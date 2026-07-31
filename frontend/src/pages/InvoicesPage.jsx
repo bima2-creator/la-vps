@@ -420,6 +420,10 @@ export default function InvoicesPage() {
 // ---------------- InvoiceForm ----------------
 function InvoiceForm({ initial, onClose, onSaved }) {
   const isEdit = Boolean(initial);
+  // When a brand-new invoice is created on-the-fly (to allow file upload before
+  // the user clicks Save), we keep its id here so uploads/preview/delete work.
+  const [createdId, setCreatedId] = useState(null);
+  const invId = initial?.id || createdId;
   const [allCustomers, setAllCustomers] = useState([]);
   const [customerDiag, setCustomerDiag] = useState(null);
   const [jenisPekerjaan, setJenisPekerjaan] = useState(initial?.jenis_pekerjaan || "");
@@ -580,23 +584,57 @@ function InvoiceForm({ initial, onClose, onSaved }) {
 
   const autoInvNo = null; // deprecated: backend auto-generates INV/NN/RomanMonth/YYYY on create.
 
-  const uploadFakturPajak = async (file) => {
-    if (!isEdit || !initial?.id) {
-      toast.error("Simpan invoice terlebih dahulu sebelum upload faktur pajak");
-      return;
+  // Create the invoice on-the-fly (without closing the form) so lampiran files
+  // can be uploaded even before the user clicks Save. Returns the invoice id.
+  const ensureSaved = async () => {
+    if (invId) return invId;
+    if (!jenisPekerjaan) { toast.error("Pilih jenis pekerjaan"); return null; }
+    if (selectedPelanggans.length === 0) { toast.error("Tambah minimal 1 pelanggan"); return null; }
+    if (selected.size === 0) { toast.error("Pilih minimal 1 work order untuk ditagihkan"); return null; }
+    if (!String(meta.invoice_no || "").trim()) { toast.error("No Invoice wajib diisi"); return null; }
+    if (!totals.grand || totals.grand <= 0) {
+      toast.error("Nilai invoice tidak boleh 0 — pastikan WO yang dipilih memiliki nilai BoQ");
+      return null;
     }
+    try {
+      const payload = {
+        pelanggans: selectedPelanggans,
+        jenis_pekerjaan: jenisPekerjaan,
+        invoice_no: meta.invoice_no,
+        inv_no_eproc: meta.inv_no_eproc,
+        tanggal: meta.tanggal,
+        tgl_kirim: meta.tgl_kirim,
+        tgl_bayar: meta.tgl_bayar,
+        status: meta.status,
+        keterangan: meta.keterangan,
+        work_order_ids: Array.from(selected),
+      };
+      const { data } = await api.post("/invoices", payload);
+      const newId = data.id || data._id;
+      setCreatedId(newId);
+      toast.success("Invoice tersimpan — melanjutkan upload file…");
+      return newId;
+    } catch (e) {
+      toast.error(formatApiError(e));
+      return null;
+    }
+  };
+
+  const uploadFakturPajak = async (file) => {
     if (!file) return;
     const isPdf = file.type === "application/pdf" || (file.name || "").toLowerCase().endsWith(".pdf");
     if (!isPdf) {
       toast.error("Hanya file PDF yang diperbolehkan");
       return;
     }
+    let id = invId;
+    if (!id) { id = await ensureSaved(); if (!id) return; }
     setUploadingFp(true);
     try {
       const form = new FormData();
       form.append("file", file);
       const { data } = await api.post(
-        `/invoices/${initial.id}/faktur-pajak`,
+        `/invoices/${id}/faktur-pajak`,
         form,
         { headers: { "Content-Type": "multipart/form-data" } },
       );
@@ -610,10 +648,10 @@ function InvoiceForm({ initial, onClose, onSaved }) {
   };
 
   const deleteFakturPajak = async () => {
-    if (!isEdit || !initial?.id) return;
+    if (!invId) return;
     if (!window.confirm("Hapus file faktur pajak yang tersimpan?")) return;
     try {
-      await api.delete(`/invoices/${initial.id}/faktur-pajak`);
+      await api.delete(`/invoices/${invId}/faktur-pajak`);
       setFpAttachment(null);
       toast.success("Faktur pajak dihapus");
     } catch (e) {
@@ -622,30 +660,28 @@ function InvoiceForm({ initial, onClose, onSaved }) {
   };
 
   const previewFakturPajak = () => {
-    if (!isEdit || !initial?.id) return;
+    if (!invId) return;
     const token = localStorage.getItem("la_token") || "";
     const base = (api.defaults && api.defaults.baseURL) || "";
-    const url = `${base}/invoices/${initial.id}/faktur-pajak/download?auth=${encodeURIComponent(token)}`;
+    const url = `${base}/invoices/${invId}/faktur-pajak/download?auth=${encodeURIComponent(token)}`;
     window.open(url, "_blank");
   };
 
   const uploadBuktiPotong = async (file) => {
-    if (!isEdit || !initial?.id) {
-      toast.error("Simpan invoice terlebih dahulu sebelum upload bukti potong");
-      return;
-    }
     if (!file) return;
     const isPdf = file.type === "application/pdf" || (file.name || "").toLowerCase().endsWith(".pdf");
     if (!isPdf) {
       toast.error("Hanya file PDF yang diperbolehkan");
       return;
     }
+    let id = invId;
+    if (!id) { id = await ensureSaved(); if (!id) return; }
     setUploadingBp(true);
     try {
       const form = new FormData();
       form.append("file", file);
       const { data } = await api.post(
-        `/invoices/${initial.id}/bukti-potong`,
+        `/invoices/${id}/bukti-potong`,
         form,
         { headers: { "Content-Type": "multipart/form-data" } },
       );
@@ -659,10 +695,10 @@ function InvoiceForm({ initial, onClose, onSaved }) {
   };
 
   const deleteBuktiPotong = async () => {
-    if (!isEdit || !initial?.id) return;
+    if (!invId) return;
     if (!window.confirm("Hapus file bukti potong yang tersimpan?")) return;
     try {
-      await api.delete(`/invoices/${initial.id}/bukti-potong`);
+      await api.delete(`/invoices/${invId}/bukti-potong`);
       setBpAttachment(null);
       toast.success("Bukti potong dihapus");
     } catch (e) {
@@ -671,10 +707,10 @@ function InvoiceForm({ initial, onClose, onSaved }) {
   };
 
   const previewBuktiPotong = () => {
-    if (!isEdit || !initial?.id) return;
+    if (!invId) return;
     const token = localStorage.getItem("la_token") || "";
     const base = (api.defaults && api.defaults.baseURL) || "";
-    const url = `${base}/invoices/${initial.id}/bukti-potong/download?auth=${encodeURIComponent(token)}`;
+    const url = `${base}/invoices/${invId}/bukti-potong/download?auth=${encodeURIComponent(token)}`;
     window.open(url, "_blank");
   };
 
@@ -703,8 +739,8 @@ function InvoiceForm({ initial, onClose, onSaved }) {
         keterangan: meta.keterangan,
         work_order_ids: Array.from(selected),
       };
-      if (isEdit) {
-        await api.put(`/invoices/${initial.id}`, payload);
+      if (invId) {
+        await api.put(`/invoices/${invId}`, payload);
         toast.success("Invoice diperbarui");
       } else {
         await api.post("/invoices", payload);
@@ -1094,13 +1130,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                     <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
                       File Faktur Pajak (PDF)
                     </label>
-                    {!isEdit && (
-                      <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5">
-                        Simpan invoice dulu, kemudian buka Edit untuk upload file.
-                      </div>
-                    )}
-                    {isEdit && (
-                      <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <label className="inline-flex items-center gap-1.5 border border-border bg-white hover:bg-slate-100 rounded-sm px-3 py-1.5 text-sm cursor-pointer">
                           {uploadingFp ? "Mengupload…" : (fpAttachment ? "Ganti file" : "Pilih file")}
                           <input
@@ -1138,8 +1168,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                             Belum ada file. Setelah upload, otomatis jadi lampiran PDF invoice.
                           </span>
                         )}
-                      </div>
-                    )}
+                    </div>
                   </div>
                 </div>
                 <div className="md:col-span-2 border border-dashed border-border rounded-sm p-3 bg-slate-50">
@@ -1150,13 +1179,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                     <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
                       File Bukti Potong (PDF)
                     </label>
-                    {!isEdit && (
-                      <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5">
-                        Simpan invoice dulu, kemudian buka Edit untuk upload file.
-                      </div>
-                    )}
-                    {isEdit && (
-                      <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <label className="inline-flex items-center gap-1.5 border border-border bg-white hover:bg-slate-100 rounded-sm px-3 py-1.5 text-sm cursor-pointer">
                           {uploadingBp ? "Mengupload…" : (bpAttachment ? "Ganti file" : "Pilih file")}
                           <input
@@ -1194,8 +1217,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                             Belum ada file. Setelah upload, otomatis jadi lampiran PDF invoice.
                           </span>
                         )}
-                      </div>
-                    )}
+                    </div>
                   </div>
                 </div>
                 <div>
