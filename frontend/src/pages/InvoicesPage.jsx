@@ -423,6 +423,9 @@ function InvoiceForm({ initial, onClose, onSaved }) {
   // the user clicks Save), we keep its id here so uploads/preview/delete work.
   const [createdId, setCreatedId] = useState(null);
   const invId = initial?.id || createdId;
+  // Once an invoice already has an invoice number, its Jenis Pekerjaan is locked
+  // (only adding more pelanggan of the same jenis is allowed).
+  const jenisLocked = Boolean(initial) && Boolean((initial?.invoice_no || "").trim());
   const [allCustomers, setAllCustomers] = useState([]);
   const [customerDiag, setCustomerDiag] = useState(null);
   const [jenisPekerjaan, setJenisPekerjaan] = useState(initial?.jenis_pekerjaan || "");
@@ -783,24 +786,34 @@ function InvoiceForm({ initial, onClose, onSaved }) {
           <div>
             <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1.5">
               1 &middot; Jenis Pekerjaan
+              {jenisLocked && (
+                <span className="ml-2 normal-case tracking-normal text-amber-700">
+                  (terkunci — invoice sudah bernomor, hanya bisa tambah pelanggan)
+                </span>
+              )}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {INVOICE_CATEGORIES.map((cat) => {
                 const on = jenisPekerjaan === cat.value;
+                const locked = jenisLocked && !on;
                 return (
                   <button
                     key={cat.value}
                     type="button"
                     data-testid={`invoice-jenis-${cat.value}`}
+                    disabled={jenisLocked}
                     onClick={() => {
+                      if (jenisLocked) return;
                       setJenisPekerjaan(cat.value);
                       setSelected(new Set());
                     }}
                     className={`text-left px-3 py-3 rounded-sm border transition-colors ${
                       on
                         ? "bg-blue-50 border-blue-500 ring-1 ring-blue-500"
+                        : locked
+                        ? "bg-slate-50 border-border opacity-40 cursor-not-allowed"
                         : "bg-white border-border hover:border-blue-400"
-                    }`}
+                    } ${jenisLocked && on ? "cursor-default" : ""}`}
                   >
                     <div
                       className={`mono text-xs uppercase tracking-[0.15em] font-semibold ${
