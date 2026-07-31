@@ -803,10 +803,7 @@ frontend:
 
 test_plan:
   current_focus:
-    - "Login Page Tweaks - ROLE label and single-word cards"
-    - "Guest Login - No Password Required"
-    - "Admin Login - Password Required"
-    - "Users Page - No Create Form"
+    - "SPK upload (PDF-only) as WO attachment with kind=spk, included as invoice lampiran"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -814,18 +811,19 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: |
-      AUTH REFACTOR — login is now USERNAME-based (not email). Please test:
-        1. POST /api/auth/login {"username":"admin","password":"admin123"} -> 200,
-           returns token + user with username="admin", role="admin", email="support@almar.co.id".
-        2. POST /api/auth/login {"username":"operator","password":"operator"} -> 200, role="operator".
-        3. POST /api/auth/login {"username":"guest","password":"guest"} -> 200, role="viewer".
-        4. Wrong password -> 401 "Invalid username or password".
-        5. GET /api/auth/me with admin Bearer token -> user object incl. username, role, actor.
-        6. RBAC: GET /api/users as admin -> 200 list with `username` for each of the 3 users;
-           GET /api/users as guest -> 403.
-        7. Spot-check: create a WO as admin then GET it; created_by should be "admin" (username),
-           not an email.
-      Only these 3 users can log in. Report any 401/403/500 anomalies or missing fields.
+      NEW FEATURE — SPK upload on Work Orders. Please test the attachment endpoint changes:
+        1. Login as admin (username admin / admin123).
+        2. Create a work order (POST /api/workorders, e.g. {"pelanggan":"SPK TEST","jenis_order":"PSB"}); keep its id.
+        3. POST /api/workorders/{id}/attachments as multipart with a small valid PDF file AND a
+           form field kind=spk -> expect 200, response JSON includes "kind":"spk".
+        4. POST the same endpoint with kind=spk but a NON-pdf file (e.g. .png bytes) -> expect 400
+           "Hanya file PDF yang diperbolehkan".
+        5. GET /api/workorders/{id}/attachments -> expect 200 list; the uploaded item has kind=="spk".
+        6. Upload a second PDF WITHOUT a kind field -> should default to kind=="general".
+        7. Cleanup: DELETE /api/workorders/{id} (or leave; note it in report).
+      Confirm the existing attachment behavior (PDF-only, list, download) is unchanged and that
+      kind is stored/returned correctly. The invoice PDF merge pulls ALL WO attachments regardless
+      of kind, so no separate invoice test is required unless trivial.
 
   - agent: "main"
     message: |

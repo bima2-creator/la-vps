@@ -22,6 +22,7 @@ import { WOFORM } from "@/constants/testIds";
 import { toast } from "sonner";
 import { CaretLeft, FloppyDisk, FilePdf, Lightning, ArrowsClockwise, ShareNetwork, Wrench, HardDrives, LockKey, MapPin } from "@phosphor-icons/react";
 import Attachments from "@/components/Attachments";
+import SpkUpload from "@/components/SpkUpload";
 import BoqItemsEditor, { computeBoqTotals } from "@/components/BoqItemsEditor";
 import PerangkatEditor from "@/components/PerangkatEditor";
 import MapPicker from "@/components/MapPicker";
@@ -848,6 +849,16 @@ export default function WorkOrderFormPage() {
               );
             })}
           </div>
+
+          {visibleActiveSection?.id === "spk" && (
+            isEdit ? (
+              <SpkUpload workorderId={id} canEdit={canEdit} />
+            ) : (
+              <div className="mt-6 border border-dashed border-blue-200 bg-blue-50/40 rounded-sm p-4 text-sm text-muted-foreground">
+                Simpan Work Order terlebih dahulu untuk mengunggah dokumen SPK (PDF).
+              </div>
+            )
+          )}
         </section>
       </div>
 

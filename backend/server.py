@@ -17,7 +17,7 @@ import bcrypt
 import jwt
 import pandas as pd
 from bson import ObjectId
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Response, UploadFile, File, Query, Header
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Response, UploadFile, File, Query, Header, Form
 from fastapi.responses import StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr, Field
@@ -2186,7 +2186,7 @@ MIME_TYPES = {
 
 
 @api.post("/workorders/{wo_id}/attachments")
-async def upload_attachment(wo_id: str, file: UploadFile = File(...), user: dict = Depends(require_roles("admin", "operator"))):
+async def upload_attachment(wo_id: str, file: UploadFile = File(...), kind: str = Form("general"), user: dict = Depends(require_roles("admin", "operator"))):
     wo = await db.workorders.find_one({"_id": ObjectId(wo_id)})
     if not wo:
         raise HTTPException(404, "Work order not found")
@@ -2198,11 +2198,15 @@ async def upload_attachment(wo_id: str, file: UploadFile = File(...), user: dict
     if ext != "pdf" and (file.content_type or "").lower() != "application/pdf":
         raise HTTPException(400, "Hanya file PDF yang diperbolehkan")
     ctype = "application/pdf"
+    kind = (kind or "general").strip().lower()
+    if kind not in ("general", "spk"):
+        kind = "general"
     file_uuid = str(uuid.uuid4())
     path = f"{APP_NAME}/workorders/{wo_id}/{file_uuid}.{ext}"
     result = put_object(path, data, ctype)
     doc = {
         "workorder_id": wo_id,
+        "kind": kind,
         "storage_path": result["path"],
         "original_filename": file.filename,
         "content_type": ctype,
@@ -2214,7 +2218,7 @@ async def upload_attachment(wo_id: str, file: UploadFile = File(...), user: dict
     res = await db.attachments.insert_one(doc)
     doc["id"] = str(res.inserted_id)
     doc.pop("_id", None)
-    await audit("attachment.upload", user, workorder_id=wo_id, meta={"filename": file.filename, "size": doc["size"]})
+    await audit("attachment.upload", user, workorder_id=wo_id, meta={"filename": file.filename, "size": doc["size"], "kind": kind})
     return doc
 
 
@@ -2223,6 +2227,7 @@ async def list_attachments(wo_id: str, user: dict = Depends(get_current_user)):
     docs = await db.attachments.find({"workorder_id": wo_id, "is_deleted": False}).sort("created_at", -1).to_list(200)
     for d in docs:
         d["id"] = str(d.pop("_id"))
+        d.setdefault("kind", "general")
     return docs
 
 
