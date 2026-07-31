@@ -2454,6 +2454,39 @@ async def get_invoice(inv_id: str, user: dict = Depends(get_current_user)):
     return d
 
 
+async def _ensure_wos_have_attachments(wos: List[dict]):
+    """Setiap work order pada invoice wajib punya minimal 1 attachment PDF.
+
+    Attachment ini nantinya akan digabung otomatis sebagai lampiran PDF
+    invoice. Kalau ada WO yang belum punya attachment, batalkan operasi
+    dengan pesan yang menyebutkan WO mana saja yang perlu upload dokumen.
+    """
+    if not wos:
+        return
+    wo_ids = [str(w["id"]) for w in wos if w.get("id")]
+    if not wo_ids:
+        return
+    counts = await db.attachments.aggregate([
+        {"$match": {"workorder_id": {"$in": wo_ids}, "is_deleted": False}},
+        {"$group": {"_id": "$workorder_id", "n": {"$sum": 1}}},
+    ]).to_list(1000)
+    have = {c["_id"] for c in counts if c.get("n", 0) > 0}
+    missing = []
+    for w in wos:
+        wid = str(w.get("id") or "")
+        if wid and wid not in have:
+            label = w.get("sa_id") or w.get("pelanggan") or wid
+            missing.append(label)
+    if missing:
+        preview = ", ".join(missing[:5])
+        more = "" if len(missing) <= 5 else f" (+{len(missing) - 5} lainnya)"
+        raise HTTPException(
+            400,
+            f"Setiap pekerjaan wajib upload attachment PDF sebagai lampiran invoice. "
+            f"Belum ada attachment untuk: {preview}{more}",
+        )
+
+
 @api.post("/invoices")
 async def create_invoice(
     payload: InvoiceIn,
@@ -2465,6 +2498,8 @@ async def create_invoice(
     if not payload.pelanggans:
         raise HTTPException(400, "Pilih minimal 1 pelanggan")
     wos = await _load_selected_wos(payload.work_order_ids)
+    # Wajib: setiap work order pada invoice harus punya minimal 1 attachment PDF
+    await _ensure_wos_have_attachments(wos)
     totals = _invoice_totals(wos)
     pelanggans = [p for p in payload.pelanggans if p]
     invoice_no = (payload.invoice_no or "").strip()
@@ -2531,6 +2566,8 @@ async def update_invoice(
     if not payload.pelanggans:
         raise HTTPException(400, "Pilih minimal 1 pelanggan")
     wos = await _load_selected_wos(payload.work_order_ids)
+    # Wajib: setiap work order pada invoice harus punya minimal 1 attachment PDF
+    await _ensure_wos_have_attachments(wos)
     totals = _invoice_totals(wos)
     pelanggans = [p for p in payload.pelanggans if p]
     invoice_no = (payload.invoice_no or "").strip()
@@ -2592,7 +2629,7 @@ async def delete_invoice(
 # ------------------------------------------------------------------
 # Invoice - Faktur Pajak (upload PDF/image + store nomor)
 # ------------------------------------------------------------------
-FP_ALLOWED_EXT = {"pdf", "png", "jpg", "jpeg"}
+FP_ALLOWED_EXT = {"pdf"}
 
 
 @api.post("/invoices/{inv_id}/faktur-pajak")
@@ -2614,18 +2651,18 @@ async def upload_faktur_pajak(
         raise HTTPException(413, "File terlalu besar (maks 20MB)")
     fname = file.filename or "faktur_pajak"
     ext = (fname.rsplit(".", 1)[-1] if "." in fname else "bin").lower()
-    if ext not in FP_ALLOWED_EXT:
-        raise HTTPException(400, "Format harus PDF, PNG, atau JPG")
-    ctype = file.content_type or MIME_TYPES.get(ext, "application/octet-stream")
+    if ext not in FP_ALLOWED_EXT and (file.content_type or "").lower() != "application/pdf":
+        raise HTTPException(400, "Hanya file PDF yang diperbolehkan")
+    ctype = "application/pdf"
     file_uuid = str(uuid.uuid4())
-    path = f"{APP_NAME}/invoices/{inv_id}/faktur_pajak_{file_uuid}.{ext}"
+    path = f"{APP_NAME}/invoices/{inv_id}/faktur_pajak_{file_uuid}.pdf"
     result = put_object(path, data, ctype)
     fp_attachment = {
         "storage_path": result["path"],
         "original_filename": fname,
         "content_type": ctype,
         "size": result.get("size", len(data)),
-        "ext": ext,
+        "ext": "pdf",
         "uploaded_by": user["email"],
         "uploaded_at": now_iso(),
     }
@@ -2694,7 +2731,7 @@ async def delete_faktur_pajak(
 # ------------------------------------------------------------------
 # Invoice - Bukti Potong (upload PDF/image lampiran)
 # ------------------------------------------------------------------
-BP_ALLOWED_EXT = {"pdf", "png", "jpg", "jpeg"}
+BP_ALLOWED_EXT = {"pdf"}
 
 
 @api.post("/invoices/{inv_id}/bukti-potong")
@@ -2715,18 +2752,18 @@ async def upload_bukti_potong(
         raise HTTPException(413, "File terlalu besar (maks 20MB)")
     fname = file.filename or "bukti_potong"
     ext = (fname.rsplit(".", 1)[-1] if "." in fname else "bin").lower()
-    if ext not in BP_ALLOWED_EXT:
-        raise HTTPException(400, "Format harus PDF, PNG, atau JPG")
-    ctype = file.content_type or MIME_TYPES.get(ext, "application/octet-stream")
+    if ext not in BP_ALLOWED_EXT and (file.content_type or "").lower() != "application/pdf":
+        raise HTTPException(400, "Hanya file PDF yang diperbolehkan")
+    ctype = "application/pdf"
     file_uuid = str(uuid.uuid4())
-    path = f"{APP_NAME}/invoices/{inv_id}/bukti_potong_{file_uuid}.{ext}"
+    path = f"{APP_NAME}/invoices/{inv_id}/bukti_potong_{file_uuid}.pdf"
     result = put_object(path, data, ctype)
     bp_attachment = {
         "storage_path": result["path"],
         "original_filename": fname,
         "content_type": ctype,
         "size": result.get("size", len(data)),
-        "ext": ext,
+        "ext": "pdf",
         "uploaded_by": user["email"],
         "uploaded_at": now_iso(),
     }

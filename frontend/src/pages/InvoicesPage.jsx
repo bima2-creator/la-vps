@@ -551,6 +551,11 @@ function InvoiceForm({ initial, onClose, onSaved }) {
       return;
     }
     if (!file) return;
+    const isPdf = file.type === "application/pdf" || (file.name || "").toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      toast.error("Hanya file PDF yang diperbolehkan");
+      return;
+    }
     setUploadingFp(true);
     try {
       const form = new FormData();
@@ -595,6 +600,11 @@ function InvoiceForm({ initial, onClose, onSaved }) {
       return;
     }
     if (!file) return;
+    const isPdf = file.type === "application/pdf" || (file.name || "").toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      toast.error("Hanya file PDF yang diperbolehkan");
+      return;
+    }
     setUploadingBp(true);
     try {
       const form = new FormData();
@@ -1021,7 +1031,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                   </div>
                   <div>
                     <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                      File Faktur Pajak (PDF/PNG/JPG)
+                      File Faktur Pajak (PDF)
                     </label>
                     {!isEdit && (
                       <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5">
@@ -1034,7 +1044,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                           {uploadingFp ? "Mengupload…" : (fpAttachment ? "Ganti file" : "Pilih file")}
                           <input
                             type="file"
-                            accept=".pdf,image/png,image/jpeg"
+                            accept="application/pdf,.pdf"
                             className="hidden"
                             disabled={uploadingFp}
                             data-testid="invoice-form-faktur-pajak-file"
@@ -1077,7 +1087,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                   </div>
                   <div>
                     <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                      File Bukti Potong (PDF/PNG/JPG)
+                      File Bukti Potong (PDF)
                     </label>
                     {!isEdit && (
                       <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5">
@@ -1090,7 +1100,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                           {uploadingBp ? "Mengupload…" : (bpAttachment ? "Ganti file" : "Pilih file")}
                           <input
                             type="file"
-                            accept=".pdf,image/png,image/jpeg"
+                            accept="application/pdf,.pdf"
                             className="hidden"
                             disabled={uploadingBp}
                             data-testid="invoice-form-bukti-potong-file"
