@@ -393,7 +393,19 @@ export default function BoqItemsEditor({ items, onChange, disabled, jenis }) {
         <div className="border border-dashed border-border rounded-sm p-8 text-center">
           <Package size={28} weight="duotone" className="mx-auto text-muted-foreground mb-2" />
           <div className="text-sm text-muted-foreground">
-            Belum ada paket. Klik <span className="text-blue-600 font-medium">Tambah Paket</span>{" "}
+            Belum ada paket. Klik{" "}
+            {disabled ? (
+              <span className="text-blue-600 font-medium">Tambah Paket</span>
+            ) : (
+              <button
+                type="button"
+                data-testid="boq-add-paket-empty-link"
+                onClick={() => setPickerOpen(true)}
+                className="text-blue-600 font-medium hover:text-blue-700 underline underline-offset-2"
+              >
+                Tambah Paket
+              </button>
+            )}{" "}
             untuk mulai.
           </div>
         </div>
