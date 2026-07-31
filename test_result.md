@@ -336,23 +336,79 @@ backend:
             - Filter functionality working correctly
 
 frontend:
-  - task: "N/A (frontend to be tested separately)"
+  - task: "Work Orders page - Template button"
     implemented: true
-    working: "NA"
-    file: ""
+    working: true
+    file: "frontend/src/pages/WorkOrdersPage.jsx"
     stuck_count: 0
-    priority: "low"
+    priority: "high"
     needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
-          comment: "Skip frontend automated testing unless user explicitly requests."
+          comment: "Template button (data-testid='wo-template-button') should trigger download of workorders_import_template.xlsx via GET /api/workorders/import/template.xlsx"
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Template button working correctly:
+            - Button visible in Work Orders page header with correct data-testid="wo-template-button"
+            - Click triggers GET /api/workorders/import/template.xlsx
+            - HTTP 200 response received
+            - Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+            - No error toast appeared
+            - File download initiated successfully
+
+  - task: "Work Orders page - Export button"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/WorkOrdersPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Export button should trigger download of workorders.xlsx via GET /api/workorders/export/xlsx"
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Export button working correctly:
+            - Button visible in Work Orders page header
+            - Click triggers GET /api/workorders/export/xlsx
+            - HTTP 200 response received
+            - Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+            - No error toast appeared
+            - File download initiated successfully
+
+  - task: "Invoices page - Export Excel button"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/InvoicesPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Export Excel button (data-testid='invoices-export') should trigger download of invoices.xlsx via GET /api/invoices/export/xlsx with optional filters"
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Export Excel button working correctly:
+            - Button visible in Invoices page header with correct data-testid="invoices-export"
+            - Click triggers GET /api/invoices/export/xlsx
+            - HTTP 200 response received
+            - Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+            - No error toast appeared
+            - Filter functionality tested: status=OPEN filter correctly passed as query parameter
+            - Filtered export also returned HTTP 200
+            - File download initiated successfully
 
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 3
-  run_ui: false
+  test_sequence: 4
+  run_ui: true
 
 test_plan:
   current_focus: []
@@ -441,3 +497,43 @@ agent_communication:
       - All HTTP status codes correct (200 as expected)
       
       RECOMMENDATION: Both new export endpoints are working correctly and ready for production use.
+
+  - agent: "testing"
+    message: |
+      ✅ FRONTEND UI TESTING COMPLETE - ALL TESTS PASSED (3/3)
+      
+      Successfully tested all Excel export/template buttons in the UI:
+      
+      11. ✅ Work Orders page - Template button
+          - Button visible with correct data-testid="wo-template-button"
+          - Located in page header next to "Import Excel" and "Export" buttons
+          - Click triggers GET /api/workorders/import/template.xlsx
+          - HTTP 200 response with correct Content-Type (spreadsheet)
+          - No error toast appeared
+          - File download initiated successfully
+      
+      12. ✅ Work Orders page - Export button
+          - Button visible in page header
+          - Click triggers GET /api/workorders/export/xlsx
+          - HTTP 200 response with correct Content-Type (spreadsheet)
+          - No error toast appeared
+          - File download initiated successfully
+      
+      13. ✅ Invoices page - Export Excel button
+          - Button visible with correct data-testid="invoices-export"
+          - Located in page header near "Refresh" button
+          - Click triggers GET /api/invoices/export/xlsx
+          - HTTP 200 response with correct Content-Type (spreadsheet)
+          - No error toast appeared
+          - Filter functionality tested: status=OPEN correctly passed as query parameter
+          - Filtered export also returned HTTP 200
+          - File download initiated successfully
+      
+      Test Details:
+      - Tested with admin@la-tracker.com / admin123 credentials
+      - All buttons have correct data-testid attributes for automated testing
+      - Network requests monitored and verified
+      - Screenshots captured showing button placement
+      - No critical console errors related to export functionality
+      
+      RECOMMENDATION: All frontend export/template buttons are working correctly and ready for production use.
