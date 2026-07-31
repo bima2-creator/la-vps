@@ -26,6 +26,27 @@ tracking, SLA (durasi vs target), Bill of Quantity (BoQ), and Invoice lifecycle.
 7. Reports page with filters + Print/PDF and Excel export.
 8. Admin user management page.
 
+## Impor Bank Data + Sorot Auto-Isi (Jun 2026 — implemented)
+- **Impor Excel** (`POST /api/perangkat/bank/import/xlsx`, admin-only): unggah
+  file Excel untuk mengimpor banyak pasangan prefix→nama sekaligus. Dua layout
+  otomatis terdeteksi dari header:
+  1. Kolom **Prefix + Nama Perangkat** → impor langsung (validasi prefix 11-13
+     char; baris tak valid masuk `skipped` + `errors[]`; duplikat dilewati).
+  2. Kolom **Nomor Registrasi + Nama Perangkat** → prefix diturunkan otomatis
+     via learning (`_learn_perangkat`, baris nomor <11 char dilewati).
+  Respons `{ok, mode, imported, skipped, errors}`.
+- **Template** (`GET /api/perangkat/bank/import/template.xlsx`, admin-only):
+  unduh template kolom Prefix + Nama Perangkat dengan contoh baris.
+- **Frontend** (`BankDataPage.jsx`): tombol **Template** (unduh) + **Import
+  Excel** (input file tersembunyi `bank-import-input`), toast ringkasan
+  (imported/skipped) + peringatan bila ada baris bermasalah, tabel auto-reload.
+- **Sorot Auto-Isi** (`PerangkatEditor.jsx` + `index.css`): saat nama perangkat
+  terisi otomatis (draft atau baris tabel), field nama diberi **kilatan hijau**
+  (`@keyframes bank-flash` / class `.bank-flash`, ~1 detik) via perubahan `key`
+  React agar operator langsung sadar sistem mengenali perangkat.
+- **Status**: Tested end-to-end (backend 8/8 pytest impor + RBAC + template,
+  frontend 4/4 flow termasuk kilatan draft & baris) — PASS.
+
 ## Kelola & Ekspor Bank Data + Auto-Isi di Tabel (Jun 2026 — implemented)
 - **Halaman admin `/bank-data`** (`BankDataPage.jsx`, menu "Kelola Bank Data"
   grup Admin, admin-only): KPI (total entri, prefix unik, nama unik), pencarian
