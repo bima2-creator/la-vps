@@ -16,15 +16,16 @@ import {
 } from "recharts";
 import { TrendUp, TrendDown, ClockClockwise, CheckCircle, Money, Waveform, ArrowUpRight } from "@phosphor-icons/react";
 
-const CHART_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#0EA5E9", "#A855F7"];
+const CHART_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#0EA5E9", "#A855F7"];
 
 function Kpi({ label, value, hint, testid, icon: Icon, tone = "blue", onClick }) {
   const toneMap = {
-    blue: "text-blue-400",
-    green: "text-emerald-400",
-    amber: "text-amber-400",
-    red: "text-red-400",
+    blue: { text: "text-blue-600", tile: "bg-blue-50 text-blue-600", bar: "from-blue-500 to-indigo-500" },
+    green: { text: "text-emerald-600", tile: "bg-emerald-50 text-emerald-600", bar: "from-emerald-500 to-teal-500" },
+    amber: { text: "text-amber-600", tile: "bg-amber-50 text-amber-600", bar: "from-amber-500 to-orange-500" },
+    red: { text: "text-red-600", tile: "bg-red-50 text-red-600", bar: "from-red-500 to-rose-500" },
   };
+  const t = toneMap[tone] || toneMap.blue;
   const clickable = typeof onClick === "function";
   return (
     <div
@@ -37,23 +38,26 @@ function Kpi({ label, value, hint, testid, icon: Icon, tone = "blue", onClick })
           ? (e) => (e.key === "Enter" || e.key === " ") && onClick()
           : undefined
       }
-      className={`border border-border bg-card p-5 rounded-sm relative overflow-hidden transition-all ${
-        clickable
-          ? "cursor-pointer hover:border-blue-500 hover:shadow-md hover:-translate-y-0.5"
-          : "hover:border-blue-500/40"
+      className={`group border border-border bg-card p-5 rounded-xl relative overflow-hidden ${
+        clickable ? "cursor-pointer hover:-translate-y-1 hover:shadow-lg" : ""
       }`}
     >
-      <div className="flex items-center justify-between">
-        <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">{label}</div>
-        {Icon && <Icon size={18} weight="duotone" className={toneMap[tone]} />}
+      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${t.bar} opacity-0 group-hover:opacity-100 transition-opacity`} />
+      <div className="flex items-start justify-between">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground pt-1">{label}</div>
+        {Icon && (
+          <div className={`grid place-items-center h-9 w-9 rounded-lg ${t.tile}`}>
+            <Icon size={18} weight="duotone" />
+          </div>
+        )}
       </div>
-      <div className="mt-3 font-display font-black text-3xl tracking-tighter mono">{value}</div>
-      {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
+      <div className="mt-3 font-display font-black text-3xl tracking-tighter mono text-slate-900">{value}</div>
+      {hint && <div className="mt-1.5 text-xs text-muted-foreground leading-snug">{hint}</div>}
       {clickable && (
         <ArrowUpRight
-          size={14}
+          size={15}
           weight="bold"
-          className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+          className={`absolute bottom-4 right-4 ${t.text} opacity-0 group-hover:opacity-100 transition-opacity`}
         />
       )}
     </div>
@@ -62,9 +66,9 @@ function Kpi({ label, value, hint, testid, icon: Icon, tone = "blue", onClick })
 
 function Section({ title, children, right }) {
   return (
-    <div className="border border-border bg-card rounded-sm">
+    <div className="border border-border bg-card rounded-xl">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{title}</div>
+        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">{title}</div>
         {right}
       </div>
       <div className="p-4">{children}</div>
@@ -124,7 +128,7 @@ export default function DashboardPage() {
             Real-time overview of provisioning workflow, SLA compliance, dan revenue.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap bg-card border border-border rounded-xl px-3 py-2">
           <select
             data-testid="dashboard-media-filter"
             value={mediaJenis}
@@ -186,7 +190,7 @@ export default function DashboardPage() {
         <div className="text-sm text-muted-foreground mono">Loading…</div>
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 rise-in">
             <Kpi
               label="Total Orders"
               value={stats.total}
@@ -234,17 +238,17 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 rise-in">
             <Section title="Orders by Jenis Pekerjaan" right={<span className="text-[10px] text-muted-foreground mono">klik bar untuk filter</span>}>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={stats.by_jenis_order}>
                   <CartesianGrid vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" tick={{ fill: "#64748b", fontSize: 11, fontFamily: "IBM Plex Mono" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
                   <YAxis tick={{ fill: "#64748b", fontSize: 11, fontFamily: "IBM Plex Mono" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
-                  <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", color: "#0f172a", borderRadius: 2 }} />
+                  <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", color: "#0f172a", borderRadius: 8 }} />
                   <Bar
                     dataKey="value"
-                    fill="#3B82F6"
+                    fill="#2563EB"
                     radius={[2, 2, 0, 0]}
                     cursor="pointer"
                     onClick={(d) => d?.name && goToList({ jenis_order: d.name })}
@@ -282,7 +286,7 @@ export default function DashboardPage() {
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", color: "#0f172a", borderRadius: 2 }} />
+                  <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", color: "#0f172a", borderRadius: 8 }} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="grid grid-cols-2 gap-2 mt-2">
@@ -307,7 +311,7 @@ export default function DashboardPage() {
                   <CartesianGrid horizontal={false} stroke="#e2e8f0" />
                   <XAxis type="number" tick={{ fill: "#64748b", fontSize: 11, fontFamily: "IBM Plex Mono" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
                   <YAxis dataKey="name" type="category" width={80} tick={{ fill: "#64748b", fontSize: 11, fontFamily: "IBM Plex Mono" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
-                  <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", color: "#0f172a", borderRadius: 2 }} />
+                  <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", color: "#0f172a", borderRadius: 8 }} />
                   <Bar
                     dataKey="value"
                     fill="#10B981"
