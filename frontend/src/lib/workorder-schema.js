@@ -183,8 +183,7 @@ const DISMANTLE_EXTRA_HIDDEN = [
   "bw",
   "rfs_la",
   "rfs_pelanggan",
-  // SPK: keep survey nomor + tgl_doc only
-  "spk_survey_tgl_terima",
+  // SPK: keep survey nomor + tgl_doc + tgl_terima (relabeled as SPK Dismantle)
   "spk_instalasi_nomor",
   "spk_instalasi_tgl_doc",
   "spk_instalasi_tgl_terima",
@@ -289,7 +288,8 @@ export const JENIS_ORDER_LIST = Object.keys(JENIS_ORDER_META);
 export const JENIS_FIELD_LABEL_OVERRIDES = {
   DISMANTLE: {
     spk_survey_nomor: "SPK Dismantle",
-    spk_survey_tgl_doc: "SPK Dismantle Diterima",
+    spk_survey_tgl_doc: "SPK Dismantle Tanggal Doc",
+    spk_survey_tgl_terima: "SPK Dismantle Diterima",
     hasil_survey_status: "Dismantle Status",
   },
   MAINTENANCE: {

@@ -1187,6 +1187,69 @@ agent_communication:
       
       RECOMMENDATION: AUTH REFACTOR UI is working correctly and ready for production use. All frontend authentication and RBAC tests passed.
 
+frontend:
+  - task: "SPK Document Upload UI - DOKUMEN SPK panel on Work Order form"
+    implemented: true
+    working: true
+    file: "frontend/src/components/SpkUpload.jsx, frontend/src/pages/WorkOrderFormPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            SPK document upload UI on Work Order form. Verify:
+            1. PSB Work Order: Create new WO, fill Customer (Nama Pelanggan + SA ID), open SPK section
+            2. DOKUMEN SPK panel visible with "Upload SPK" button (NO separate ATTACHMENTS panel)
+            3. Upload PDF WITHOUT clicking Save first - should auto-create WO and upload
+            4. After upload: "Upload SPK" button hidden, "only 1 SPK" message shown
+            5. Delete SPK: file removed, "Upload SPK" button reappears
+            6. DISMANTLE Work Order: SPK section shows 3 labeled fields (SPK Dismantle, Tanggal Doc, Diterima) + DOKUMEN SPK panel
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - SPK Document Upload UI working correctly (all tests passed):
+            
+            TEST 1 - PSB SPK Upload (Upload on NEW WO WITHOUT clicking Save first):
+            - Login as admin successful (username: admin, password: admin123)
+            - Jenis Order picker works - PSB selected
+            - Fase picker works - SURVEY selected (PSB requires fase)
+            - Work Order form loaded with PSB and TIPRO: SURVEY badges
+            - Customer section filled: Nama Pelanggan="UI SPK TEST", SA ID="SA-UI-1"
+            - SPK section unlocked after filling required Customer fields
+            - DOKUMEN SPK panel visible with "Upload SPK" button
+            - NO separate ATTACHMENTS panel found (correct - old generic panel removed)
+            - SPK file upload works WITHOUT clicking Save first:
+              * Auto-created Work Order (ID: 6a6cdb7c1ff023f0a670ed13)
+              * Success toast: "SPK berhasil diupload"
+              * File uploaded: test_spk.pdf (0.4 KB)
+            - After upload, "Upload SPK" button HIDDEN (correct)
+            - "Only 1 SPK" message shown: "Hanya 1 file SPK. Hapus file lama untuk mengganti."
+            - Delete SPK works: SPK item removed, "Upload SPK" button reappears
+            
+            TEST 2 - DISMANTLE SPK Fields:
+            - DISMANTLE jenis order selected
+            - No fase picker required for DISMANTLE (correct - goes directly to form)
+            - Work Order form loaded with DISMANTLE badge
+            - Customer section filled: Nama Pelanggan="UI DISMANTLE", SI ID="SI-UI-1"
+            - SA ID field hidden for DISMANTLE (correct per schema)
+            - SPK section shows 3 DISMANTLE-specific fields with correct labels:
+              1. "SPK Dismantle" (text field, maps to spk_survey_nomor)
+              2. "SPK Dismantle Tanggal Doc" (date field, maps to spk_survey_tgl_doc)
+              3. "SPK Dismantle Diterima" (date field, maps to spk_survey_tgl_terima)
+            - DOKUMEN SPK upload panel also present for DISMANTLE (correct)
+            
+            Screenshots: test1_spk_section_before_upload.png, test1_spk_section_after_upload.png, test1_spk_section_after_delete.png, test2_dismantle_spk_section.png
+            
+            Key Findings:
+            - ensureSaved() function works correctly: auto-creates WO before upload if not saved
+            - SpkUpload component correctly shows/hides Upload button based on file count
+            - Single SPK restriction enforced in UI (button hidden after 1 upload)
+            - DISMANTLE field label overrides working correctly (getFieldLabel function)
+            - No separate ATTACHMENTS panel exists (old generic panel successfully removed)
+            - DOKUMEN SPK panel is the ONLY attachment UI for Work Orders
+
 backend:
   - task: "SPK upload (PDF-only) as WO attachment with kind=spk, included as invoice lampiran"
     implemented: true
@@ -1309,4 +1372,69 @@ agent_communication:
       - Minimal valid PDF used: b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"
       
       RECOMMENDATION: SPK upload feature is fully functional and ready for production use. All backend tests passed with no issues.
+
+  - agent: "testing"
+    message: |
+      ✅ SPK DOCUMENT UPLOAD UI & DISMANTLE FIELDS TESTING COMPLETE - ALL TESTS PASSED
+      
+      Comprehensive end-to-end UI testing completed for SPK document upload flow and DISMANTLE SPK fields.
+      
+      TEST 1 - PSB SPK Upload (Upload on NEW WO WITHOUT clicking Save first):
+      ✅ Login as admin successful (username: admin, password: admin123)
+      ✅ Jenis Order picker works - PSB selected
+      ✅ Fase picker works - SURVEY selected (PSB requires fase)
+      ✅ Work Order form loaded with PSB and TIPRO: SURVEY badges
+      ✅ Customer section filled: Nama Pelanggan="UI SPK TEST", SA ID="SA-UI-1"
+      ✅ SPK section unlocked after filling required Customer fields
+      ✅ DOKUMEN SPK panel visible with "Upload SPK" button
+      ✅ NO separate ATTACHMENTS panel found (correct - old generic panel removed)
+      ✅ SPK file upload works WITHOUT clicking Save first:
+         - Auto-created Work Order (ID: 6a6cdb7c1ff023f0a670ed13)
+         - Success toast: "SPK berhasil diupload"
+         - File uploaded: test_spk.pdf (0.4 KB)
+      ✅ After upload, "Upload SPK" button HIDDEN (correct)
+      ✅ "Only 1 SPK" message shown: "Hanya 1 file SPK. Hapus file lama untuk mengganti."
+      ✅ Delete SPK works:
+         - Confirmation dialog handled
+         - SPK item removed from list
+         - "Upload SPK" button reappears (correct)
+      
+      TEST 2 - DISMANTLE SPK Fields:
+      ✅ DISMANTLE jenis order selected
+      ✅ No fase picker required for DISMANTLE (correct - goes directly to form)
+      ✅ Work Order form loaded with DISMANTLE badge
+      ✅ Customer section filled: Nama Pelanggan="UI DISMANTLE", SI ID="SI-UI-1"
+      ✅ SA ID field hidden for DISMANTLE (correct per schema)
+      ✅ SPK section shows 3 DISMANTLE-specific fields with correct labels:
+         1. "SPK Dismantle" (text field, maps to spk_survey_nomor)
+         2. "SPK Dismantle Tanggal Doc" (date field, maps to spk_survey_tgl_doc)
+         3. "SPK Dismantle Diterima" (date field, maps to spk_survey_tgl_terima)
+      ✅ DOKUMEN SPK upload panel also present for DISMANTLE (correct)
+      
+      Screenshots Captured:
+      - test1_spk_section_before_upload.png (PSB SPK section with Upload button)
+      - test1_spk_section_after_upload.png (PSB SPK section with uploaded file + "only 1 SPK" message)
+      - test1_spk_section_after_delete.png (PSB SPK section after delete, Upload button reappears)
+      - test2_dismantle_spk_section.png (DISMANTLE SPK section with 3 labeled fields + upload panel)
+      
+      Network Requests Verified:
+      - POST /api/workorders/{id}/attachments (SPK upload)
+      - GET /api/workorders/{id}/attachments (load SPK list)
+      - DELETE /api/attachments/{id} (delete SPK)
+      
+      Key Findings:
+      - ensureSaved() function works correctly: auto-creates WO before upload if not saved
+      - SpkUpload component correctly shows/hides Upload button based on file count
+      - Single SPK restriction enforced in UI (button hidden after 1 upload)
+      - DISMANTLE field label overrides working correctly (getFieldLabel function)
+      - No separate ATTACHMENTS panel exists (old generic panel successfully removed)
+      - DOKUMEN SPK panel is the ONLY attachment UI for Work Orders
+      
+      Test Details:
+      - Frontend URL: https://project-bootstrap-18.preview.emergentagent.com
+      - Login: Admin card selected, password "admin123"
+      - Test PDF: /tmp/test_files/test_spk.pdf (minimal valid PDF)
+      - All data-testid attributes working correctly for automation
+      
+      RECOMMENDATION: SPK document upload UI and DISMANTLE fields are working correctly and ready for production use. All UI tests passed with no critical issues.
 
