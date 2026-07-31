@@ -559,17 +559,6 @@ function InvoiceForm({ initial, onClose, onSaved }) {
         { headers: { "Content-Type": "multipart/form-data" } },
       );
       setFpAttachment(data.faktur_pajak_attachment || null);
-      // Auto-fill nomor faktur pajak when detected from the uploaded PDF
-      if (data.faktur_pajak_no && data.faktur_pajak_no !== meta.faktur_pajak_no) {
-        setMeta((m) => ({ ...m, faktur_pajak_no: data.faktur_pajak_no }));
-        if (data.auto_detected) {
-          toast.success(
-            `Nomor Faktur Pajak terdeteksi otomatis: ${data.faktur_pajak_no}`,
-          );
-        }
-      } else if (data.auto_detected === false && !meta.faktur_pajak_no) {
-        toast.info("Nomor Faktur Pajak tidak terdeteksi otomatis — silakan isi manual");
-      }
       toast.success("Faktur pajak berhasil diupload — akan otomatis jadi lampiran invoice");
     } catch (e) {
       toast.error(formatApiError(e));

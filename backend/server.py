@@ -1956,28 +1956,26 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
     safe_no = (inv_no or "invoice").replace("/", "-").replace(" ", "_")
 
     # -----------------------------------------------------------
-    # Append Faktur Pajak (if uploaded) as lampiran pages.
+    # Build lampiran list: Faktur Pajak + all attachments from every
+    # work order that belongs to this invoice. Each item is converted
+    # to PDF bytes (images wrapped into an A4 page) and merged
+    # sequentially after the main invoice.
     # -----------------------------------------------------------
-    fp = inv.get("faktur_pajak_attachment") or {}
-    if fp.get("storage_path") and _HAS_PYPDF:
-        try:
-            fp_bytes, fp_ctype = get_object(fp["storage_path"])
-            fp_ext = (fp.get("ext") or "").lower()
-            fp_pdf_bytes: Optional[bytes] = None
-            if fp_ext == "pdf" or (fp_ctype or "").lower() == "application/pdf":
-                fp_pdf_bytes = fp_bytes
-            elif fp_ext in ("png", "jpg", "jpeg"):
-                # Wrap image into a single-page PDF via reportlab
+    def _to_pdf_bytes(raw: bytes, ext: str, ctype: str) -> Optional[bytes]:
+        ext = (ext or "").lower()
+        ctype = (ctype or "").lower()
+        if ext == "pdf" or ctype == "application/pdf":
+            return raw
+        if ext in ("png", "jpg", "jpeg") or ctype.startswith("image/"):
+            try:
                 img_buf = io.BytesIO()
                 img_doc = SimpleDocTemplate(
                     img_buf, pagesize=A4,
                     leftMargin=10 * mm, rightMargin=10 * mm,
                     topMargin=10 * mm, bottomMargin=10 * mm,
                 )
-                img_reader = RLImage(io.BytesIO(fp_bytes))
-                # Scale image to fit page width (~190mm)
-                max_w = 190 * mm
-                max_h = 260 * mm
+                img_reader = RLImage(io.BytesIO(raw))
+                max_w, max_h = 190 * mm, 260 * mm
                 try:
                     iw = img_reader.imageWidth
                     ih = img_reader.imageHeight
@@ -1988,28 +1986,72 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
                     img_reader.drawWidth = max_w
                     img_reader.drawHeight = max_h
                 img_doc.build([img_reader])
-                fp_pdf_bytes = img_buf.getvalue()
-            if fp_pdf_bytes:
-                writer = PdfWriter()
-                # Append main invoice
-                for page in PdfReader(io.BytesIO(buf.getvalue())).pages:
-                    writer.add_page(page)
-                # Append faktur pajak
-                for page in PdfReader(io.BytesIO(fp_pdf_bytes)).pages:
-                    writer.add_page(page)
-                merged = io.BytesIO()
-                writer.write(merged)
-                merged.seek(0)
-                return StreamingResponse(
-                    merged,
-                    media_type="application/pdf",
-                    headers={"Content-Disposition": f'inline; filename="{safe_no}.pdf"'},
-                )
+                return img_buf.getvalue()
+            except Exception:
+                return None
+        return None
+
+    lampiran_pdfs: List[bytes] = []
+    log = logging.getLogger("la-tracker")
+
+    # 1) Faktur Pajak
+    fp = inv.get("faktur_pajak_attachment") or {}
+    if fp.get("storage_path"):
+        try:
+            raw, ctype_fp = get_object(fp["storage_path"])
+            pdf_bytes = _to_pdf_bytes(raw, fp.get("ext") or "", ctype_fp or fp.get("content_type") or "")
+            if pdf_bytes:
+                lampiran_pdfs.append(pdf_bytes)
         except Exception as e:
-            logging.getLogger("la-tracker").warning(
-                "faktur pajak merge failed for %s: %s", inv_id, e
+            log.warning("faktur pajak fetch failed for %s: %s", inv_id, e)
+
+    # 2) Attachments from all work orders bound to this invoice
+    wo_ids = inv.get("work_order_ids") or []
+    if wo_ids:
+        try:
+            atts = await db.attachments.find(
+                {"workorder_id": {"$in": [str(w) for w in wo_ids]}, "is_deleted": False}
+            ).sort("created_at", 1).to_list(500)
+            for att in atts:
+                try:
+                    raw, ctype_a = get_object(att["storage_path"])
+                    fname_a = att.get("original_filename") or ""
+                    ext_a = (fname_a.rsplit(".", 1)[-1] if "." in fname_a else "").lower()
+                    pdf_bytes = _to_pdf_bytes(
+                        raw, ext_a, ctype_a or att.get("content_type") or "",
+                    )
+                    if pdf_bytes:
+                        lampiran_pdfs.append(pdf_bytes)
+                except Exception as e:
+                    log.warning(
+                        "wo attachment merge skipped (id=%s): %s",
+                        att.get("_id"), e,
+                    )
+        except Exception as e:
+            log.warning("wo attachments query failed for %s: %s", inv_id, e)
+
+    # 3) Merge everything if we have pypdf and any lampiran
+    if lampiran_pdfs and _HAS_PYPDF:
+        try:
+            writer = PdfWriter()
+            for page in PdfReader(io.BytesIO(buf.getvalue())).pages:
+                writer.add_page(page)
+            for pdf_b in lampiran_pdfs:
+                try:
+                    for page in PdfReader(io.BytesIO(pdf_b)).pages:
+                        writer.add_page(page)
+                except Exception as e:
+                    log.warning("skip lampiran page: %s", e)
+            merged = io.BytesIO()
+            writer.write(merged)
+            merged.seek(0)
+            return StreamingResponse(
+                merged,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f'inline; filename="{safe_no}.pdf"'},
             )
-            # fall through to return invoice without lampiran
+        except Exception as e:
+            log.warning("invoice pdf merge failed for %s: %s", inv_id, e)
 
     return StreamingResponse(
         buf,
@@ -2539,48 +2581,6 @@ async def delete_invoice(
 FP_ALLOWED_EXT = {"pdf", "png", "jpg", "jpeg"}
 
 
-def _extract_faktur_pajak_no(pdf_bytes: bytes) -> Optional[str]:
-    """Try to auto-detect the 16-digit Nomor Seri Faktur Pajak from PDF text.
-
-    Handles both plain format "0400260028205717" and dotted/dashed format
-    "040.026-00.28205717". Returns the pure 16-digit string, or None.
-    """
-    if not _HAS_PYPDF:
-        return None
-    try:
-        reader = PdfReader(io.BytesIO(pdf_bytes))
-        text_parts = []
-        for page in reader.pages[:3]:  # only first pages needed
-            try:
-                text_parts.append(page.extract_text() or "")
-            except Exception:
-                continue
-        text = "\n".join(text_parts)
-    except Exception:
-        return None
-    if not text:
-        return None
-    import re
-    # 1. Look for labeled line first (Indonesian invoices)
-    labeled = re.search(
-        r"Kode\s*dan\s*Nomor\s*Seri\s*Faktur\s*Pajak\s*[:\-]?\s*([\d.\-\s]{16,25})",
-        text, re.IGNORECASE,
-    )
-    if labeled:
-        digits = re.sub(r"\D", "", labeled.group(1))
-        if len(digits) == 16:
-            return digits
-    # 2. Dotted/dashed pattern anywhere
-    dotted = re.search(r"\b(\d{3})\.(\d{3})[-.](\d{2})\.(\d{8})\b", text)
-    if dotted:
-        return "".join(dotted.groups())
-    # 3. Bare 16-digit fallback (must not be part of longer number)
-    bare = re.search(r"(?<!\d)(\d{16})(?!\d)", text)
-    if bare:
-        return bare.group(1)
-    return None
-
-
 @api.post("/invoices/{inv_id}/faktur-pajak")
 async def upload_faktur_pajak(
     inv_id: str,
@@ -2603,12 +2603,6 @@ async def upload_faktur_pajak(
     if ext not in FP_ALLOWED_EXT:
         raise HTTPException(400, "Format harus PDF, PNG, atau JPG")
     ctype = file.content_type or MIME_TYPES.get(ext, "application/octet-stream")
-
-    # Try auto-extract for PDFs
-    detected_no: Optional[str] = None
-    if ext == "pdf":
-        detected_no = _extract_faktur_pajak_no(data)
-
     file_uuid = str(uuid.uuid4())
     path = f"{APP_NAME}/invoices/{inv_id}/faktur_pajak_{file_uuid}.{ext}"
     result = put_object(path, data, ctype)
@@ -2620,31 +2614,22 @@ async def upload_faktur_pajak(
         "ext": ext,
         "uploaded_by": user["email"],
         "uploaded_at": now_iso(),
-        "auto_detected_no": detected_no or "",
     }
     update_set: Dict[str, Any] = {
         "faktur_pajak_attachment": fp_attachment,
         "updated_at": now_iso(),
     }
-    # Resolve final faktur_pajak_no with priority:
-    #   1) explicit form field from client
-    #   2) auto-detected from PDF
-    #   3) keep existing value on the invoice
-    final_no = (faktur_pajak_no or "").strip()
-    if not final_no and detected_no:
-        final_no = detected_no
-    if final_no:
-        update_set["faktur_pajak_no"] = final_no
+    if faktur_pajak_no is not None:
+        update_set["faktur_pajak_no"] = (faktur_pajak_no or "").strip()
     await db.invoices.update_one({"_id": oid}, {"$set": update_set})
     await audit(
         "invoice.faktur_pajak.upload", user, target=inv_id,
-        meta={"filename": fname, "size": fp_attachment["size"], "no": final_no, "auto": bool(detected_no)},
+        meta={"filename": fname, "size": fp_attachment["size"], "no": update_set.get("faktur_pajak_no")},
     )
     return {
         "ok": True,
         "faktur_pajak_attachment": fp_attachment,
-        "faktur_pajak_no": final_no or inv.get("faktur_pajak_no", ""),
-        "auto_detected": bool(detected_no),
+        "faktur_pajak_no": update_set.get("faktur_pajak_no", inv.get("faktur_pajak_no", "")),
     }
 
 
