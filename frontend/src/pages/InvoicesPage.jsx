@@ -444,6 +444,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
     tanggal: initial?.tanggal || new Date().toISOString().slice(0, 10),
     tgl_kirim: initial?.tgl_kirim || "",
     tgl_bayar: initial?.tgl_bayar || "",
+    tgl_dibayar: initial?.tgl_dibayar || "",
     status: initial?.status || "OPEN",
     keterangan: initial?.keterangan || "",
   });
@@ -604,7 +605,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
         tanggal: meta.tanggal,
         tgl_kirim: meta.tgl_kirim,
         tgl_bayar: meta.tgl_bayar,
-        status: meta.status,
+        tgl_dibayar: meta.tgl_dibayar,
         keterangan: meta.keterangan,
         work_order_ids: Array.from(selected),
       };
@@ -734,7 +735,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
         tanggal: meta.tanggal,
         tgl_kirim: meta.tgl_kirim,
         tgl_bayar: meta.tgl_bayar,
-        status: meta.status,
+        tgl_dibayar: meta.tgl_dibayar,
         keterangan: meta.keterangan,
         work_order_ids: Array.from(selected),
       };
@@ -1221,18 +1222,18 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                 </div>
                 <div>
                   <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                    Status
+                    Status <span className="text-muted-foreground/70">(otomatis)</span>
                   </label>
-                  <select
+                  <div
                     data-testid="invoice-form-status"
-                    value={meta.status}
-                    onChange={(e) => setMeta({ ...meta, status: e.target.value })}
-                    className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm"
+                    className={`inline-flex items-center px-2.5 py-1.5 rounded-sm text-xs font-medium border ${STATUS_BADGE[(initial?.status || "OPEN")] || STATUS_BADGE.OPEN}`}
                   >
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </select>
+                    {initial?.status || "OPEN"}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1 leading-snug">
+                    Dihitung dari kelengkapan Faktur/Bupot/No eProc &amp; tanggal.
+                    Diperbarui otomatis setelah disimpan.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
@@ -1259,14 +1260,28 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                 </div>
                 <div>
                   <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                    Tanggal Bayar
+                    Tanggal Jatuh Tempo
                   </label>
                   <input
                     type="date"
+                    data-testid="invoice-form-tgl-jatuh-tempo"
                     value={meta.tgl_bayar}
                     onChange={(e) => setMeta({ ...meta, tgl_bayar: e.target.value })}
                     className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm"
                   />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                    Tanggal Dibayar
+                  </label>
+                  <input
+                    type="date"
+                    data-testid="invoice-form-tgl-dibayar"
+                    value={meta.tgl_dibayar}
+                    onChange={(e) => setMeta({ ...meta, tgl_dibayar: e.target.value })}
+                    className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Kosongkan bila belum dibayar.</p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">

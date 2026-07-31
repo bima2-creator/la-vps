@@ -2334,6 +2334,42 @@ def _wo_matches_activity(wo: dict, jenis_pekerjaan: str) -> bool:
     return _wo_ready_for_billing(wo, jp)
 
 
+def compute_invoice_status(inv: dict) -> str:
+    """Automatically derive invoice status from its data.
+    Fields used:
+      - tgl_bayar   = Tanggal Jatuh Tempo (due date, YYYY-MM-DD)
+      - tgl_dibayar = Tanggal Dibayar (actual payment date; empty = belum dibayar)
+      - tgl_kirim   = Tanggal Kirim/Submit
+      - faktur_pajak_attachment / bukti_potong_attachment / inv_no_eproc = kelengkapan dokumen
+    Rules:
+      PAID    -> sudah dibayar (tgl_dibayar terisi) dan <= jatuh tempo
+      OVERDUE -> dibayar melewati jatuh tempo, ATAU belum dibayar tapi sudah lewat jatuh tempo
+      OPEN    -> Faktur / Bukti Potong / No eProc belum lengkap
+      SENT    -> dokumen lengkap dan sudah ada Tanggal Kirim
+    """
+    due = (inv.get("tgl_bayar") or "").strip()
+    paid = (inv.get("tgl_dibayar") or "").strip()
+    sent = (inv.get("tgl_kirim") or "").strip()
+    today = datetime.now(timezone.utc).date().isoformat()
+
+    if paid:
+        # ISO date strings compare lexicographically
+        if due and paid > due:
+            return "OVERDUE"
+        return "PAID"
+    # belum dibayar
+    if due and today > due:
+        return "OVERDUE"
+    has_faktur = bool(inv.get("faktur_pajak_attachment"))
+    has_bupot = bool(inv.get("bukti_potong_attachment"))
+    has_eproc = bool((inv.get("inv_no_eproc") or "").strip())
+    if not (has_faktur and has_bupot and has_eproc):
+        return "OPEN"
+    if sent:
+        return "SENT"
+    return "OPEN"
+
+
 class InvoiceIn(BaseModel):
     pelanggans: List[str] = []
     jenis_pekerjaan: str
@@ -2343,6 +2379,7 @@ class InvoiceIn(BaseModel):
     tanggal: Optional[str] = ""
     tgl_kirim: Optional[str] = ""
     tgl_bayar: Optional[str] = ""
+    tgl_dibayar: Optional[str] = ""
     status: Optional[str] = "OPEN"
     keterangan: Optional[str] = ""
     work_order_ids: List[str] = []
@@ -2563,6 +2600,8 @@ async def list_invoices(
         # Backward compat: expose `pelanggans` list even for legacy single-pelanggan invoices
         if not d.get("pelanggans"):
             d["pelanggans"] = [d.get("pelanggan")] if d.get("pelanggan") else []
+        # Status is always auto-derived (recompute to reflect time-based OVERDUE)
+        d["status"] = compute_invoice_status(d)
     return docs
 
 
@@ -2662,6 +2701,7 @@ async def get_invoice(inv_id: str, user: dict = Depends(get_current_user)):
     d["id"] = str(d.pop("_id"))
     if not d.get("pelanggans"):
         d["pelanggans"] = [d.get("pelanggan")] if d.get("pelanggan") else []
+    d["status"] = compute_invoice_status(d)
     return d
 
 
@@ -2731,7 +2771,7 @@ async def create_invoice(
         "tanggal": payload.tanggal or "",
         "tgl_kirim": payload.tgl_kirim or "",
         "tgl_bayar": payload.tgl_bayar or "",
-        "status": (payload.status or "OPEN").upper(),
+        "tgl_dibayar": payload.tgl_dibayar or "",
         "keterangan": payload.keterangan or "",
         "work_order_ids": [w["id"] for w in wos],
         "work_orders_snapshot": [
@@ -2751,6 +2791,7 @@ async def create_invoice(
         "updated_at": now_iso(),
         "created_by": user.get("actor"),
     }
+    doc["status"] = compute_invoice_status(doc)
     res = await db.invoices.insert_one(doc)
     doc["id"] = str(res.inserted_id)
     doc.pop("_id", None)
@@ -2797,7 +2838,7 @@ async def update_invoice(
         "tanggal": payload.tanggal or "",
         "tgl_kirim": payload.tgl_kirim or "",
         "tgl_bayar": payload.tgl_bayar or "",
-        "status": (payload.status or "OPEN").upper(),
+        "tgl_dibayar": payload.tgl_dibayar or "",
         "keterangan": payload.keterangan or "",
         "work_order_ids": [w["id"] for w in wos],
         "work_orders_snapshot": [
@@ -2815,6 +2856,8 @@ async def update_invoice(
         **totals,
         "updated_at": now_iso(),
     }
+    # Auto-compute status from the merged data (keep existing faktur/bupot attachments).
+    upd["status"] = compute_invoice_status({**existing, **upd})
     await db.invoices.update_one({"_id": oid}, {"$set": upd})
     await audit("invoice.update", user, target=inv_id, meta={"pelanggans": pelanggans, "jp": jp})
     upd["id"] = inv_id
@@ -2883,6 +2926,7 @@ async def upload_faktur_pajak(
     }
     if faktur_pajak_no is not None:
         update_set["faktur_pajak_no"] = (faktur_pajak_no or "").strip()
+    update_set["status"] = compute_invoice_status({**inv, **update_set})
     await db.invoices.update_one({"_id": oid}, {"$set": update_set})
     await audit(
         "invoice.faktur_pajak.upload", user, target=inv_id,
@@ -2931,9 +2975,10 @@ async def delete_faktur_pajak(
     inv = await db.invoices.find_one({"_id": oid})
     if not inv:
         raise HTTPException(404, "Invoice tidak ditemukan")
+    merged = {k: v for k, v in inv.items() if k != "faktur_pajak_attachment"}
     await db.invoices.update_one(
         {"_id": oid},
-        {"$unset": {"faktur_pajak_attachment": ""}, "$set": {"updated_at": now_iso()}},
+        {"$unset": {"faktur_pajak_attachment": ""}, "$set": {"updated_at": now_iso(), "status": compute_invoice_status(merged)}},
     )
     await audit("invoice.faktur_pajak.delete", user, target=inv_id)
     return {"ok": True}
@@ -2980,7 +3025,7 @@ async def upload_bukti_potong(
     }
     await db.invoices.update_one(
         {"_id": oid},
-        {"$set": {"bukti_potong_attachment": bp_attachment, "updated_at": now_iso()}},
+        {"$set": {"bukti_potong_attachment": bp_attachment, "updated_at": now_iso(), "status": compute_invoice_status({**inv, "bukti_potong_attachment": bp_attachment})}},
     )
     await audit(
         "invoice.bukti_potong.upload", user, target=inv_id,
@@ -3024,9 +3069,10 @@ async def delete_bukti_potong(
     inv = await db.invoices.find_one({"_id": oid})
     if not inv:
         raise HTTPException(404, "Invoice tidak ditemukan")
+    merged = {k: v for k, v in inv.items() if k != "bukti_potong_attachment"}
     await db.invoices.update_one(
         {"_id": oid},
-        {"$unset": {"bukti_potong_attachment": ""}, "$set": {"updated_at": now_iso()}},
+        {"$unset": {"bukti_potong_attachment": ""}, "$set": {"updated_at": now_iso(), "status": compute_invoice_status(merged)}},
     )
     await audit("invoice.bukti_potong.delete", user, target=inv_id)
     return {"ok": True}
