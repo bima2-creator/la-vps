@@ -126,6 +126,68 @@ backend:
             - GET /api/auth/me with Bearer token returns correct user object (admin@la-tracker.com)
             - JWT authentication working as expected
 
+  - task: "AUTH REFACTOR - Username-based login with 3 fixed users"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            AUTH REFACTOR — login is now USERNAME-based (not email). Test:
+            1. POST /api/auth/login {"username":"admin","password":"admin123"} -> 200, token, username="admin", role="admin", email="support@almar.co.id"
+            2. POST /api/auth/login {"username":"operator","password":"operator"} -> 200, role="operator"
+            3. POST /api/auth/login {"username":"guest","password":"guest"} -> 200, role="viewer"
+            4. Wrong password -> 401 "Invalid username or password"
+            5. GET /api/auth/me with admin Bearer token -> user object incl. username, role, actor
+            6. RBAC: GET /api/users as admin -> 200 list with username for each of 3 users; GET /api/users as guest -> 403
+            7. Spot-check: create WO as admin, verify created_by="admin" (username), then delete
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - AUTH REFACTOR working correctly (7/7 tests passed):
+            
+            Test 1: Login admin/admin123
+            - HTTP 200 with valid JWT token
+            - Response includes: username="admin", role="admin", email="support@almar.co.id"
+            - Token format correct
+            
+            Test 2: Login operator/operator
+            - HTTP 200 with valid JWT token
+            - Response includes: username="operator", role="operator"
+            
+            Test 3: Login guest/guest
+            - HTTP 200 with valid JWT token
+            - Response includes: username="guest", role="viewer"
+            
+            Test 4: Wrong password
+            - HTTP 401 with detail "Invalid username or password"
+            - Correct error handling
+            
+            Test 5: GET /api/auth/me
+            - HTTP 200 with admin token
+            - User object includes: username="admin", role="admin", actor="admin", email="support@almar.co.id"
+            - Actor field correctly set to username
+            
+            Test 6: RBAC /api/users
+            - Admin token: HTTP 200, returns list of 3 users (admin, operator, guest)
+            - Each user has username field
+            - Guest token: HTTP 403 Forbidden (correct RBAC enforcement)
+            
+            Test 7: created_by uses username
+            - Created work order as admin with sa_id="AUTH_TEST_1785510196"
+            - GET /api/workorders/{id} returned created_by="admin" (username, not email)
+            - Work order deleted successfully for cleanup
+            
+            All HTTP status codes correct (200, 401, 403 as expected)
+            No 500 errors encountered
+            Username-based authentication fully functional
+            RBAC working correctly
+            created_by field now uses username instead of email
+
   - task: "Work Order Attachment PDF-only restriction"
     implemented: true
     working: true
@@ -458,11 +520,12 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 4
+  test_sequence: 5
   run_ui: true
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "AUTH REFACTOR - Username-based login with 3 fixed users"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -470,23 +533,18 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: |
-      NEW FEATURE — "More export options". Please test ONLY the two new endpoints
-      (the previous invoice features already passed and are unchanged):
-        1. Login as admin@la-tracker.com / admin123.
-        2. GET /api/workorders/import/template.xlsx
-           - Expect 200, spreadsheet content-type, filename workorders_import_template.xlsx.
-           - Open bytes with openpyxl; verify header row contains labels like "PELANGGAN"
-             and "BOQ JUMLAH", and there is exactly one example data row.
-           - Round-trip: POST the downloaded bytes to /api/workorders/import/xlsx and
-             expect {"inserted": >= 1}.
-        3. GET /api/invoices/export/xlsx
-           - Expect 200, spreadsheet content-type, filename invoices.xlsx.
-           - Open with openpyxl; verify header labels (NO INVOICE, PELANGGAN, GRAND TOTAL...).
-           - Verify it did NOT get captured by /api/invoices/{inv_id} (i.e. no 400 "Invalid id").
-           - With filter ?status=OPEN, verify only OPEN invoices are included (data rows count
-             matches GET /api/invoices?status=OPEN length).
-      Report any 500s, wrong status codes, route-shadowing (export path captured by {inv_id}),
-      or missing/blank headers.
+      AUTH REFACTOR — login is now USERNAME-based (not email). Please test:
+        1. POST /api/auth/login {"username":"admin","password":"admin123"} -> 200,
+           returns token + user with username="admin", role="admin", email="support@almar.co.id".
+        2. POST /api/auth/login {"username":"operator","password":"operator"} -> 200, role="operator".
+        3. POST /api/auth/login {"username":"guest","password":"guest"} -> 200, role="viewer".
+        4. Wrong password -> 401 "Invalid username or password".
+        5. GET /api/auth/me with admin Bearer token -> user object incl. username, role, actor.
+        6. RBAC: GET /api/users as admin -> 200 list with `username` for each of the 3 users;
+           GET /api/users as guest -> 403.
+        7. Spot-check: create a WO as admin then GET it; created_by should be "admin" (username),
+           not an email.
+      Only these 3 users can log in. Report any 401/403/500 anomalies or missing fields.
 
   - agent: "testing"
     message: |
@@ -641,3 +699,32 @@ agent_communication:
       - workorders_page.png (Work Orders page with table)
       
       CONCLUSION: UI redesign is working perfectly. All components render correctly, navigation works smoothly, sidebar collapse/expand functions properly, and there are no errors. The redesign successfully implements modern gradient branding, clean sidebar with proper grouping, professional dashboard with KPI cards and charts, and responsive collapse/expand functionality. Ready for production use.
+
+
+  - agent: "testing"
+    message: |
+      ✅ AUTH REFACTOR TESTING COMPLETE - ALL TESTS PASSED (7/7)
+      
+      Successfully tested the username-based authentication refactor with 3 fixed users (admin/operator/guest).
+      
+      TEST RESULTS:
+      1. ✅ Login admin/admin123 - HTTP 200, token + user object with username="admin", role="admin", email="support@almar.co.id"
+      2. ✅ Login operator/operator - HTTP 200, token + user object with username="operator", role="operator"
+      3. ✅ Login guest/guest - HTTP 200, token + user object with username="guest", role="viewer"
+      4. ✅ Wrong password - HTTP 401 with detail "Invalid username or password"
+      5. ✅ GET /api/auth/me - HTTP 200, user object includes username, role, actor fields
+      6. ✅ RBAC /api/users - Admin gets 200 with 3 users (each has username field), Guest gets 403 Forbidden
+      7. ✅ created_by uses username - Created WO as admin, verified created_by="admin" (username not email), deleted successfully
+      
+      Test Details:
+      - Created comprehensive test suite in /app/backend_auth_refactor_test.py
+      - Tested against production URL: https://project-bootstrap-18.preview.emergentagent.com/api
+      - All HTTP status codes correct (200, 401, 403 as expected)
+      - No 500 errors encountered
+      - Username-based authentication fully functional
+      - RBAC working correctly (admin can access /api/users, guest cannot)
+      - created_by field now uses username instead of email
+      - All 3 fixed users (admin, operator, guest) can log in successfully
+      - Actor field correctly set to username for audit trails
+      
+      RECOMMENDATION: AUTH REFACTOR is working correctly and ready for production use. All backend authentication tests passed.

@@ -42,7 +42,7 @@ export default function IdleTimeoutManager() {
   }, []);
 
   // Only run when authenticated
-  const active = !!(user && user.email);
+  const active = !!(user && (user.username || user.id || user.email));
 
   useEffect(() => {
     if (!active) return undefined;

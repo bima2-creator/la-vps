@@ -7,7 +7,7 @@ import { UserPlus, Trash } from "@phosphor-icons/react";
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "operator" });
+  const [form, setForm] = useState({ name: "", username: "", email: "", password: "", role: "operator" });
   const [creating, setCreating] = useState(false);
 
   const load = async () => {
@@ -31,7 +31,7 @@ export default function UsersPage() {
     try {
       await api.post("/users", form);
       toast.success("User created");
-      setForm({ name: "", email: "", password: "", role: "operator" });
+      setForm({ name: "", username: "", email: "", password: "", role: "operator" });
       load();
     } catch (err) {
       toast.error(formatApiError(err.response?.data?.detail) || "Create failed");
@@ -66,7 +66,7 @@ export default function UsersPage() {
 
       <form onSubmit={create} className="border border-border bg-card rounded-sm p-5 space-y-3">
         <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">New User</div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <input
             data-testid={USERS.nameInput}
             required
@@ -78,8 +78,16 @@ export default function UsersPage() {
           <input
             data-testid={USERS.emailInput}
             required
+            type="text"
+            placeholder="Username"
+            value={form.username}
+            onChange={(e) => setForm({ ...form, username: e.target.value })}
+            className="bg-secondary border border-border rounded-sm px-3 py-2 text-sm mono"
+          />
+          <input
+            data-testid="users-email-input"
             type="email"
-            placeholder="Email"
+            placeholder="Email (optional)"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             className="bg-secondary border border-border rounded-sm px-3 py-2 text-sm mono"
@@ -88,11 +96,11 @@ export default function UsersPage() {
             data-testid={USERS.passwordInput}
             required
             type="password"
-            placeholder="Password (min 6)"
+            placeholder="Password (min 4)"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             className="bg-secondary border border-border rounded-sm px-3 py-2 text-sm"
-            minLength={6}
+            minLength={4}
           />
           <select
             data-testid={USERS.roleSelect}
@@ -119,6 +127,7 @@ export default function UsersPage() {
           <thead className="bg-slate-50 border-b border-border">
             <tr className="text-left text-[10px] uppercase tracking-widest text-muted-foreground">
               <th>Name</th>
+              <th>Username</th>
               <th>Email</th>
               <th>Role</th>
               <th>Created</th>
@@ -128,7 +137,7 @@ export default function UsersPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={5} className="text-center py-6 text-muted-foreground mono">
+                <td colSpan={6} className="text-center py-6 text-muted-foreground mono">
                   Loading…
                 </td>
               </tr>
@@ -136,7 +145,8 @@ export default function UsersPage() {
             {users.map((u, i) => (
               <tr key={u.id} className={`border-b border-border/60 ${i % 2 ? "bg-slate-50/60" : ""}`}>
                 <td>{u.name}</td>
-                <td className="mono">{u.email}</td>
+                <td className="mono">{u.username}</td>
+                <td className="mono text-xs text-muted-foreground">{u.email || "—"}</td>
                 <td>
                   <span className={`text-[10px] uppercase tracking-widest border px-2 py-0.5 rounded-sm ${roleColors[u.role] || ""}`}>
                     {u.role}

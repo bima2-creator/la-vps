@@ -9,7 +9,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ export default function LoginPage() {
     setErr("");
     setLoading(true);
     try {
-      await login(email, password);
+      await login(username, password);
       const to = loc.state?.from?.pathname || "/dashboard";
       nav(to, { replace: true });
     } catch (e) {
@@ -83,16 +83,17 @@ export default function LoginPage() {
           <div className="mt-8 space-y-4">
             <div>
               <label className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                Email
+                Username
               </label>
               <input
                 data-testid={LOGIN.emailInput}
-                type="email"
+                type="text"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full bg-secondary border border-border rounded-sm px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                placeholder="you@company.com"
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="mt-1 w-full bg-secondary border border-border rounded-sm px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mono transition-colors"
+                placeholder="username"
               />
             </div>
             <div>

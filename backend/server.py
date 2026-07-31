@@ -135,10 +135,10 @@ def verify_password(pw: str, hashed: str) -> bool:
         return False
 
 
-def create_access_token(user_id: str, email: str, role: str) -> str:
+def create_access_token(user_id: str, username: str, role: str) -> str:
     payload = {
         "sub": user_id,
-        "email": email,
+        "username": username,
         "role": role,
         "type": "access",
         "exp": datetime.now(timezone.utc) + timedelta(hours=8),
@@ -183,6 +183,10 @@ async def get_current_user(request: Request) -> dict:
         user["id"] = str(user["_id"])
         user.pop("_id", None)
         user.pop("password_hash", None)
+        user.setdefault("username", user.get("email", ""))
+        user.setdefault("email", "")
+        # `actor` is the stable identity string used for created_by / audit trails
+        user["actor"] = user.get("username") or user.get("email") or "system"
         return user
     except jwt.ExpiredSignatureError:
         raise HTTPException(401, "Token expired")
@@ -202,22 +206,24 @@ def require_roles(*roles: str):
 # Models
 # ------------------------------------------------------------------
 class RegisterIn(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=6)
+    username: str = Field(min_length=1)
+    password: str = Field(min_length=4)
     name: str = Field(min_length=1)
     role: str = Field(default="operator", pattern="^(admin|operator|viewer)$")
+    email: Optional[str] = ""
 
 
 class LoginIn(BaseModel):
-    email: EmailStr
+    username: str
     password: str
 
 
 class UserOut(BaseModel):
     id: str
-    email: str
+    username: str
     name: str
     role: str
+    email: Optional[str] = ""
 
 
 # ---- Work Order sub-schemas ----
@@ -356,7 +362,7 @@ async def audit(action: str, user: dict, workorder_id: Optional[str] = None, tar
         await db.audit_logs.insert_one({
             "action": action,
             "user_id": user.get("id"),
-            "user_email": user.get("email"),
+            "user_email": user.get("actor") or user.get("email"),
             "user_role": user.get("role"),
             "workorder_id": workorder_id,
             "target": target,
@@ -372,7 +378,7 @@ async def audit(action: str, user: dict, workorder_id: Optional[str] = None, tar
 # ------------------------------------------------------------------
 @app.on_event("startup")
 async def on_startup() -> None:
-    await db.users.create_index("email", unique=True)
+    await seed_fixed_users()
     await db.workorders.create_index("pelanggan")
     await db.workorders.create_index("sa_id")
     await db.workorders.create_index("inv_status")
@@ -392,24 +398,80 @@ async def on_startup() -> None:
     if init_storage():
         log.info("Object storage initialized")
 
-    admin_email = os.environ.get("ADMIN_EMAIL", "admin@la-tracker.com")
-    admin_pw = os.environ.get("ADMIN_PASSWORD", "admin123")
-    existing = await db.users.find_one({"email": admin_email})
-    if existing is None:
-        await db.users.insert_one({
-            "email": admin_email,
-            "password_hash": hash_password(admin_pw),
-            "name": "Administrator",
-            "role": "admin",
-            "created_at": now_iso(),
-        })
-        log.info("Seeded admin user: %s", admin_email)
-    elif not verify_password(admin_pw, existing["password_hash"]):
-        await db.users.update_one(
-            {"email": admin_email},
-            {"$set": {"password_hash": hash_password(admin_pw)}},
-        )
-        log.info("Reset admin password for: %s", admin_email)
+
+# The application supports exactly three fixed login accounts.
+# Passwords are read from env when provided, otherwise fall back to the defaults.
+FIXED_USERS = [
+    {
+        "username": "admin",
+        "password": os.environ.get("ADMIN_PASSWORD", "admin123"),
+        "name": "Administrator",
+        "role": "admin",
+        # Admin notification/alert address (SLA, Invoice, dll.)
+        "email": os.environ.get("ADMIN_EMAIL", "support@almar.co.id"),
+    },
+    {
+        "username": "operator",
+        "password": os.environ.get("OPERATOR_PASSWORD", "operator"),
+        "name": "Operator",
+        "role": "operator",
+        "email": "",
+    },
+    {
+        "username": "guest",
+        "password": os.environ.get("GUEST_PASSWORD", "guest"),
+        "name": "Guest",
+        "role": "viewer",
+        "email": "",
+    },
+]
+
+
+async def seed_fixed_users() -> None:
+    """Ensure exactly the three fixed accounts exist (admin/operator/guest).
+    Idempotent: creates missing accounts, keeps passwords/roles in sync, and
+    removes any other accounts so only these three can log in."""
+    usernames = [u["username"] for u in FIXED_USERS]
+
+    # Clean up the legacy unique index on `email` (operator/guest have no email).
+    try:
+        await db.users.drop_index("email_1")
+    except Exception:
+        pass
+
+    # Remove any accounts that are not part of the fixed set.
+    try:
+        await db.users.delete_many({"username": {"$nin": usernames}})
+    except Exception:
+        pass
+
+    for u in FIXED_USERS:
+        doc_set = {
+            "username": u["username"],
+            "name": u["name"],
+            "role": u["role"],
+            "email": u.get("email", ""),
+        }
+        existing = await db.users.find_one({"username": u["username"]})
+        if existing is None:
+            await db.users.insert_one({
+                **doc_set,
+                "password_hash": hash_password(u["password"]),
+                "created_at": now_iso(),
+            })
+            log.info("Seeded user: %s (%s)", u["username"], u["role"])
+        else:
+            update = {"$set": doc_set}
+            # Keep password in sync with the configured value.
+            if not verify_password(u["password"], existing.get("password_hash", "")):
+                update["$set"]["password_hash"] = hash_password(u["password"])
+            await db.users.update_one({"_id": existing["_id"]}, update)
+
+    # Unique index on username (safe now that data is clean).
+    try:
+        await db.users.create_index("username", unique=True)
+    except Exception as e:
+        log.warning("Could not create username index: %s", e)
 
 
 @app.on_event("shutdown")
@@ -430,12 +492,13 @@ async def health_root():
 # ------------------------------------------------------------------
 @api.post("/auth/register")
 async def register(payload: RegisterIn, response: Response):
-    email = payload.email.lower()
-    existing = await db.users.find_one({"email": email})
+    username = payload.username.strip().lower()
+    existing = await db.users.find_one({"username": username})
     if existing:
-        raise HTTPException(400, "Email already registered")
+        raise HTTPException(400, "Username already registered")
     doc = {
-        "email": email,
+        "username": username,
+        "email": (payload.email or "").strip().lower(),
         "password_hash": hash_password(payload.password),
         "name": payload.name,
         "role": payload.role,
@@ -443,23 +506,23 @@ async def register(payload: RegisterIn, response: Response):
     }
     res = await db.users.insert_one(doc)
     uid = str(res.inserted_id)
-    access = create_access_token(uid, email, payload.role)
+    access = create_access_token(uid, username, payload.role)
     refresh = create_refresh_token(uid)
     set_auth_cookies(response, access, refresh)
-    return {"id": uid, "email": email, "name": payload.name, "role": payload.role, "token": access}
+    return {"id": uid, "username": username, "email": doc["email"], "name": payload.name, "role": payload.role, "token": access}
 
 
 @api.post("/auth/login")
 async def login(payload: LoginIn, response: Response):
-    email = payload.email.lower()
-    user = await db.users.find_one({"email": email})
+    username = payload.username.strip().lower()
+    user = await db.users.find_one({"username": username})
     if not user or not verify_password(payload.password, user["password_hash"]):
-        raise HTTPException(401, "Invalid email or password")
+        raise HTTPException(401, "Invalid username or password")
     uid = str(user["_id"])
-    access = create_access_token(uid, email, user["role"])
+    access = create_access_token(uid, username, user["role"])
     refresh = create_refresh_token(uid)
     set_auth_cookies(response, access, refresh)
-    return {"id": uid, "email": email, "name": user["name"], "role": user["role"], "token": access}
+    return {"id": uid, "username": username, "email": user.get("email", ""), "name": user["name"], "role": user["role"], "token": access}
 
 
 @api.post("/auth/logout")
@@ -486,7 +549,7 @@ async def refresh_token(request: Request, response: Response):
         user = await db.users.find_one({"_id": ObjectId(uid)})
         if not user:
             raise HTTPException(401, "User not found")
-        access = create_access_token(uid, user["email"], user["role"])
+        access = create_access_token(uid, user.get("username", ""), user["role"])
         response.set_cookie("access_token", access, httponly=True, secure=True, samesite="none", max_age=28800, path="/")
         return {"token": access}
     except jwt.InvalidTokenError:
@@ -499,24 +562,25 @@ async def refresh_token(request: Request, response: Response):
 @api.get("/users")
 async def list_users(user: dict = Depends(require_roles("admin"))):
     users = await db.users.find({}, {"password_hash": 0}).to_list(500)
-    return [{"id": str(u["_id"]), "email": u["email"], "name": u["name"], "role": u["role"],
-             "created_at": u.get("created_at")} for u in users]
+    return [{"id": str(u["_id"]), "username": u.get("username", ""), "email": u.get("email", ""),
+             "name": u["name"], "role": u["role"], "created_at": u.get("created_at")} for u in users]
 
 
 @api.post("/users")
 async def create_user(payload: RegisterIn, user: dict = Depends(require_roles("admin"))):
-    email = payload.email.lower()
-    if await db.users.find_one({"email": email}):
-        raise HTTPException(400, "Email already exists")
+    username = payload.username.strip().lower()
+    if await db.users.find_one({"username": username}):
+        raise HTTPException(400, "Username already exists")
     doc = {
-        "email": email,
+        "username": username,
+        "email": (payload.email or "").strip().lower(),
         "password_hash": hash_password(payload.password),
         "name": payload.name,
         "role": payload.role,
         "created_at": now_iso(),
     }
     res = await db.users.insert_one(doc)
-    return {"id": str(res.inserted_id), "email": email, "name": payload.name, "role": payload.role}
+    return {"id": str(res.inserted_id), "username": username, "email": doc["email"], "name": payload.name, "role": payload.role}
 
 
 @api.delete("/users/{user_id}")
@@ -704,7 +768,7 @@ async def create_workorder(payload: WorkOrderIn, user: dict = Depends(require_ro
     await _validate_perangkat_uniqueness(doc)
     doc["created_at"] = now_iso()
     doc["updated_at"] = now_iso()
-    doc["created_by"] = user["email"]
+    doc["created_by"] = user["actor"]
     res = await db.workorders.insert_one(doc)
     doc["_id"] = res.inserted_id
     await audit("workorder.create", user, workorder_id=str(res.inserted_id), meta={"pelanggan": doc.get("pelanggan")})
@@ -921,7 +985,7 @@ async def import_workorders(file: UploadFile = File(...), user: dict = Depends(r
                     doc[k] = 0
             doc["created_at"] = now_iso()
             doc["updated_at"] = now_iso()
-            doc["created_by"] = user["email"]
+            doc["created_by"] = user["actor"]
             docs.append(doc)
     else:
         # Fallback: expect flat headers in row 0 matching EXPORT_COLUMNS labels
@@ -950,7 +1014,7 @@ async def import_workorders(file: UploadFile = File(...), user: dict = Depends(r
                     doc[k] = 0
             doc["created_at"] = now_iso()
             doc["updated_at"] = now_iso()
-            doc["created_by"] = user["email"]
+            doc["created_by"] = user["actor"]
             docs.append(doc)
 
     if not docs:
@@ -1521,7 +1585,7 @@ async def export_pdf_list(
 
     elems: List[Any] = []
     elems.append(Paragraph("LA TRACKER · Work Order Report", styles["Title"]))
-    elems.append(Paragraph(f"Generated {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} by {user['email']}", styles["Normal"]))
+    elems.append(Paragraph(f"Generated {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} by {user['actor']}", styles["Normal"]))
     elems.append(Spacer(1, 6))
     elems.append(Paragraph(f"Total records: <b>{len(docs)}</b>", styles["Normal"]))
     elems.append(Spacer(1, 10))
@@ -2143,7 +2207,7 @@ async def upload_attachment(wo_id: str, file: UploadFile = File(...), user: dict
         "original_filename": file.filename,
         "content_type": ctype,
         "size": result.get("size", len(data)),
-        "uploaded_by": user["email"],
+        "uploaded_by": user["actor"],
         "created_at": now_iso(),
         "is_deleted": False,
     }
@@ -2673,7 +2737,7 @@ async def create_invoice(
         **totals,
         "created_at": now_iso(),
         "updated_at": now_iso(),
-        "created_by": user.get("email"),
+        "created_by": user.get("actor"),
     }
     res = await db.invoices.insert_one(doc)
     doc["id"] = str(res.inserted_id)
@@ -2798,7 +2862,7 @@ async def upload_faktur_pajak(
         "content_type": ctype,
         "size": result.get("size", len(data)),
         "ext": "pdf",
-        "uploaded_by": user["email"],
+        "uploaded_by": user["actor"],
         "uploaded_at": now_iso(),
     }
     update_set: Dict[str, Any] = {
@@ -2899,7 +2963,7 @@ async def upload_bukti_potong(
         "content_type": ctype,
         "size": result.get("size", len(data)),
         "ext": "pdf",
-        "uploaded_by": user["email"],
+        "uploaded_by": user["actor"],
         "uploaded_at": now_iso(),
     }
     await db.invoices.update_one(
