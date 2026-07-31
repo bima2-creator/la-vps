@@ -1,0 +1,1271 @@
+[
+  {
+    "code": "47624",
+    "name": "Anting anting sling",
+    "satuan": "unit",
+    "keterangan": "Anting anting sling",
+    "jasa": 0,
+    "material": 10000,
+    "total": 10000
+  },
+  {
+    "code": "41666",
+    "name": "Ballast",
+    "satuan": "unit",
+    "keterangan": "TINDAK LANJUT-Pointing & Aktivasi (commisioning)",
+    "jasa": 26250,
+    "material": 69300,
+    "total": 95550
+  },
+  {
+    "code": "36734",
+    "name": "Landasan VSAT ( Material dan Jasa )",
+    "satuan": "Meter\u1d9f",
+    "keterangan": "TINDAK LANJUT-Pointing & Aktivasi (commisioning)",
+    "jasa": 1890000,
+    "material": 0,
+    "total": 1890000
+  },
+  {
+    "code": "26273",
+    "name": "Pointing & Aktivasi ( BWA, WLL & VSAT )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Pointing & Aktivasi (commisioning)",
+    "jasa": 472500,
+    "material": 0,
+    "total": 472500
+  },
+  {
+    "code": "55588",
+    "name": "Pointing & Aktivasi ( RADIO LINK )",
+    "satuan": "HOP",
+    "keterangan": "TINDAK LANJUT-Pointing & Aktivasi (commisioning)",
+    "jasa": 945000,
+    "material": 0,
+    "total": 945000
+  },
+  {
+    "code": "46037",
+    "name": "Pointing & Aktivasi ( RADIO LINK )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Pointing & Aktivasi (commisioning)",
+    "jasa": 472500,
+    "material": 0,
+    "total": 472500
+  },
+  {
+    "code": "32574",
+    "name": "Sangkar Faraday Parabolic",
+    "satuan": "unit",
+    "keterangan": "TINDAK LANJUT-Pointing & Aktivasi (commisioning)",
+    "jasa": 157500,
+    "material": 420000,
+    "total": 577500
+  },
+  {
+    "code": "64004",
+    "name": "Sangkar faraday VSAT",
+    "satuan": "unit",
+    "keterangan": "TINDAK LANJUT-Pointing & Aktivasi (commisioning)",
+    "jasa": 315000,
+    "material": 840000,
+    "total": 1155000
+  },
+  {
+    "code": "46305",
+    "name": "Baut 14 (Dinabolt)",
+    "satuan": "unit",
+    "keterangan": "Baut 14 (Dinabolt)",
+    "jasa": 1125,
+    "material": 5175,
+    "total": 6300
+  },
+  {
+    "code": "39776",
+    "name": "Bulldog grip",
+    "satuan": "unit",
+    "keterangan": "Bulldog grip",
+    "jasa": 1125,
+    "material": 7000,
+    "total": 8125
+  },
+  {
+    "code": "71985",
+    "name": "Cabut perangkat RADIO LINK Diameter 1,2 m ( Antena, modem, RF, dll )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-cabut",
+    "jasa": 749000,
+    "material": 0,
+    "total": 749000
+  },
+  {
+    "code": "96428",
+    "name": "Cabut perangkat RADIO LINK Diameter 0,6 m ( Antena, modem, RF, dll )",
+    "satuan": "HOP",
+    "keterangan": "TINDAK LANJUT-cabut",
+    "jasa": 1177000,
+    "material": 0,
+    "total": 1177000
+  },
+  {
+    "code": "59374",
+    "name": "Cabut perangkat RADIO LINK Diameter 0,6 m ( Antena, modem, RF, dll )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-cabut",
+    "jasa": 588500,
+    "material": 0,
+    "total": 588500
+  },
+  {
+    "code": "78259",
+    "name": "Cabut perangkat RADIO LINK Diameter 1,2 m ( Antena, modem, RF, dll )",
+    "satuan": "HOP",
+    "keterangan": "TINDAK LANJUT-cabut",
+    "jasa": 1498000,
+    "material": 0,
+    "total": 1498000
+  },
+  {
+    "code": "95794",
+    "name": "Cabut perangkat BWA ( Antena, modem dll )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-cabut",
+    "jasa": 428000,
+    "material": 0,
+    "total": 428000
+  },
+  {
+    "code": "73150",
+    "name": "Cabut perangkat VSAT Reflector 1,8 m ( Mounting, Modem, Feedhorn, Canester, Reflector dll )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-cabut",
+    "jasa": 749000,
+    "material": 0,
+    "total": 749000
+  },
+  {
+    "code": "21081",
+    "name": "Cabut perangkat VSAT Reflector 2,4 m ( Mounting, Modem, Feedhorn, Canester, Reflector dll )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-cabut",
+    "jasa": 963000,
+    "material": 0,
+    "total": 963000
+  },
+  {
+    "code": "15458",
+    "name": "Cabut perangkat VSAT Reflector 3,8 m ( Mounting, Modem, Feedhorn, Canester, Reflector dll )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-cabut",
+    "jasa": 1284000,
+    "material": 0,
+    "total": 1284000
+  },
+  {
+    "code": "34473",
+    "name": "dynabolt 12",
+    "satuan": "paket",
+    "keterangan": "TINDAK LANJUT-cabut",
+    "jasa": 1125,
+    "material": 5000,
+    "total": 6125
+  },
+  {
+    "code": "80630",
+    "name": "dynabolt 14",
+    "satuan": "paket",
+    "keterangan": "TINDAK LANJUT-cabut",
+    "jasa": 1875,
+    "material": 5000,
+    "total": 6875
+  },
+  {
+    "code": "69977",
+    "name": "Cancel Jabodetabek",
+    "satuan": "paket",
+    "keterangan": "PM Remote-Cancel PM Remote ( Transportasi only )",
+    "jasa": 240750,
+    "material": 0,
+    "total": 240750
+  },
+  {
+    "code": "89956",
+    "name": "Cancel Non Jabodetabek ( kecuali Pulau Seribu )",
+    "satuan": "paket",
+    "keterangan": "PM Remote-Cancel PM Remote ( Transportasi only )",
+    "jasa": 337050,
+    "material": 0,
+    "total": 337050
+  },
+  {
+    "code": "22765",
+    "name": "Cancel Pulau Seribu",
+    "satuan": "paket",
+    "keterangan": "PM Remote-Cancel PM Remote ( Transportasi only )",
+    "jasa": 433350,
+    "material": 0,
+    "total": 433350
+  },
+  {
+    "code": "96224",
+    "name": "Cikampek, Sukabumi ( Kota )",
+    "satuan": "site",
+    "keterangan": "PM Remote-Transportasi",
+    "jasa": 495000,
+    "material": 0,
+    "total": 495000
+  },
+  {
+    "code": "55761",
+    "name": "Cikarang, karawang , Bogor",
+    "satuan": "site",
+    "keterangan": "PM Remote-Transportasi",
+    "jasa": 396000,
+    "material": 0,
+    "total": 396000
+  },
+  {
+    "code": "85541",
+    "name": "Cilegon - ( Merak )",
+    "satuan": "site",
+    "keterangan": "PM Remote-Transportasi",
+    "jasa": 550000,
+    "material": 0,
+    "total": 550000
+  },
+  {
+    "code": "60226",
+    "name": "Jakarta, Bekasi, Depok, Tangerang kota",
+    "satuan": "site",
+    "keterangan": "PM Remote-Transportasi",
+    "jasa": 275000,
+    "material": 0,
+    "total": 275000
+  },
+  {
+    "code": "98925",
+    "name": "Pandeglang (Ujung Kulon)",
+    "satuan": "site",
+    "keterangan": "PM Remote-Transportasi",
+    "jasa": 1000000,
+    "material": 0,
+    "total": 1000000
+  },
+  {
+    "code": "35470",
+    "name": "Pulau Seribu",
+    "satuan": "site",
+    "keterangan": "PM Remote-Transportasi",
+    "jasa": 1750000,
+    "material": 0,
+    "total": 1750000
+  },
+  {
+    "code": "40114",
+    "name": "Serang Timur ( kota ) - Banten Lama",
+    "satuan": "site",
+    "keterangan": "PM Remote-Transportasi",
+    "jasa": 495000,
+    "material": 0,
+    "total": 495000
+  },
+  {
+    "code": "68322",
+    "name": "Tangerang, Cikupa",
+    "satuan": "site",
+    "keterangan": "PM Remote-Transportasi",
+    "jasa": 396000,
+    "material": 0,
+    "total": 396000
+  },
+  {
+    "code": "58871",
+    "name": "Connection kit",
+    "satuan": "unit",
+    "keterangan": "Connection kit",
+    "jasa": 7650,
+    "material": 0,
+    "total": 7650
+  },
+  {
+    "code": "16751",
+    "name": "Duckmount (1 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 157500,
+    "material": 630000,
+    "total": 787500
+  },
+  {
+    "code": "97405",
+    "name": "Duckmount (1,5 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 157500,
+    "material": 669768,
+    "total": 827268
+  },
+  {
+    "code": "17960",
+    "name": "Duckmount (2 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 210000,
+    "material": 736746,
+    "total": 946746
+  },
+  {
+    "code": "71157",
+    "name": "Duckmount (2,5 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 210000,
+    "material": 770233,
+    "total": 980233
+  },
+  {
+    "code": "35963",
+    "name": "Duckmount (3 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 262500,
+    "material": 870699,
+    "total": 1133199
+  },
+  {
+    "code": "47647",
+    "name": "Duckmount (3,5 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 262500,
+    "material": 937676,
+    "total": 1200176
+  },
+  {
+    "code": "28193",
+    "name": "Duckmount (4 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 315000,
+    "material": 1004653,
+    "total": 1319653
+  },
+  {
+    "code": "61975",
+    "name": "Duckmount (4,5 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 315000,
+    "material": 1071630,
+    "total": 1386630
+  },
+  {
+    "code": "45716",
+    "name": "Duckmount (5 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 315000,
+    "material": 1203483,
+    "total": 1518483
+  },
+  {
+    "code": "98557",
+    "name": "Triangle Tower (10 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 735000,
+    "material": 4725000,
+    "total": 5460000
+  },
+  {
+    "code": "75425",
+    "name": "Triangle Tower (15 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 945000,
+    "material": 6825000,
+    "total": 7770000
+  },
+  {
+    "code": "23900",
+    "name": "Triangle Tower (20 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 1260000,
+    "material": 9450000,
+    "total": 10710000
+  },
+  {
+    "code": "50913",
+    "name": "Triangle Tower (25 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 1470000,
+    "material": 11812500,
+    "total": 13282500
+  },
+  {
+    "code": "42756",
+    "name": "Triangle Tower (30 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 1680000,
+    "material": 14175000,
+    "total": 15855000
+  },
+  {
+    "code": "83021",
+    "name": "Triangle Tower (5 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 420000,
+    "material": 2362500,
+    "total": 2782500
+  },
+  {
+    "code": "16463",
+    "name": "Wallmount (1 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 157500,
+    "material": 401861,
+    "total": 559361
+  },
+  {
+    "code": "64403",
+    "name": "Wallmount (1,5 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 157500,
+    "material": 435669,
+    "total": 593169
+  },
+  {
+    "code": "43075",
+    "name": "Wallmount (2 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 210000,
+    "material": 636280,
+    "total": 846280
+  },
+  {
+    "code": "33056",
+    "name": "Wallmount (2,5 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 210000,
+    "material": 669768,
+    "total": 879768
+  },
+  {
+    "code": "14199",
+    "name": "Wallmount (3 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 236250,
+    "material": 736746,
+    "total": 972996
+  },
+  {
+    "code": "81864",
+    "name": "Wallmount (3,5 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 236250,
+    "material": 803722,
+    "total": 1039972
+  },
+  {
+    "code": "19456",
+    "name": "Wallmount (4 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 283500,
+    "material": 892500,
+    "total": 1176000
+  },
+  {
+    "code": "57397",
+    "name": "Wallmount (4,5 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 283500,
+    "material": 937676,
+    "total": 1221176
+  },
+  {
+    "code": "23460",
+    "name": "Wallmount (5 M)",
+    "satuan": "unit",
+    "keterangan": "Pole/Mounting : ( Diameter 2,5, tebal 2 mm )",
+    "jasa": 283500,
+    "material": 1050000,
+    "total": 1333500
+  },
+  {
+    "code": "49407",
+    "name": "Element + tiang s/d 6 M Splitzen 1",
+    "satuan": "unit",
+    "keterangan": "Penangkal Petir",
+    "jasa": 157500,
+    "material": 642000,
+    "total": 799500
+  },
+  {
+    "code": "54813",
+    "name": "Penarikan kabel dari penangkal petir ke Bak kontrol ( NYY 1 x 70 mm 2 )",
+    "satuan": "meter",
+    "keterangan": "Penangkal Petir",
+    "jasa": 12600,
+    "material": 144450,
+    "total": 157050
+  },
+  {
+    "code": "89090",
+    "name": "Pentanahan penangkal petir 3,1 M - 6 M + Pipa tembaga",
+    "satuan": "unit",
+    "keterangan": "Penangkal Petir",
+    "jasa": 315000,
+    "material": 1070000,
+    "total": 1385000
+  },
+  {
+    "code": "32380",
+    "name": "Pentanahan penangkal petir 6,1 M -12 M + Pipa tembaga",
+    "satuan": "unit",
+    "keterangan": "Penangkal Petir",
+    "jasa": 472500,
+    "material": 2140000,
+    "total": 2612500
+  },
+  {
+    "code": "67758",
+    "name": "Pentanahan penangkal petir Bak Kontrol ( 30 cm x 30 cm x 30 cm )",
+    "satuan": "unit",
+    "keterangan": "Penangkal Petir",
+    "jasa": 78750,
+    "material": 214000,
+    "total": 292750
+  },
+  {
+    "code": "64976",
+    "name": "Pentanahan penangkal petir s/d 3 M + Pipa tembaga",
+    "satuan": "unit",
+    "keterangan": "Penangkal Petir",
+    "jasa": 210000,
+    "material": 535000,
+    "total": 745000
+  },
+  {
+    "code": "55652",
+    "name": "Instalasi BWA",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Instalasi",
+    "jasa": 472500,
+    "material": 0,
+    "total": 472500
+  },
+  {
+    "code": "86989",
+    "name": "Instalasi VSAT Reflector 1,8 m",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Instalasi",
+    "jasa": 945000,
+    "material": 0,
+    "total": 945000
+  },
+  {
+    "code": "55558",
+    "name": "Instalasi VSAT Reflector 2,4 m",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Instalasi",
+    "jasa": 1155000,
+    "material": 0,
+    "total": 1155000
+  },
+  {
+    "code": "10523",
+    "name": "Instalasi VSAT Reflector 3,6 m",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Instalasi",
+    "jasa": 1575000,
+    "material": 0,
+    "total": 1575000
+  },
+  {
+    "code": "13096",
+    "name": "Instalasi Radio Link Diameter 0,6 m",
+    "satuan": "HOP",
+    "keterangan": "TINDAK LANJUT-Instalasi",
+    "jasa": 966000,
+    "material": 0,
+    "total": 966000
+  },
+  {
+    "code": "18672",
+    "name": "Instalasi Radio Link Diameter 0,6 m",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Instalasi",
+    "jasa": 483000,
+    "material": 0,
+    "total": 483000
+  },
+  {
+    "code": "58453",
+    "name": "Instalasi Radio Link Diameter 1,2 m",
+    "satuan": "HOP",
+    "keterangan": "TINDAK LANJUT-Instalasi",
+    "jasa": 1159200,
+    "material": 0,
+    "total": 1159200
+  },
+  {
+    "code": "50323",
+    "name": "Instalasi Radio Link Diameter 1,2 m",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Instalasi",
+    "jasa": 579600,
+    "material": 0,
+    "total": 579600
+  },
+  {
+    "code": "30755",
+    "name": "Jarum kencang",
+    "satuan": "unit",
+    "keterangan": "Jarum kencang",
+    "jasa": 1125,
+    "material": 17000,
+    "total": 18125
+  },
+  {
+    "code": "26295",
+    "name": "Kabel BC 25",
+    "satuan": "meter",
+    "keterangan": "Kegiatan penarikan kabel",
+    "jasa": 8033,
+    "material": 20900,
+    "total": 28933
+  },
+  {
+    "code": "98167",
+    "name": "kabel Belden 9292",
+    "satuan": "meter",
+    "keterangan": "Kegiatan penarikan kabel",
+    "jasa": 8033,
+    "material": 24200,
+    "total": 32233
+  },
+  {
+    "code": "98908",
+    "name": "kabel belden 9913",
+    "satuan": "meter",
+    "keterangan": "Kegiatan penarikan kabel",
+    "jasa": 8033,
+    "material": 33000,
+    "total": 41033
+  },
+  {
+    "code": "17810",
+    "name": "Kabel Ground 6 mm ( VSAT ) - (Serabut )",
+    "satuan": "meter",
+    "keterangan": "Kegiatan penarikan kabel",
+    "jasa": 8033,
+    "material": 9630,
+    "total": 17663
+  },
+  {
+    "code": "44406",
+    "name": "Kabel Ground 4 mm ( BWA ) - (Serabut )",
+    "satuan": "meter",
+    "keterangan": "Kegiatan penarikan kabel",
+    "jasa": 8033,
+    "material": 8667,
+    "total": 16700
+  },
+  {
+    "code": "39638",
+    "name": "Kabel LMR 240",
+    "satuan": "meter",
+    "keterangan": "Kegiatan penarikan kabel",
+    "jasa": 8033,
+    "material": 27933,
+    "total": 35966
+  },
+  {
+    "code": "30800",
+    "name": "Kabel NYA 16",
+    "satuan": "meter",
+    "keterangan": "Kegiatan penarikan kabel",
+    "jasa": 8033,
+    "material": 39050,
+    "total": 47083
+  },
+  {
+    "code": "58393",
+    "name": "Kabel Power",
+    "satuan": "meter",
+    "keterangan": "Kegiatan penarikan kabel",
+    "jasa": 8033,
+    "material": 16500,
+    "total": 24533
+  },
+  {
+    "code": "17817",
+    "name": "UTP Outdoor CAT 5E Outdoor",
+    "satuan": "meter",
+    "keterangan": "Kegiatan penarikan kabel",
+    "jasa": 8033,
+    "material": 17000,
+    "total": 25033
+  },
+  {
+    "code": "27863",
+    "name": "Kabel NYM (isi 3)",
+    "satuan": "unit",
+    "keterangan": "Kabel NYM (isi 3)",
+    "jasa": 7650,
+    "material": 8500,
+    "total": 16150
+  },
+  {
+    "code": "49807",
+    "name": "Klem Paku",
+    "satuan": "unit",
+    "keterangan": "Klem Paku",
+    "jasa": 0,
+    "material": 15000,
+    "total": 15000
+  },
+  {
+    "code": "26238",
+    "name": "Konektor adaptor F",
+    "satuan": "unit",
+    "keterangan": "Konektor adaptor F",
+    "jasa": 0,
+    "material": 75000,
+    "total": 75000
+  },
+  {
+    "code": "58410",
+    "name": "Kuku macan",
+    "satuan": "unit",
+    "keterangan": "Kuku macan",
+    "jasa": 1125,
+    "material": 7000,
+    "total": 8125
+  },
+  {
+    "code": "39169",
+    "name": "List Protektor",
+    "satuan": "unit",
+    "keterangan": "List Protektor",
+    "jasa": 0,
+    "material": 15000,
+    "total": 15000
+  },
+  {
+    "code": "92413",
+    "name": "Paralon",
+    "satuan": "unit",
+    "keterangan": "Paralon",
+    "jasa": 0,
+    "material": 10000,
+    "total": 10000
+  },
+  {
+    "code": "89811",
+    "name": "Pekerjaan Grounding-Bounding Ground",
+    "satuan": "unit",
+    "keterangan": "Grounding",
+    "jasa": 13125,
+    "material": 0,
+    "total": 13125
+  },
+  {
+    "code": "41737",
+    "name": "Pekerjaan Grounding-Ground Bar ( 15 cm x 5 cm x 4 mm )",
+    "satuan": "unit",
+    "keterangan": "Grounding",
+    "jasa": 78750,
+    "material": 210000,
+    "total": 288750
+  },
+  {
+    "code": "29483",
+    "name": "Pentahanan-Bak Kontrol ( 30 cm x 30 cm x 30 cm )",
+    "satuan": "unit",
+    "keterangan": "Grounding",
+    "jasa": 78750,
+    "material": 214000,
+    "total": 292750
+  },
+  {
+    "code": "50545",
+    "name": "Pentahanan-Kabel Ground Bar - Bak Kontrol 4 mm",
+    "satuan": "meter",
+    "keterangan": "Grounding",
+    "jasa": 7875,
+    "material": 8667,
+    "total": 16542
+  },
+  {
+    "code": "97016",
+    "name": "Pentahanan-Kabel Ground Bar - Bak Kontrol 6 mm",
+    "satuan": "meter",
+    "keterangan": "Grounding",
+    "jasa": 7875,
+    "material": 9630,
+    "total": 17505
+  },
+  {
+    "code": "71845",
+    "name": "Tanam kabel berikut element pentahanan 6 M - 12 M + Pipa tembaga",
+    "satuan": "unit",
+    "keterangan": "Grounding",
+    "jasa": 488250,
+    "material": 2140000,
+    "total": 2628250
+  },
+  {
+    "code": "16198",
+    "name": "Tanam kabel berikut element pentahanan 3,1 M - 6 M + Pipa tembaga",
+    "satuan": "unit",
+    "keterangan": "Grounding",
+    "jasa": 336000,
+    "material": 1070000,
+    "total": 1406000
+  },
+  {
+    "code": "98304",
+    "name": "Tanam kabel berikut element pentahanan s/d 3 M kedalaman + Pipa tembaga",
+    "satuan": "unit",
+    "keterangan": "Grounding",
+    "jasa": 141750,
+    "material": 535000,
+    "total": 676750
+  },
+  {
+    "code": "70922",
+    "name": "Pemasangan Arester",
+    "satuan": "unit",
+    "keterangan": "Pemasangan Arester",
+    "jasa": 78750,
+    "material": 963000,
+    "total": 1041750
+  },
+  {
+    "code": "72726",
+    "name": "Pemasangan IT Transformer",
+    "satuan": "unit",
+    "keterangan": "Pemasangan IT Transformer",
+    "jasa": 78750,
+    "material": 1872500,
+    "total": 1951250
+  },
+  {
+    "code": "73455",
+    "name": "Pemasangan Konektor N Gilbert 1 SET (2 buah)",
+    "satuan": "unit",
+    "keterangan": "Pemasangan Konektor N Gilbert 1 SET (2 buah)",
+    "jasa": 8033,
+    "material": 330750,
+    "total": 338783
+  },
+  {
+    "code": "45298",
+    "name": "Penggantian perangkat BWA",
+    "satuan": "unit",
+    "keterangan": "Penggantian perangkat",
+    "jasa": 472500,
+    "material": 0,
+    "total": 472500
+  },
+  {
+    "code": "91554",
+    "name": "Penggantian perangkat RADIO LINK Diameter 0,6 m",
+    "satuan": "HOP",
+    "keterangan": "Penggantian perangkat",
+    "jasa": 945000,
+    "material": 0,
+    "total": 945000
+  },
+  {
+    "code": "13514",
+    "name": "Penggantian perangkat RADIO LINK Diameter 0,6 m",
+    "satuan": "SITE",
+    "keterangan": "Penggantian perangkat",
+    "jasa": 472500,
+    "material": 0,
+    "total": 472500
+  },
+  {
+    "code": "75889",
+    "name": "Penggantian perangkat RADIO LINK Diameter 1,2 m",
+    "satuan": "HOP",
+    "keterangan": "Penggantian perangkat",
+    "jasa": 945000,
+    "material": 0,
+    "total": 945000
+  },
+  {
+    "code": "48567",
+    "name": "Penggantian perangkat RADIO LINK Diameter 1,2 m",
+    "satuan": "SITE",
+    "keterangan": "Penggantian perangkat",
+    "jasa": 472500,
+    "material": 0,
+    "total": 472500
+  },
+  {
+    "code": "55514",
+    "name": "Penggantian perangkat VSAT",
+    "satuan": "unit",
+    "keterangan": "Penggantian perangkat",
+    "jasa": 472500,
+    "material": 0,
+    "total": 472500
+  },
+  {
+    "code": "74496",
+    "name": "Pipa Clipsal @ pc",
+    "satuan": "unit",
+    "keterangan": "Pipa Clipsal @ pc",
+    "jasa": 0,
+    "material": 20000,
+    "total": 20000
+  },
+  {
+    "code": "38002",
+    "name": "Pipa Protektor",
+    "satuan": "unit",
+    "keterangan": "Pipa Protektor",
+    "jasa": 0,
+    "material": 10000,
+    "total": 10000
+  },
+  {
+    "code": "90568",
+    "name": "Pipa Spiral",
+    "satuan": "unit",
+    "keterangan": "Pipa Spiral",
+    "jasa": 0,
+    "material": 10000,
+    "total": 10000
+  },
+  {
+    "code": "47500",
+    "name": "PM Rutin Jabodetabek ( RADIO LINK )",
+    "satuan": "HOP",
+    "keterangan": "PM Remote",
+    "jasa": 1230500,
+    "material": 0,
+    "total": 1230500
+  },
+  {
+    "code": "10510",
+    "name": "PM Rutin Jabodetabek ( BWA, WLL & VSAT )",
+    "satuan": "SITE",
+    "keterangan": "PM Remote",
+    "jasa": 577800,
+    "material": 0,
+    "total": 577800
+  },
+  {
+    "code": "23087",
+    "name": "PM Rutin Jabodetabek ( RADIO LINK )",
+    "satuan": "SITE",
+    "keterangan": "PM Remote",
+    "jasa": 642000,
+    "material": 0,
+    "total": 642000
+  },
+  {
+    "code": "56591",
+    "name": "PM Rutin Non Jabodetabek ( Radio Link )",
+    "satuan": "HOP",
+    "keterangan": "PM Remote",
+    "jasa": 1819000,
+    "material": 0,
+    "total": 1819000
+  },
+  {
+    "code": "46949",
+    "name": "PM Rutin Non Jabodetabek ( Radio Link )",
+    "satuan": "SITE",
+    "keterangan": "PM Remote",
+    "jasa": 1027200,
+    "material": 0,
+    "total": 1027200
+  },
+  {
+    "code": "56618",
+    "name": "PM Rutin Non Jabodetabek ( BWA, WLL & VSAT )",
+    "satuan": "SITE",
+    "keterangan": "PM Remote",
+    "jasa": 963000,
+    "material": 0,
+    "total": 963000
+  },
+  {
+    "code": "44233",
+    "name": "PM Rutin Pulau Seribu ( Radio Link )",
+    "satuan": "SITE",
+    "keterangan": "PM Remote",
+    "jasa": 2514500,
+    "material": 0,
+    "total": 2514500
+  },
+  {
+    "code": "31036",
+    "name": "PM Rutin Pulau Seribu ( BWA, WLL & VSAT )",
+    "satuan": "SITE",
+    "keterangan": "PM Remote",
+    "jasa": 2450300,
+    "material": 0,
+    "total": 2450300
+  },
+  {
+    "code": "31650",
+    "name": "PM Rutin Pulau Seribu ( Radio Link )",
+    "satuan": "HOP",
+    "keterangan": "PM Remote",
+    "jasa": 3103000,
+    "material": 0,
+    "total": 3103000
+  },
+  {
+    "code": "19432",
+    "name": "Relokasi VSAT ( termasuk Pointing dan Aktivasi ) Reflector 1,8 m",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Relokasi",
+    "jasa": 1680000,
+    "material": 0,
+    "total": 1680000
+  },
+  {
+    "code": "14293",
+    "name": "Relokasi VSAT ( termasuk Pointing dan Aktivasi ) Reflector 2,4 m",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Relokasi",
+    "jasa": 2100000,
+    "material": 0,
+    "total": 2100000
+  },
+  {
+    "code": "16283",
+    "name": "Relokasi VSAT ( termasuk Pointing dan Aktivasi ) Reflector 3,6 m",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Relokasi",
+    "jasa": 2835000,
+    "material": 0,
+    "total": 2835000
+  },
+  {
+    "code": "70369",
+    "name": "Relokasi BWA ( termasuk Pointing dan Aktivasi )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Relokasi",
+    "jasa": 850500,
+    "material": 0,
+    "total": 850500
+  },
+  {
+    "code": "26710",
+    "name": "Relokasi BWA ( termasuk Pointing dan Aktivasi ) Diameter 0,6 m",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Relokasi",
+    "jasa": 483000,
+    "material": 0,
+    "total": 483000
+  },
+  {
+    "code": "27895",
+    "name": "Relokasi BWA ( termasuk Pointing dan Aktivasi ) Diameter 1,2 m",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-Relokasi",
+    "jasa": 1894200,
+    "material": 0,
+    "total": 1894200
+  },
+  {
+    "code": "57522",
+    "name": "Skun + Mur Baut",
+    "satuan": "unit",
+    "keterangan": "Skun + Mur Baut",
+    "jasa": 1181,
+    "material": 5537,
+    "total": 6718
+  },
+  {
+    "code": "95415",
+    "name": "Splicing",
+    "satuan": "unit",
+    "keterangan": "Splicing",
+    "jasa": 3000,
+    "material": 13000,
+    "total": 16000
+  },
+  {
+    "code": "20398",
+    "name": "Splicing ( 3 M ) (1 Lusin)",
+    "satuan": "LUSIN",
+    "keterangan": "Splicing ( 3 M )",
+    "jasa": 3150,
+    "material": 13650,
+    "total": 16800
+  },
+  {
+    "code": "51658",
+    "name": "Survey Non Jabodetabek ( RADIO LINK )",
+    "satuan": "HOP",
+    "keterangan": "TINDAK LANJUT-survey pekerjaan dari gangguan atau migrasi",
+    "jasa": 1605000,
+    "material": 0,
+    "total": 1605000
+  },
+  {
+    "code": "84277",
+    "name": "Survey Non Jabodetabek ( RADIO LINK )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-survey pekerjaan dari gangguan atau migrasi",
+    "jasa": 963000,
+    "material": 0,
+    "total": 963000
+  },
+  {
+    "code": "57050",
+    "name": "Survey Pulau Seribu ( RADIO LINK )",
+    "satuan": "HOP",
+    "keterangan": "TINDAK LANJUT-survey pekerjaan dari gangguan atau migrasi",
+    "jasa": 3028100,
+    "material": 0,
+    "total": 3028100
+  },
+  {
+    "code": "77012",
+    "name": "Survey Pulau Seribu ( RADIO LINK )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-survey pekerjaan dari gangguan atau migrasi",
+    "jasa": 2450300,
+    "material": 0,
+    "total": 2450300
+  },
+  {
+    "code": "22099",
+    "name": "Survey Pulau Seribu ( BWA, WLL & VSAT )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-survey pekerjaan dari gangguan atau migrasi",
+    "jasa": 2450300,
+    "material": 0,
+    "total": 2450300
+  },
+  {
+    "code": "10242",
+    "name": "Survey Jabodetabek ( RADIO LINK )",
+    "satuan": "HOP",
+    "keterangan": "TINDAK LANJUT-survey pekerjaan dari gangguan atau migrasi",
+    "jasa": 963000,
+    "material": 0,
+    "total": 963000
+  },
+  {
+    "code": "46359",
+    "name": "Survey Jabodetabek ( RADIO LINK )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-survey pekerjaan dari gangguan atau migrasi",
+    "jasa": 577800,
+    "material": 0,
+    "total": 577800
+  },
+  {
+    "code": "60827",
+    "name": "Survey Jabodetabek ( BWA, WLL & VSAT )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-survey pekerjaan dari gangguan atau migrasi",
+    "jasa": 577800,
+    "material": 0,
+    "total": 577800
+  },
+  {
+    "code": "33946",
+    "name": "Survey Non Jabodetabek ( BWA, WLL & VSAT )",
+    "satuan": "SITE",
+    "keterangan": "TINDAK LANJUT-survey pekerjaan dari gangguan atau migrasi",
+    "jasa": 963000,
+    "material": 0,
+    "total": 963000
+  },
+  {
+    "code": "14834",
+    "name": "Tali Sling",
+    "satuan": "unit",
+    "keterangan": "Tali Sling",
+    "jasa": 7650,
+    "material": 9600,
+    "total": 17250
+  },
+  {
+    "code": "40008",
+    "name": "Terhalang Pohon (pemotongan pohon milik pelanggan & pembuangan ) (1 Lusin)",
+    "satuan": "lusin",
+    "keterangan": "TINDAK LANJUT-Terhalang",
+    "jasa": 519750,
+    "material": 0,
+    "total": 519750
+  },
+  {
+    "code": "45751",
+    "name": "Type Triangle < 10 meter",
+    "satuan": "unit",
+    "keterangan": "Perawatan Tower Including Cat & Las",
+    "jasa": 472500,
+    "material": 0,
+    "total": 472500
+  },
+  {
+    "code": "15297",
+    "name": "Type Triangle 11 - 20 meter",
+    "satuan": "unit",
+    "keterangan": "Perawatan Tower Including Cat & Las",
+    "jasa": 0,
+    "material": 0,
+    "total": 0
+  },
+  {
+    "code": "16044",
+    "name": "Type Triangle 21 - 30 meter",
+    "satuan": "unit",
+    "keterangan": "Perawatan Tower Including Cat & Las",
+    "jasa": 0,
+    "material": 0,
+    "total": 0
+  },
+  {
+    "code": "59456",
+    "name": "Type Wallmount & Duckmount < 2 meter",
+    "satuan": "unit",
+    "keterangan": "Perawatan Tower Including Cat & Las",
+    "jasa": 0,
+    "material": 0,
+    "total": 0
+  },
+  {
+    "code": "63428",
+    "name": "Type Wallmount & Duckmount 2 - 5 meter",
+    "satuan": "unit",
+    "keterangan": "Perawatan Tower Including Cat & Las",
+    "jasa": 0,
+    "material": 0,
+    "total": 0
+  },
+  {
+    "code": "96455",
+    "name": "Tyrap",
+    "satuan": "unit",
+    "keterangan": "Tyrap",
+    "jasa": 0,
+    "material": 0,
+    "total": 0
+  }
+]

@@ -1,0 +1,49 @@
+{
+  "summary": "First end-to-end smoke test of LA Tracker MVP. Backend auth, RBAC, dashboard stats, workorders CRUD list, and users endpoints working. Frontend login → dashboard KPIs → workorders list → create work order → logout all pass. RBAC UI correctly hides Users nav for operator, and hides Users/New Entry/Create button for viewer. Reports page loads.",
+  "tested_scope": ["frontend", "backend", "auth", "integration"],
+  "passed": [
+    "POST /api/auth/login (admin) returns 200 with token field",
+    "GET /api/auth/me with Bearer token returns admin profile (200)",
+    "GET /api/dashboard/stats returns 200 with total/by_status/by_media/by_jenis_order/by_inv_status/revenue_paid/sla_pct",
+    "GET /api/workorders?limit=2 returns 200 with items[]",
+    "GET /api/users returns 200 for admin, lists admin user",
+    "POST /api/users creates operator@la-tracker.com (200)",
+    "POST /api/users creates viewer@la-tracker.com (200)",
+    "RBAC: operator GET /api/users -> 403 Forbidden",
+    "RBAC: viewer POST /api/workorders -> 403 Forbidden",
+    "Frontend login page renders, admin login redirects to /dashboard",
+    "Dashboard shows KPI (Total Orders=1) and 3 charts (Orders by Jenis, Media Akses, Invoice Status)",
+    "Work Orders page loads with search input and table",
+    "Create work order: filled pelanggan/alamat/sa_id/bw, saved, redirected to list, new row 'Test Pelanggan T1' visible",
+    "Logout works, redirects to /login",
+    "Operator UI: Users nav link hidden, workorders create button hidden (operator has view-only? note below)",
+    "Viewer UI: Users nav link hidden, New Entry link hidden, Create button hidden",
+    "Reports page loads with filters, KPIs (Records, Total Value, Paid) and table placeholder"
+  ],
+  "failed": [
+    {
+      "area": "workorders / RBAC UI (minor)",
+      "issue": "For operator role the workorders 'Create' button is hidden in UI, though spec suggests operator can create. Backend allows operator POST /api/workorders (only viewer is blocked). This is a UI inconsistency to confirm with product.",
+      "evidence": "Playwright: operator logged in, workorders-create-button query returned null. Backend RBAC blocks only viewer for POST /api/workorders.",
+      "priority": "LOW"
+    }
+  ],
+  "action_items": [
+    "Confirm intended operator permissions on Work Orders create button. If operator should be able to create, unhide [data-testid=workorders-create-button] for role=operator. If not, tighten backend to also block operator POST /api/workorders."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": {
+    "login_response_field": "Token is returned as 'token' (not 'access_token'); AuthContext appears to consume it correctly since UI auth flows all worked.",
+    "not_tested": [
+      "Edit existing work order (pencil icon) — deferred to full QA",
+      "Delete work order + confirm dialog",
+      "Excel Import (sample file unavailable)",
+      "Excel Export download verification",
+      "Print dialog on Reports",
+      "Delete user (including self-delete restriction)",
+      "httpOnly cookie flag verification (only Bearer path validated end-to-end)"
+    ]
+  }
+}

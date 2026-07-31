@@ -1,0 +1,56 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: la-tracker-mongo
+    restart: unless-stopped
+    volumes:
+      - ./data/mongo:/data/db
+    networks:
+      - la-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: la-tracker-backend
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    env_file:
+      - ./local.env
+    environment:
+      MONGO_URL: "mongodb://mongo:27017"
+      DB_NAME: "la_tracker"
+      STORAGE_MODE: "local"
+      LOCAL_STORAGE_DIR: "/data/attachments"
+      FRONTEND_URL: "http://localhost:3000"
+      CORS_ORIGINS: "*"
+    volumes:
+      - ./data/attachments:/data/attachments
+    networks:
+      - la-net
+    expose:
+      - "8001"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: la-tracker-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - la-net
+
+networks:
+  la-net:
+    driver: bridge

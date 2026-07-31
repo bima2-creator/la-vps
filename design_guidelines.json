@@ -1,0 +1,127 @@
+{
+  "theme": "dark",
+  "archetype": "The Performance Pro + Swiss High-Contrast",
+  "general_ui_ux_design_guidelines": "Design around the user's next decision, not just displaying every metric. Utilize progressive disclosure: overview first, depth on demand. The dashboard must feel like an elite command center, prioritizing network health and SLA statuses.",
+  "typography": {
+    "headings": {
+      "family": "Chivo",
+      "weights": ["400", "700", "900"],
+      "tracking": "tracking-tight",
+      "usage": "Use for all page titles, KPI numbers, and major section headers."
+    },
+    "body": {
+      "family": "IBM Plex Sans",
+      "weights": ["400", "500", "600"],
+      "tracking": "tracking-normal",
+      "usage": "Use for standard text, UI elements, and form labels."
+    },
+    "mono": {
+      "family": "IBM Plex Mono",
+      "weights": ["400", "500"],
+      "tracking": "tracking-tight",
+      "usage": "MANDATORY for all numerical data: Coordinates, Dates, IP Addresses, Bandwidth, SLA durations, and Invoice numbers."
+    },
+    "hierarchy_rules": [
+      "H1 (Page Title): text-4xl sm:text-5xl tracking-tighter font-black",
+      "H2 (Section Header): text-2xl sm:text-3xl tracking-tight font-bold",
+      "Overlines/Labels: text-xs uppercase tracking-[0.2em] text-muted-foreground",
+      "Data Points: text-3xl font-mono font-medium"
+    ]
+  },
+  "colors": {
+    "background": {
+      "base": "#0A0A0C",
+      "surface": "#121214",
+      "surface_hover": "#1A1A1D"
+    },
+    "border": {
+      "default": "#27272A",
+      "subtle": "#1F1F22",
+      "active": "#3B82F6"
+    },
+    "text": {
+      "primary": "#F8FAFC",
+      "secondary": "#94A3B8",
+      "tertiary": "#64748B"
+    },
+    "brand": {
+      "primary": "#3B82F6",
+      "primary_glow": "rgba(59, 130, 246, 0.5)",
+      "accent": "#FACC15"
+    },
+    "status": {
+      "success_sla": "#10B981",
+      "warning_sla": "#F59E0B",
+      "breach_sla": "#EF4444",
+      "info": "#0EA5E9"
+    }
+  },
+  "layouts": {
+    "overall_architecture": "Sidebar-based navigation (left) with a massive central data canvas. The sidebar must be collapsible to maximize horizontal space for data tables.",
+    "dashboard_grid": "Mode B: High Density Grid. grid-cols-1 md:grid-cols-4. gap-4. Hero KPI in the top-left (col-span-1). Main charts take col-span-2 or col-span-3. Use 'align-items: stretch'.",
+    "data_entry_form": "Multi-step 'Wizard' or Vertical Tabs on the left with the active section's form on the right. Avoid one massive scrolling page. Break into: Customer, SPK, Timeline, SLA, Media, BoQ, Invoice."
+  },
+  "spacing": {
+    "containers": "p-6 or p-8 for main layout areas.",
+    "cards": "p-4 or p-5 to maintain density while giving breathing room.",
+    "tables": "Dense padding (py-2 px-3) to allow maximum rows on screen.",
+    "forms": "gap-6 between form sections, gap-2 between label and input."
+  },
+  "component_styles": {
+    "surfaces": "GRID BORDERS style. Expose the skeleton. Dashboards should feel like a technical command center. Minimal border-radius (rounded-sm or rounded-none).",
+    "cards": "Flat solid surfaces (#121214). 1px subtle border (#27272A). NO heavy drop shadows. On hover, slight border color change.",
+    "tables": "Shadcn Table heavily customized for density. Sticky header. Zebra striping using very subtle background shifts (#0A0A0C to #121214).",
+    "forms": "Shadcn form primitives. Inputs must have solid backgrounds (not transparent) to prevent text muddying. Focus state: ring-1 ring-blue-500 border-blue-500.",
+    "buttons": "Sharp edges (rounded-sm). Primary buttons in Brand Blue. Destructive actions in Status Red. Ensure text has 4.5:1 contrast."
+  },
+  "visual_enhancers": {
+    "tracing_beam": "Apply to the active SLA target or the most critical alert card in the dashboard.",
+    "status_indicators": "Use pulsating dots (ping animation) next to 'In-Progress' or 'Breached' SLAs.",
+    "empty_states": "Include ASCII art or simple Phosphor line icons with a helpful message. No dead ends."
+  },
+  "icons": {
+    "library": "@phosphor-icons/react",
+    "installation": "yarn add @phosphor-icons/react",
+    "usage": "Use 'Duotone' or 'Regular' weight. Phosphor fits the dense dashboard look perfectly."
+  },
+  "media": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1644088379091-d574269d422f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGRhdGElMjBuZXR3b3JrJTIwbm9kZXMlMjBkYXJrfGVufDB8fHx8MTc4NTM3ODAwMHww&ixlib=rb-4.1.0&q=85",
+      "description": "Abstract blue data network nodes. Use as the background for the login page with a heavy dark overlay (bg-black/80)."
+    },
+    "empty_state_illustration": {
+      "url": "https://images.unsplash.com/photo-1762163516269-3c143e04175c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNzl8MHwxfHNlYXJjaHwzfHx0ZWxlY29tJTIwY29tbWFuZCUyMGNlbnRlciUyMG5ldHdvcmslMjBzZXJ2ZXJ8ZW58MHx8fHwxNzg1Mzc3OTg3fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Server rack lights. Use for 'No Data' or 'System Health' empty states with a grayscale filter and low opacity."
+    }
+  },
+  "charts": {
+    "library": "recharts (via Shadcn)",
+    "styling": "Remove all chart grid lines except horizontal baseline. Use mono fonts for axis ticks. Use solid fills (no gradients on bar charts) for a sharp, authoritative look."
+  },
+  "instructions_to_main_agent": [
+    "You are building a telecom command center. Prioritize data density, clarity, and authority.",
+    "Implement the multi-step form for Work Order data entry using Shadcn Tabs or a custom vertical wizard.",
+    "Always use IBM Plex Mono for coordinates, dates, and metric values.",
+    "Ensure the sidebar can be toggled/collapsed to give tables maximum width.",
+    "Do not use generic centered layouts. Left-align dense data.",
+    "For the data table, implement sticky headers and horizontal scrolling for the massive number of columns.",
+    "CRITICAL: DO NOT use complete transparent background in header, overlays, any surface that has content under it. Example: Dropdown with transparent background"
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. In frontend design, this creates what users call the 'AI slop' aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects carefully; prefer solid surfaces for data-heavy sections.",
+    "You MUST NOT apply universal transition. Eg: transition: all. Always add transitions for specific interactive elements.",
+    "You MUST NOT center align the app container, ie do not add .App { text-align: center; }.",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style.",
+    "NEVER use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, and entrance animations.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap, except inside data tables.",
+    "Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN.",
+    "Prioritize using pre-existing components from src/components/ui when applicable.",
+    "Use sonner for toasts (/app/frontend/src/components/ui/sonner.jsx or .js).",
+    "All interactive and key informational elements MUST include a data-testid attribute to facilitate robust automated testing."
+  ]
+}

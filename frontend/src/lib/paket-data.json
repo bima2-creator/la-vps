@@ -1,0 +1,731 @@
+[
+  {
+    "code": "P001",
+    "name": "Paket 1",
+    "satuan": "1 Sistem",
+    "keterangan": "Hasil survey meliputi : semua media ( Wireless- WLL,BWA,Radio Link,",
+    "jasa": 575000,
+    "material": 0,
+    "total": 575000
+  },
+  {
+    "code": "P002",
+    "name": "Paket 2",
+    "satuan": "1 site",
+    "keterangan": "perubahan parameter dan aktifasi jaringan",
+    "jasa": 920000,
+    "material": 0,
+    "total": 920000
+  },
+  {
+    "code": "P003",
+    "name": "Paket 3 , Kabel PVC",
+    "satuan": "",
+    "keterangan": "HRB",
+    "jasa": 1357000,
+    "material": 1840000,
+    "total": 3197000
+  },
+  {
+    "code": "P004",
+    "name": "Paket 4 , Kabel UTP",
+    "satuan": "2 sisi",
+    "keterangan": "Perijinan dan biaya waspang",
+    "jasa": 753250,
+    "material": 546250,
+    "total": 1299500
+  },
+  {
+    "code": "P005",
+    "name": "Paket 5 , Kabel UTP",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 1207500,
+    "material": 1322500,
+    "total": 2530000
+  },
+  {
+    "code": "P006",
+    "name": "Paket 6 , Kabel UTP",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 2116000,
+    "material": 2875000,
+    "total": 4991000
+  },
+  {
+    "code": "P007",
+    "name": "Paket 7 , Kabel PVC ( PIHAK 3 )",
+    "satuan": "1 sisi",
+    "keterangan": "Kegiatan 3 d meliputi NON HRB /TELKOM",
+    "jasa": 678500,
+    "material": 920000,
+    "total": 1598500
+  },
+  {
+    "code": "P008",
+    "name": "Paket 8 , Kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "PraInstalasi dan Instalasi FO meliputi :",
+    "jasa": 603750,
+    "material": 9194250,
+    "total": 9798000
+  },
+  {
+    "code": "P009",
+    "name": "Paket 9 , Kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "Testing ( PING  / BERT  )",
+    "jasa": 905050,
+    "material": 9481750,
+    "total": 10386800
+  },
+  {
+    "code": "P010",
+    "name": "Paket 10 , Kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "Perijinan",
+    "jasa": 1207500,
+    "material": 9769250,
+    "total": 10976750
+  },
+  {
+    "code": "P011",
+    "name": "Paket 11 , Kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "Biaya Penarikan paket ini khusus untuk HRB yang tidak memerlukan Ijin ,",
+    "jasa": 1508800,
+    "material": 10056750,
+    "total": 11565550
+  },
+  {
+    "code": "P012",
+    "name": "Paket 12 , Kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 1811250,
+    "material": 10344250,
+    "total": 12155500
+  },
+  {
+    "code": "P013",
+    "name": "Paket 13 , Kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 2112550,
+    "material": 10631750,
+    "total": 12744300
+  },
+  {
+    "code": "P014",
+    "name": "Paket 14 , Kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 2415000,
+    "material": 10919250,
+    "total": 13334250
+  },
+  {
+    "code": "P015",
+    "name": "Paket 15 , Kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 2716300,
+    "material": 11206750,
+    "total": 13923050
+  },
+  {
+    "code": "P016",
+    "name": "Paket 16 , Kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 3018750,
+    "material": 11494250,
+    "total": 14513000
+  },
+  {
+    "code": "P017",
+    "name": "Paket 17 , Kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 3348456,
+    "material": 11209000,
+    "total": 14557456
+  },
+  {
+    "code": "P018",
+    "name": "Paket 18 ,Jointing 1 titik / 12 core",
+    "satuan": "1 sisi",
+    "keterangan": "Jointing pemasangan atau pencabutan",
+    "jasa": 1150000,
+    "material": 0,
+    "total": 1150000
+  },
+  {
+    "code": "P019",
+    "name": "Paket 19 , Buka HH",
+    "satuan": "1 sisi",
+    "keterangan": "",
+    "jasa": 908724,
+    "material": 0,
+    "total": 908724
+  },
+  {
+    "code": "P020",
+    "name": "Paket 20, Kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 2150456,
+    "material": 1845013,
+    "total": 3995470
+  },
+  {
+    "code": "P021",
+    "name": "paket 21, kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 2400456,
+    "material": 2007513,
+    "total": 4407970
+  },
+  {
+    "code": "P022",
+    "name": "paket 22, kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 3261435,
+    "material": 2170013,
+    "total": 5431448
+  },
+  {
+    "code": "P023",
+    "name": "paket 23, kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 3536435,
+    "material": 2332513,
+    "total": 5868948
+  },
+  {
+    "code": "P024",
+    "name": "paket 24, kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 3811435,
+    "material": 2495013,
+    "total": 6306448
+  },
+  {
+    "code": "P025",
+    "name": "paket 25, kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 4086435,
+    "material": 2657513,
+    "total": 6743948
+  },
+  {
+    "code": "P026",
+    "name": "paket 26, kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 4361435,
+    "material": 2820013,
+    "total": 7181448
+  },
+  {
+    "code": "P027",
+    "name": "paket 27, kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 4636435,
+    "material": 2982513,
+    "total": 7618948
+  },
+  {
+    "code": "P028",
+    "name": "paket 28, kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 4911435,
+    "material": 3145013,
+    "total": 8056448
+  },
+  {
+    "code": "P029",
+    "name": "paket 29, kabel FO",
+    "satuan": "2 sisi",
+    "keterangan": "",
+    "jasa": 5461435,
+    "material": 3470013,
+    "total": 8931448
+  },
+  {
+    "code": "P089",
+    "name": "Paket 89, VSAT 3,8 - 2",
+    "satuan": "1 site",
+    "keterangan": "Instalasi perangkat sesuai spek teknis LA",
+    "jasa": 2806000,
+    "material": 6819500,
+    "total": 9625500
+  },
+  {
+    "code": "P090",
+    "name": "Paket 90, VSAT 3,8 - 3",
+    "satuan": "1 site",
+    "keterangan": "IKG TX dan RX ( 2 tarikan )",
+    "jasa": 3320050,
+    "material": 8487000,
+    "total": 11807050
+  },
+  {
+    "code": "P091",
+    "name": "Paket 91, VSAT 3,8 - 4",
+    "satuan": "1 site",
+    "keterangan": "Testing ( PING / BERT TEST )",
+    "jasa": 3835250,
+    "material": 10154500,
+    "total": 13989750
+  },
+  {
+    "code": "P092",
+    "name": "Paket 92, VSAT 3,8 - 5",
+    "satuan": "1 site",
+    "keterangan": "",
+    "jasa": 4347000,
+    "material": 11822000,
+    "total": 16169000
+  },
+  {
+    "code": "P093",
+    "name": "Paket 93, VSAT 3,8 - 6",
+    "satuan": "1 site",
+    "keterangan": "",
+    "jasa": 4858750,
+    "material": 16307000,
+    "total": 21165750
+  },
+  {
+    "code": "P094",
+    "name": "Paket 94, VSAT 3,8 - 7",
+    "satuan": "1 site",
+    "keterangan": "",
+    "jasa": 4907050,
+    "material": 18377000,
+    "total": 23284050
+  },
+  {
+    "code": "P095",
+    "name": "Paket 95, RL 0,6 - 1",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 2777250,
+    "material": 4864500,
+    "total": 7641750
+  },
+  {
+    "code": "P096",
+    "name": "Paket 96, RL 0,6 - 2",
+    "satuan": "",
+    "keterangan": "Instalasi perangkat sesuai spek teknis LA",
+    "jasa": 3139500,
+    "material": 5583250,
+    "total": 8722750
+  },
+  {
+    "code": "P097",
+    "name": "Paket 97, RL 0,6 - 3",
+    "satuan": "",
+    "keterangan": "IKG CT dan REMOTE",
+    "jasa": 3501750,
+    "material": 6302000,
+    "total": 9803750
+  },
+  {
+    "code": "P098",
+    "name": "Paket 98, RL 0,6 - 4",
+    "satuan": "",
+    "keterangan": "Testing ( PING / BERT TEST )",
+    "jasa": 3864000,
+    "material": 7020750,
+    "total": 10884750
+  },
+  {
+    "code": "P099",
+    "name": "Paket 99, RL 0,6 - 5",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 4226250,
+    "material": 7739500,
+    "total": 11965750
+  },
+  {
+    "code": "P100",
+    "name": "Paket 100, RL 0,6 - 6",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 4588500,
+    "material": 9867000,
+    "total": 14455500
+  },
+  {
+    "code": "P101",
+    "name": "Paket 101, RL 0,6 - 7",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 4950750,
+    "material": 10787000,
+    "total": 15737750
+  },
+  {
+    "code": "P102",
+    "name": "Paket 102, RL 0,6 - 8",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 5313000,
+    "material": 11707000,
+    "total": 17020000
+  },
+  {
+    "code": "P103",
+    "name": "Paket 103, RL 0,6 - 9",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 5675250,
+    "material": 12627000,
+    "total": 18302250
+  },
+  {
+    "code": "P104",
+    "name": "Paket 104, RL 0,6 - 10",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 6037500,
+    "material": 13547000,
+    "total": 19584500
+  },
+  {
+    "code": "P105",
+    "name": "Paket 105, RL 0,6 - 11",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 6399750,
+    "material": 14467000,
+    "total": 20866750
+  },
+  {
+    "code": "P106",
+    "name": "Paket 106, RL 1,2 - 1",
+    "satuan": "1 hop /",
+    "keterangan": "PraInstalasi dan Instalasi R/L meliputi :",
+    "jasa": 2777250,
+    "material": 5324500,
+    "total": 8101750
+  },
+  {
+    "code": "P107",
+    "name": "Paket 107, RL 1,2 - 2",
+    "satuan": "",
+    "keterangan": "Clearence + Pointing + CrossPoll + Commisioning",
+    "jasa": 3139500,
+    "material": 6043250,
+    "total": 9182750
+  },
+  {
+    "code": "P108",
+    "name": "Paket 108, RL 1.2 - 3",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 3501750,
+    "material": 6762000,
+    "total": 10263750
+  },
+  {
+    "code": "P109",
+    "name": "Paket 109, RL 1.2 - 4",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 3864000,
+    "material": 7480750,
+    "total": 11344750
+  },
+  {
+    "code": "P110",
+    "name": "Paket 110, RL 1,2 - 5",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 4226250,
+    "material": 8199500,
+    "total": 12425750
+  },
+  {
+    "code": "P111",
+    "name": "Paket 111, RL 1,2 - 6",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 4830000,
+    "material": 10787000,
+    "total": 15617000
+  },
+  {
+    "code": "P112",
+    "name": "Paket 112, RL 1,2 - 7",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 5192250,
+    "material": 11707000,
+    "total": 16899250
+  },
+  {
+    "code": "P113",
+    "name": "Paket 113, RL 1,2 - 8",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 5554500,
+    "material": 12627000,
+    "total": 18181500
+  },
+  {
+    "code": "P114",
+    "name": "Paket 114, RL 1,2 - 9",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 5916750,
+    "material": 13547000,
+    "total": 19463750
+  },
+  {
+    "code": "P115",
+    "name": "Paket 115, RL 1,2 - 10",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 6279000,
+    "material": 14467000,
+    "total": 20746000
+  },
+  {
+    "code": "P116",
+    "name": "Paket 116, RL 1,2 - 11",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 6641250,
+    "material": 15387000,
+    "total": 22028250
+  },
+  {
+    "code": "P118",
+    "name": "Paket 118, Tower S",
+    "satuan": "1 site",
+    "keterangan": "Paket Tower 3 angle + Sling meliputi :",
+    "jasa": 1265000,
+    "material": 2530000,
+    "total": 3795000
+  },
+  {
+    "code": "P119",
+    "name": "Paket 119, Tower M",
+    "satuan": "1 site",
+    "keterangan": "Pasang tower + Sling + Accesoris",
+    "jasa": 2530000,
+    "material": 6325000,
+    "total": 8855000
+  },
+  {
+    "code": "P120",
+    "name": "Paket 120, Tower L",
+    "satuan": "1 site",
+    "keterangan": "Grounding Tanam dan Grounding Bar",
+    "jasa": 3795000,
+    "material": 9487500,
+    "total": 13282500
+  },
+  {
+    "code": "P121",
+    "name": "Paket 121,  Tower X",
+    "satuan": "1 site",
+    "keterangan": "Labeling perangkat",
+    "jasa": 5060000,
+    "material": 10120000,
+    "total": 15180000
+  },
+  {
+    "code": "P122",
+    "name": "Paket 122, Mini Tower S",
+    "satuan": "1 site",
+    "keterangan": "Paket Mini Tower untuk RL atau Vsat meliputi :",
+    "jasa": 1265000,
+    "material": 2530000,
+    "total": 3795000
+  },
+  {
+    "code": "P123",
+    "name": "Paket 123, Mini tower M",
+    "satuan": "1 site",
+    "keterangan": "Accesoris",
+    "jasa": 1897500,
+    "material": 4427500,
+    "total": 6325000
+  },
+  {
+    "code": "P124",
+    "name": "Paket 124, P.Petir",
+    "satuan": "1 site",
+    "keterangan": "Perbaikan penangkal petir tanpa pembuatan sumber grounding baru",
+    "jasa": 189750,
+    "material": 0,
+    "total": 189750
+  },
+  {
+    "code": "P125",
+    "name": "Paket 125, P.Petir+",
+    "satuan": "1 site",
+    "keterangan": "Pembuatan penangkal petir dengan sumber grounding baru",
+    "jasa": 301875,
+    "material": 1147125,
+    "total": 1449000
+  },
+  {
+    "code": "P126",
+    "name": "Paket 126, Grounding",
+    "satuan": "1 site",
+    "keterangan": "Perbaikan Grounding tanpa pembuatan sumber grounding baru",
+    "jasa": 189750,
+    "material": 0,
+    "total": 189750
+  },
+  {
+    "code": "P127",
+    "name": "Paket 127, Grounding +",
+    "satuan": "1 site",
+    "keterangan": "Pembuatan Grounding dengan sumber ground baru",
+    "jasa": 287500,
+    "material": 1092500,
+    "total": 1380000
+  },
+  {
+    "code": "P128",
+    "name": "Paket 128, VSAT 1,2/1,8",
+    "satuan": "1 site",
+    "keterangan": "Cabut Vsat 1,2/1,8 meter + TOWER + KABEL",
+    "jasa": 724500,
+    "material": 0,
+    "total": 724500
+  },
+  {
+    "code": "P129",
+    "name": "Paket 129, VSAT 2,4",
+    "satuan": "1 site",
+    "keterangan": "Cabut Vsat 2,4 meter + TOWER + KABEL",
+    "jasa": 845250,
+    "material": 0,
+    "total": 845250
+  },
+  {
+    "code": "P130",
+    "name": "Paket 130, VSAT 3,8",
+    "satuan": "1 site",
+    "keterangan": "Cabut Vsat 3,8 meter + TOWER + KABEL",
+    "jasa": 1207500,
+    "material": 0,
+    "total": 1207500
+  },
+  {
+    "code": "P131",
+    "name": "Paket 131, RL 0,6",
+    "satuan": "1 Hop / 2 sisi",
+    "keterangan": "Cabut RL 0,6 meter + TOWER + KABEL",
+    "jasa": 1449000,
+    "material": 0,
+    "total": 1449000
+  },
+  {
+    "code": "P132",
+    "name": "Paket 132, RL 1,2",
+    "satuan": "1 Hop / 2 sisi",
+    "keterangan": "Cabut RL 1,2 meter + TOWER + KABEL",
+    "jasa": 1811250,
+    "material": 0,
+    "total": 1811250
+  },
+  {
+    "code": "P133",
+    "name": "Paket 133, Wireless",
+    "satuan": "1 site",
+    "keterangan": "Cabut WLL,BWA1,BWA2,BWA3 (non VSAT dan RL) + TOWER + kabel",
+    "jasa": 483000,
+    "material": 0,
+    "total": 483000
+  },
+  {
+    "code": "P134",
+    "name": "Paket 134, Wireline + FO",
+    "satuan": "1 site",
+    "keterangan": "Cabut perangkat Wireline dan penormalan kabel",
+    "jasa": 241500,
+    "material": 0,
+    "total": 241500
+  },
+  {
+    "code": "P135",
+    "name": "Paket 135, Insentif 1",
+    "satuan": "1 site",
+    "keterangan": "Dilengkapi dengan bukti pendukung yang lengkap",
+    "jasa": 241500,
+    "material": 0,
+    "total": 241500
+  },
+  {
+    "code": "P136",
+    "name": "Paket 136, Insentif 2",
+    "satuan": "1 site",
+    "keterangan": "Dilengkapi dengan bukti pendukung yang lengkap",
+    "jasa": 115000,
+    "material": 0,
+    "total": 115000
+  },
+  {
+    "code": "P137",
+    "name": "Paket 137, Insentif 4",
+    "satuan": "1 site",
+    "keterangan": "Aktivasi / integrasi jaringan, testing router non standar dan Voice",
+    "jasa": 575000,
+    "material": 0,
+    "total": 575000
+  },
+  {
+    "code": "P138",
+    "name": "Paket 138, Insentif 5",
+    "satuan": "1 site",
+    "keterangan": "Kirim router untuk testing dan aplikasi diluar jadwal instalasi",
+    "jasa": 287500,
+    "material": 0,
+    "total": 287500
+  },
+  {
+    "code": "P139",
+    "name": "Paket 139, VSAT 1,8",
+    "satuan": "1 site",
+    "keterangan": "",
+    "jasa": 0,
+    "material": 1207500,
+    "total": 1207500
+  },
+  {
+    "code": "P140",
+    "name": "Paket 140, VSAT 2,4",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 0,
+    "material": 6900000,
+    "total": 6900000
+  },
+  {
+    "code": "P141",
+    "name": "Paket 141, VSAT 3,8",
+    "satuan": "",
+    "keterangan": "",
+    "jasa": 0,
+    "material": 12650000,
+    "total": 12650000
+  }
+]
