@@ -47,13 +47,12 @@ const INVOICE_CATEGORIES = [
 ];
 // For the list-page filter dropdown, include all values including legacy NON_MAINTENANCE.
 const ACTIVITY_TYPES = ["SURVEY", "INSTALASI", "AKTIVASI", "DISMANTLE", "MAINTENANCE", "NON_MAINTENANCE"];
-const STATUS_OPTIONS = ["OPEN", "SENT", "PAID", "LUNAS", "OVERDUE"];
+const STATUS_OPTIONS = ["OPEN", "SENT", "PAID", "OVERDUE"];
 
 const STATUS_BADGE = {
   OPEN: "bg-blue-100 text-blue-700 border-blue-200",
   SENT: "bg-amber-100 text-amber-800 border-amber-200",
   PAID: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  LUNAS: "bg-emerald-100 text-emerald-800 border-emerald-200",
   OVERDUE: "bg-red-100 text-red-700 border-red-200",
 };
 

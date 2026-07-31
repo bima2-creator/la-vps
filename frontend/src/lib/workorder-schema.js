@@ -148,7 +148,7 @@ export const SECTIONS = [
         name: "inv_status",
         label: "Status Invoice",
         type: "select",
-        options: ["", "OPEN", "SENT", "PAID", "LUNAS", "OVERDUE"],
+        options: ["", "OPEN", "SENT", "PAID", "OVERDUE"],
       },
       { name: "keterangan", label: "Keterangan", type: "textarea" },
     ],

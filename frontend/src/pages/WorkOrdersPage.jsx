@@ -249,7 +249,6 @@ export default function WorkOrdersPage() {
           <option>OPEN</option>
           <option>SENT</option>
           <option>PAID</option>
-          <option>LUNAS</option>
           <option>OVERDUE</option>
         </select>
         <select
