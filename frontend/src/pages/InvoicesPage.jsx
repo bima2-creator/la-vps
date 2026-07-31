@@ -422,6 +422,10 @@ function InvoiceForm({ initial, onClose, onSaved }) {
     initial?.faktur_pajak_attachment || null,
   );
   const [uploadingFp, setUploadingFp] = useState(false);
+  const [bpAttachment, setBpAttachment] = useState(
+    initial?.bukti_potong_attachment || null,
+  );
+  const [uploadingBp, setUploadingBp] = useState(false);
 
   // Load customers whenever the jenis pekerjaan changes.
   // If no jenis is picked yet, we clear the customer list to force the user
@@ -582,6 +586,50 @@ function InvoiceForm({ initial, onClose, onSaved }) {
     const token = localStorage.getItem("la_token") || "";
     const base = (api.defaults && api.defaults.baseURL) || "";
     const url = `${base}/invoices/${initial.id}/faktur-pajak/download?auth=${encodeURIComponent(token)}`;
+    window.open(url, "_blank");
+  };
+
+  const uploadBuktiPotong = async (file) => {
+    if (!isEdit || !initial?.id) {
+      toast.error("Simpan invoice terlebih dahulu sebelum upload bukti potong");
+      return;
+    }
+    if (!file) return;
+    setUploadingBp(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const { data } = await api.post(
+        `/invoices/${initial.id}/bukti-potong`,
+        form,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      setBpAttachment(data.bukti_potong_attachment || null);
+      toast.success("Bukti potong berhasil diupload — akan otomatis jadi lampiran invoice");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally {
+      setUploadingBp(false);
+    }
+  };
+
+  const deleteBuktiPotong = async () => {
+    if (!isEdit || !initial?.id) return;
+    if (!window.confirm("Hapus file bukti potong yang tersimpan?")) return;
+    try {
+      await api.delete(`/invoices/${initial.id}/bukti-potong`);
+      setBpAttachment(null);
+      toast.success("Bukti potong dihapus");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    }
+  };
+
+  const previewBuktiPotong = () => {
+    if (!isEdit || !initial?.id) return;
+    const token = localStorage.getItem("la_token") || "";
+    const base = (api.defaults && api.defaults.baseURL) || "";
+    const url = `${base}/invoices/${initial.id}/bukti-potong/download?auth=${encodeURIComponent(token)}`;
     window.open(url, "_blank");
   };
 
@@ -1009,6 +1057,62 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                             <button
                               type="button"
                               onClick={deleteFakturPajak}
+                              className="text-sm text-red-600 hover:underline"
+                            >
+                              Hapus
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground">
+                            Belum ada file. Setelah upload, otomatis jadi lampiran PDF invoice.
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="md:col-span-2 border border-dashed border-border rounded-sm p-3 bg-slate-50">
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
+                    Bukti Potong (lampiran invoice)
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                      File Bukti Potong (PDF/PNG/JPG)
+                    </label>
+                    {!isEdit && (
+                      <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5">
+                        Simpan invoice dulu, kemudian buka Edit untuk upload file.
+                      </div>
+                    )}
+                    {isEdit && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <label className="inline-flex items-center gap-1.5 border border-border bg-white hover:bg-slate-100 rounded-sm px-3 py-1.5 text-sm cursor-pointer">
+                          {uploadingBp ? "Mengupload…" : (bpAttachment ? "Ganti file" : "Pilih file")}
+                          <input
+                            type="file"
+                            accept=".pdf,image/png,image/jpeg"
+                            className="hidden"
+                            disabled={uploadingBp}
+                            data-testid="invoice-form-bukti-potong-file"
+                            onChange={(e) => {
+                              const f = e.target.files && e.target.files[0];
+                              if (f) uploadBuktiPotong(f);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                        {bpAttachment ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={previewBuktiPotong}
+                              className="text-sm text-blue-600 hover:underline"
+                            >
+                              Lihat: {bpAttachment.original_filename || "bukti_potong"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={deleteBuktiPotong}
                               className="text-sm text-red-600 hover:underline"
                             >
                               Hapus

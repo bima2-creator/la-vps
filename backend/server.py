@@ -2005,7 +2005,18 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
         except Exception as e:
             log.warning("faktur pajak fetch failed for %s: %s", inv_id, e)
 
-    # 2) Attachments from all work orders bound to this invoice
+    # 2) Bukti Potong
+    bp = inv.get("bukti_potong_attachment") or {}
+    if bp.get("storage_path"):
+        try:
+            raw, ctype_bp = get_object(bp["storage_path"])
+            pdf_bytes = _to_pdf_bytes(raw, bp.get("ext") or "", ctype_bp or bp.get("content_type") or "")
+            if pdf_bytes:
+                lampiran_pdfs.append(pdf_bytes)
+        except Exception as e:
+            log.warning("bukti potong fetch failed for %s: %s", inv_id, e)
+
+    # 3) Attachments from all work orders bound to this invoice
     wo_ids = inv.get("work_order_ids") or []
     if wo_ids:
         try:
@@ -2030,7 +2041,7 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
         except Exception as e:
             log.warning("wo attachments query failed for %s: %s", inv_id, e)
 
-    # 3) Merge everything if we have pypdf and any lampiran
+    # 4) Merge everything if we have pypdf and any lampiran
     if lampiran_pdfs and _HAS_PYPDF:
         try:
             writer = PdfWriter()
@@ -2677,6 +2688,99 @@ async def delete_faktur_pajak(
         {"$unset": {"faktur_pajak_attachment": ""}, "$set": {"updated_at": now_iso()}},
     )
     await audit("invoice.faktur_pajak.delete", user, target=inv_id)
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------
+# Invoice - Bukti Potong (upload PDF/image lampiran)
+# ------------------------------------------------------------------
+BP_ALLOWED_EXT = {"pdf", "png", "jpg", "jpeg"}
+
+
+@api.post("/invoices/{inv_id}/bukti-potong")
+async def upload_bukti_potong(
+    inv_id: str,
+    file: UploadFile = File(...),
+    user: dict = Depends(require_roles("admin", "operator")),
+):
+    try:
+        oid = ObjectId(inv_id)
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    inv = await db.invoices.find_one({"_id": oid})
+    if not inv:
+        raise HTTPException(404, "Invoice tidak ditemukan")
+    data = await file.read()
+    if len(data) > 20 * 1024 * 1024:
+        raise HTTPException(413, "File terlalu besar (maks 20MB)")
+    fname = file.filename or "bukti_potong"
+    ext = (fname.rsplit(".", 1)[-1] if "." in fname else "bin").lower()
+    if ext not in BP_ALLOWED_EXT:
+        raise HTTPException(400, "Format harus PDF, PNG, atau JPG")
+    ctype = file.content_type or MIME_TYPES.get(ext, "application/octet-stream")
+    file_uuid = str(uuid.uuid4())
+    path = f"{APP_NAME}/invoices/{inv_id}/bukti_potong_{file_uuid}.{ext}"
+    result = put_object(path, data, ctype)
+    bp_attachment = {
+        "storage_path": result["path"],
+        "original_filename": fname,
+        "content_type": ctype,
+        "size": result.get("size", len(data)),
+        "ext": ext,
+        "uploaded_by": user["email"],
+        "uploaded_at": now_iso(),
+    }
+    await db.invoices.update_one(
+        {"_id": oid},
+        {"$set": {"bukti_potong_attachment": bp_attachment, "updated_at": now_iso()}},
+    )
+    await audit(
+        "invoice.bukti_potong.upload", user, target=inv_id,
+        meta={"filename": fname, "size": bp_attachment["size"]},
+    )
+    return {"ok": True, "bukti_potong_attachment": bp_attachment}
+
+
+@api.get("/invoices/{inv_id}/bukti-potong/download")
+async def download_bukti_potong(inv_id: str, request: Request, auth: Optional[str] = Query(None)):
+    if auth and "Authorization" not in request.headers:
+        request.scope["headers"] = list(request.scope["headers"]) + [(b"authorization", f"Bearer {auth}".encode())]
+    _ = await get_current_user(request)
+    try:
+        oid = ObjectId(inv_id)
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    inv = await db.invoices.find_one({"_id": oid})
+    if not inv:
+        raise HTTPException(404, "Invoice tidak ditemukan")
+    bp = inv.get("bukti_potong_attachment") or {}
+    if not bp.get("storage_path"):
+        raise HTTPException(404, "Bukti potong belum diupload")
+    data, ctype = get_object(bp["storage_path"])
+    return Response(
+        content=data,
+        media_type=bp.get("content_type") or ctype,
+        headers={"Content-Disposition": f'inline; filename="{bp.get("original_filename", "bukti_potong")}"'},
+    )
+
+
+@api.delete("/invoices/{inv_id}/bukti-potong")
+async def delete_bukti_potong(
+    inv_id: str,
+    user: dict = Depends(require_roles("admin", "operator")),
+):
+    try:
+        oid = ObjectId(inv_id)
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    inv = await db.invoices.find_one({"_id": oid})
+    if not inv:
+        raise HTTPException(404, "Invoice tidak ditemukan")
+    await db.invoices.update_one(
+        {"_id": oid},
+        {"$unset": {"bukti_potong_attachment": ""}, "$set": {"updated_at": now_iso()}},
+    )
+    await audit("invoice.bukti_potong.delete", user, target=inv_id)
     return {"ok": True}
 
 
