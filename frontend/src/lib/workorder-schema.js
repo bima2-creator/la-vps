@@ -406,6 +406,10 @@ export function getFaseHiddenFields(jenis, fase) {
     hidden.add(`hasil_${p}_datek`);
     hidden.add(`hasil_${p}_npae`);
   });
+  // Perangkat terpasang tidak relevan pada fase Survey.
+  if (keepPhase === "survey") {
+    hidden.add("perangkat_items");
+  }
   return hidden;
 }
 
