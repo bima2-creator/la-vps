@@ -137,6 +137,43 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
     onChange(list.map((it, i) => (i === idx ? { ...it, [k]: val } : it)));
   };
 
+  // --- Row-level Bank Data auto-detect (editing existing rows) ---
+  const listRef = useRef(list);
+  listRef.current = list;
+  const rowTimers = useRef({});
+  const rowAutoRef = useRef({});
+  const [rowBank, setRowBank] = useState({}); // idx -> lookup result
+
+  const setRowNama = (idx, nama) => {
+    rowAutoRef.current[idx] = nama;
+    const cur = listRef.current;
+    onChange(cur.map((it, i) => (i === idx ? { ...it, nama_perangkat: nama } : it)));
+  };
+
+  const scheduleRowLookup = (idx, nomor) => {
+    const n = (nomor || "").trim();
+    if (rowTimers.current[idx]) clearTimeout(rowTimers.current[idx]);
+    if (n.length < 11) {
+      setRowBank((m) => ({ ...m, [idx]: null }));
+      return;
+    }
+    rowTimers.current[idx] = setTimeout(async () => {
+      try {
+        const { data } = await api.get("/perangkat/bank/lookup", { params: { nomor: n } });
+        setRowBank((m) => ({ ...m, [idx]: data }));
+        if (data.matched && !data.ambiguous) {
+          const cur = listRef.current;
+          const curNama = (cur[idx]?.nama_perangkat || "").trim();
+          if (!curNama || curNama === rowAutoRef.current[idx]) {
+            setRowNama(idx, data.suggested);
+          }
+        }
+      } catch {
+        /* ignore lookup errors */
+      }
+    }, 300);
+  };
+
   const activeMeta = isMaint && addRole && addRole !== "any" ? PERANGKAT_ROLES[addRole] : null;
 
   return (
@@ -322,10 +359,34 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
                     <input
                       data-testid={`perangkat-nomor-${i}`}
                       value={it.nomor_registrasi || ""}
-                      onChange={(e) => patch(i, "nomor_registrasi", e.target.value)}
+                      onChange={(e) => {
+                        patch(i, "nomor_registrasi", e.target.value);
+                        scheduleRowLookup(i, e.target.value.toUpperCase());
+                      }}
                       disabled={disabled}
                       className="w-full bg-white border border-border rounded-sm px-2 py-1 text-sm mono"
                     />
+                    {!disabled && rowBank[i] && rowBank[i].matched && rowBank[i].ambiguous && (
+                      <div
+                        data-testid={`perangkat-row-bank-options-${i}`}
+                        className="mt-1 flex flex-wrap gap-1"
+                      >
+                        {rowBank[i].options.map((o) => (
+                          <button
+                            key={o.nama}
+                            type="button"
+                            onClick={() => setRowNama(i, o.nama)}
+                            className={`text-[10px] px-1.5 py-0.5 rounded-sm border transition-colors ${
+                              it.nama_perangkat === o.nama
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-amber-50 border-amber-200 hover:bg-amber-100"
+                            }`}
+                          >
+                            {o.nama}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   {isMaint && (
                     <td className="px-3 py-2">

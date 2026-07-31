@@ -1,0 +1,28 @@
+{
+  "summary": "Iteration 3 focused on the new Bank Data admin feature set: (1) Admin CRUD (list/KPI/search/create/update/merge/delete), (2) Row-level auto-detect while editing an existing perangkat row (unambiguous auto-fill + ambiguous chip picker), and (3) Excel export + RBAC. Backend: 15/15 pytest cases pass covering list+KPI, search by prefix and by nama (case-insensitive), RBAC 403 for operator/guest on GET/POST/EXPORT, create validation (short/long prefix, empty nama), idempotent create, update nama, update-with-merge (merged=true and original row deleted), delete 404 on missing, and xlsx export (200 + correct content-type + PK-zip magic bytes). Frontend: /bank-data admin page renders with KPI cards (bank-kpi-entries/prefixes/namas), search box, add flow (bank-add-btn -> bank-add-prefix + bank-add-nama -> bank-add-confirm), edit flow (bank-edit-{id} -> bank-edit-nama -> bank-edit-save), delete cleanup (bank-delete-{id}), and Excel download (bank-export-xlsx yields bank-data-perangkat.xlsx). Row auto-detect verified inside PSB/INSTALASI WO -> Hasil Pekerjaan -> perangkat-add-btn draft -> row appears -> editing perangkat-nomor-0 to 'B2WS0100010305999' auto-fills nama to 'CANISTER 1.8 DIAMETER 4 INCHI'; ambiguous nomor 'B2WS020O011609999' shows 2 chips in perangkat-row-bank-options-0 (REMOTE HX50-IDU- C-BAND HUGHES + MODEM HX50) and clicking a chip sets the nama accordingly. All test entries cleaned up.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_perangkat_bank_admin.py",
+    "/app/backend/tests/test_perangkat_bank.py",
+    "/app/test_reports/pytest/perangkat_bank_admin.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is now ~3375 lines -- still recommended to split into modules (auth, workorders, invoices, perangkat, attachments).",
+    "perangkat_bank_update merge only copies count; if the collided doc has newer updated_at metadata (e.g. audit), no history is preserved -- acceptable for MVP but worth documenting.",
+    "Row-level auto-fill in PerangkatEditor only fills nama when curNama is empty or equals last auto-filled value (rowAutoRef). Good UX -- protects manual entries. Verified working.",
+    "GET /api/perangkat/bank uses estimated_document_count for total_entries KPI while count_documents is used for pagination total; slight discrepancy under heavy write load -- acceptable for KPI cards.",
+    "BankDataPage.jsx uses window.confirm for delete (non-shadcn); consistent with other admin pages but design system could get a confirm-dialog primitive."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_perangkat_bank_admin.py"
+  ],
+  "success_rate": {"backend": "100% (15/15 new + prior 8/8 still passing)", "frontend": "100% (3/3 flows: bank CRUD+export, row auto-detect unambiguous, row auto-detect ambiguous)"},
+  "test_credentials": "admin/admin123, operator/operator, guest/guest (username login via role-radio + password)",
+  "seed_data_creation": "Created transient bank entries UITESTPREF01/UI_TEST_ENTRY (edited to UI_TEST_ENTRY_RENAMED then deleted) and TESTPREFIXA1/TESTPREFIXB1 (deleted in fixture teardown). Two throw-away PSB WorkOrders (pelanggan=TEST_ROW_AUTODETECT, SA IDs TEST-ROW-SAID-2/-3) were left un-saved (Cancel path -- never persisted). All bank test rows cleaned up.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "For PerangkatEditor row auto-detect, the row's nama field is protected once user types something manual (curNama non-empty AND != last auto-fill) -- test must clear the nama first before editing nomor. Draft-add-confirm testid is 'perangkat-add-confirm' (NOT 'perangkat-draft-confirm'). Bank Data admin sidebar link uses testid 'nav-bank-data' visible only for admin role. XLSX download via Playwright expect_download works.",
+  "rca of the issue": "N/A - no bugs found."
+}

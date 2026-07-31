@@ -14,6 +14,7 @@ import UsersPage from "@/pages/UsersPage";
 import AuditLogPage from "@/pages/AuditLogPage";
 import InvoicesPage from "@/pages/InvoicesPage";
 import MasterPerangkatPage from "@/pages/MasterPerangkatPage";
+import BankDataPage from "@/pages/BankDataPage";
 
 export default function App() {
   return (
@@ -57,6 +58,14 @@ export default function App() {
               }
             />
             <Route path="/perangkat" element={<MasterPerangkatPage />} />
+            <Route
+              path="/bank-data"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <BankDataPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/users"
               element={

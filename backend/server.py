@@ -881,6 +881,149 @@ async def perangkat_bank_lookup(nomor: str, user: dict = Depends(get_current_use
     return {"matched": False, "options": []}
 
 
+# --- Bank Data management (admin) ---------------------------------
+class BankEntryIn(BaseModel):
+    prefix: str
+    nama: str
+
+
+class BankEntryUpdate(BaseModel):
+    prefix: Optional[str] = None
+    nama: Optional[str] = None
+
+
+def _bank_out(d: dict) -> dict:
+    return {
+        "id": str(d["_id"]),
+        "prefix": d.get("prefix"),
+        "plen": d.get("plen"),
+        "nama": d.get("nama"),
+        "count": int(d.get("count", 1)),
+        "updated_at": d.get("updated_at", ""),
+    }
+
+
+@api.get("/perangkat/bank")
+async def perangkat_bank_list(
+    q: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 100,
+    user: dict = Depends(require_roles("admin")),
+):
+    query: Dict[str, Any] = {}
+    if q and q.strip():
+        s = q.strip()
+        query = {"$or": [
+            {"prefix": {"$regex": s.upper()}},
+            {"nama": {"$regex": s, "$options": "i"}},
+        ]}
+    total = await db.perangkat_bank.count_documents(query)
+    cur = (
+        db.perangkat_bank.find(query)
+        .sort([("nama", 1), ("prefix", 1), ("plen", 1)])
+        .skip(max(0, (page - 1) * page_size))
+        .limit(page_size)
+    )
+    items = [_bank_out(d) async for d in cur]
+    total_prefixes = len(await db.perangkat_bank.distinct("prefix"))
+    total_namas = len(await db.perangkat_bank.distinct("nama"))
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "kpi": {
+            "total_entries": await db.perangkat_bank.estimated_document_count(),
+            "total_prefixes": total_prefixes,
+            "total_namas": total_namas,
+        },
+    }
+
+
+@api.get("/perangkat/bank/export/xlsx")
+async def perangkat_bank_export(user: dict = Depends(require_roles("admin"))):
+    docs = await db.perangkat_bank.find({}).sort([("nama", 1), ("prefix", 1)]).to_list(100000)
+    rows = [
+        {
+            "PREFIX": d.get("prefix"),
+            "PANJANG": d.get("plen"),
+            "NAMA PERANGKAT": d.get("nama"),
+            "JUMLAH DATA": int(d.get("count", 1)),
+            "DIPERBARUI": d.get("updated_at", ""),
+        }
+        for d in docs
+    ]
+    df = pd.DataFrame(rows, columns=["PREFIX", "PANJANG", "NAMA PERANGKAT", "JUMLAH DATA", "DIPERBARUI"])
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Bank Data Perangkat")
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=bank-data-perangkat.xlsx"},
+    )
+
+
+@api.post("/perangkat/bank")
+async def perangkat_bank_create(payload: BankEntryIn, user: dict = Depends(require_roles("admin"))):
+    prefix = _clean_nomor(payload.prefix)
+    nama = (payload.nama or "").strip()
+    if not nama:
+        raise HTTPException(400, "Nama perangkat wajib diisi.")
+    if not (11 <= len(prefix) <= 13):
+        raise HTTPException(400, "Prefix harus 11-13 karakter.")
+    plen = len(prefix)
+    existing = await db.perangkat_bank.find_one({"prefix": prefix, "plen": plen, "nama": nama})
+    if existing:
+        return _bank_out(existing)
+    doc = {"prefix": prefix, "plen": plen, "nama": nama, "count": 1, "updated_at": now_iso()}
+    res = await db.perangkat_bank.insert_one(doc)
+    doc["_id"] = res.inserted_id
+    return _bank_out(doc)
+
+
+@api.put("/perangkat/bank/{entry_id}")
+async def perangkat_bank_update(entry_id: str, payload: BankEntryUpdate, user: dict = Depends(require_roles("admin"))):
+    doc = await db.perangkat_bank.find_one({"_id": ObjectId(entry_id)})
+    if not doc:
+        raise HTTPException(404, "Not found")
+    new_prefix = _clean_nomor(payload.prefix) if payload.prefix is not None else doc["prefix"]
+    new_nama = payload.nama.strip() if payload.nama is not None else doc["nama"]
+    if not new_nama:
+        raise HTTPException(400, "Nama perangkat wajib diisi.")
+    if not (11 <= len(new_prefix) <= 13):
+        raise HTTPException(400, "Prefix harus 11-13 karakter.")
+    new_plen = len(new_prefix)
+    dup = await db.perangkat_bank.find_one(
+        {"prefix": new_prefix, "plen": new_plen, "nama": new_nama, "_id": {"$ne": ObjectId(entry_id)}}
+    )
+    if dup:
+        await db.perangkat_bank.update_one(
+            {"_id": dup["_id"]},
+            {"$inc": {"count": int(doc.get("count", 1))}, "$set": {"updated_at": now_iso()}},
+        )
+        await db.perangkat_bank.delete_one({"_id": ObjectId(entry_id)})
+        merged = await db.perangkat_bank.find_one({"_id": dup["_id"]})
+        return {**_bank_out(merged), "merged": True}
+    await db.perangkat_bank.update_one(
+        {"_id": ObjectId(entry_id)},
+        {"$set": {"prefix": new_prefix, "plen": new_plen, "nama": new_nama, "updated_at": now_iso()}},
+    )
+    updated = await db.perangkat_bank.find_one({"_id": ObjectId(entry_id)})
+    return _bank_out(updated)
+
+
+@api.delete("/perangkat/bank/{entry_id}")
+async def perangkat_bank_delete(entry_id: str, user: dict = Depends(require_roles("admin"))):
+    res = await db.perangkat_bank.delete_one({"_id": ObjectId(entry_id)})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+
+
+
 
 # ------------------------------------------------------------------
 # Excel Import / Export
