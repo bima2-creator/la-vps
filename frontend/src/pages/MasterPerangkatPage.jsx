@@ -120,7 +120,7 @@ function DrillPanel({ device, onClose }) {
                         <Badge className={jClass}>{h.jenis_order || "-"}</Badge>
                         {h.wo_jenis_pekerjaan && h.jenis_order !== "MAINTENANCE" && (
                           <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                            Fase: {h.wo_jenis_pekerjaan}
+                            Tipro: {h.wo_jenis_pekerjaan}
                           </Badge>
                         )}
                         {h.maintenance_type && (

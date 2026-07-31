@@ -359,11 +359,11 @@ export default function WorkOrderFormPage() {
             Step 2 of 2 &middot; Wajib
           </div>
           <h1 className="font-display text-4xl sm:text-5xl font-black tracking-tighter mt-2">
-            Pilih Fase Pekerjaan
+            Pilih Tipro Pekerjaan
           </h1>
           <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
             Untuk jenis order <span className="mono text-blue-600">{jenisChosen}</span>,
-            satu work order hanya mencakup satu fase pekerjaan. Field SPK, Timeline &amp; SLA,
+            satu work order hanya mencakup satu Tipro pekerjaan. Field SPK, Timeline &amp; SLA,
             serta Hasil Pekerjaan akan otomatis disesuaikan.
           </p>
 
@@ -501,7 +501,7 @@ export default function WorkOrderFormPage() {
                 data-testid="workorder-fase-badge"
                 className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 text-[10px] uppercase tracking-[0.2em] mono"
               >
-                <LockKey size={10} weight="bold" /> Fase: {faseChosen}
+                <LockKey size={10} weight="bold" /> Tipro: {faseChosen}
               </span>
             )}
             {maintenanceType && (

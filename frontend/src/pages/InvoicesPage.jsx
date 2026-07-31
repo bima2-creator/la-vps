@@ -22,17 +22,17 @@ const INVOICE_CATEGORIES = [
   {
     value: "SURVEY",
     title: "SURVEY",
-    hint: "Untuk WO fase Survey (PSB / Mutasi / Migrasi).",
+    hint: "Untuk WO Tipro Survey (PSB / Mutasi / Migrasi).",
   },
   {
     value: "INSTALASI",
     title: "INSTALASI",
-    hint: "Untuk WO fase Instalasi (PSB / Mutasi / Migrasi).",
+    hint: "Untuk WO Tipro Instalasi (PSB / Mutasi / Migrasi).",
   },
   {
     value: "AKTIVASI",
     title: "AKTIVASI",
-    hint: "Untuk WO fase Aktivasi (PSB / Mutasi / Migrasi).",
+    hint: "Untuk WO Tipro Aktivasi (PSB / Mutasi / Migrasi).",
   },
   {
     value: "DISMANTLE",
