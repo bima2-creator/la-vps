@@ -6,6 +6,7 @@ load_dotenv(ROOT_DIR / ".env")
 
 import io
 import os
+import json
 import uuid
 import csv
 import logging
@@ -394,6 +395,12 @@ async def on_startup() -> None:
     await db.invoices.create_index("pelanggan")
     await db.invoices.create_index("invoice_no", unique=True, sparse=True)
 
+    try:
+        await db.perangkat_bank.create_index([("prefix", 1), ("plen", 1)])
+    except Exception:
+        pass
+    await _seed_perangkat_bank()
+
     # Initialize object storage (non-blocking on failure)
     if init_storage():
         log.info("Object storage initialized")
@@ -771,6 +778,7 @@ async def create_workorder(payload: WorkOrderIn, user: dict = Depends(require_ro
     doc["created_by"] = user["actor"]
     res = await db.workorders.insert_one(doc)
     doc["_id"] = res.inserted_id
+    await _learn_perangkat(doc.get("perangkat_items"))
     await audit("workorder.create", user, workorder_id=str(res.inserted_id), meta={"pelanggan": doc.get("pelanggan")})
     return workorder_to_out(doc)
 
@@ -785,6 +793,7 @@ async def update_workorder(wo_id: str, payload: WorkOrderIn, user: dict = Depend
     if res.matched_count == 0:
         raise HTTPException(404, "Not found")
     updated = await db.workorders.find_one({"_id": ObjectId(wo_id)})
+    await _learn_perangkat(doc.get("perangkat_items"))
     await audit("workorder.update", user, workorder_id=wo_id, meta={"pelanggan": updated.get("pelanggan")})
     return workorder_to_out(updated)
 
@@ -796,6 +805,81 @@ async def delete_workorder(wo_id: str, user: dict = Depends(require_roles("admin
         raise HTTPException(404, "Not found")
     await audit("workorder.delete", user, workorder_id=wo_id)
     return {"ok": True}
+
+
+# ------------------------------------------------------------------
+# Perangkat "Bank Data": prefix -> nama learning + lookup
+# Setiap perangkat yang ditambahkan menjadi bank data. Nomor registrasi
+# dikenali lewat prefix 11-13 karakter (longest-prefix match).
+# ------------------------------------------------------------------
+PREFIX_LENGTHS = (13, 12, 11)
+
+
+def _clean_nomor(nomor: Optional[str]) -> str:
+    return (nomor or "").strip().upper()
+
+
+async def _learn_perangkat(items) -> None:
+    """Persist prefix->nama mappings so future entries auto-detect the device."""
+    for it in items or []:
+        if not isinstance(it, dict):
+            continue
+        nama = (it.get("nama_perangkat") or "").strip()
+        nomor = _clean_nomor(it.get("nomor_registrasi"))
+        if not nama or len(nomor) < 11:
+            continue
+        for L in PREFIX_LENGTHS:
+            if len(nomor) < L:
+                continue
+            await db.perangkat_bank.update_one(
+                {"prefix": nomor[:L], "plen": L, "nama": nama},
+                {"$inc": {"count": 1}, "$set": {"updated_at": now_iso()}},
+                upsert=True,
+            )
+
+
+async def _seed_perangkat_bank() -> None:
+    if await db.perangkat_bank.estimated_document_count() > 0:
+        return
+    try:
+        with open(ROOT_DIR / "perangkat_bank_seed.json", "r", encoding="utf-8") as f:
+            rows = json.load(f)
+    except Exception as e:
+        log.warning(f"perangkat bank seed skipped: {e}")
+        return
+    items = [{"nama_perangkat": r[0], "nomor_registrasi": r[1]} for r in rows if len(r) == 2]
+    await _learn_perangkat(items)
+    log.info(f"Seeded perangkat bank from {len(items)} rows")
+
+
+@api.get("/perangkat/bank/lookup")
+async def perangkat_bank_lookup(nomor: str, user: dict = Depends(get_current_user)):
+    """Return device name(s) matching a registration number by longest prefix."""
+    n = _clean_nomor(nomor)
+    if len(n) < 11:
+        return {"matched": False, "options": []}
+    for L in PREFIX_LENGTHS:
+        if len(n) < L:
+            continue
+        prefix = n[:L]
+        agg: Dict[str, int] = {}
+        async for d in db.perangkat_bank.find({"prefix": prefix, "plen": L}):
+            agg[d["nama"]] = agg.get(d["nama"], 0) + int(d.get("count", 1))
+        if agg:
+            options = sorted(
+                [{"nama": k, "count": v} for k, v in agg.items()],
+                key=lambda x: (-x["count"], x["nama"]),
+            )
+            return {
+                "matched": True,
+                "prefix": prefix,
+                "length": L,
+                "ambiguous": len(options) > 1,
+                "suggested": options[0]["nama"],
+                "options": options,
+            }
+    return {"matched": False, "options": []}
+
 
 
 # ------------------------------------------------------------------

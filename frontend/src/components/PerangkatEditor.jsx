@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import PERANGKAT_MASTER from "@/lib/perangkat-master.json";
+import { api } from "@/lib/api";
 import {
   Plus,
   Trash,
@@ -7,6 +8,7 @@ import {
   Wrench,
   ArrowsCounterClockwise,
   CheckCircle,
+  MagnifyingGlass,
 } from "@phosphor-icons/react";
 
 // Roles are used for MAINTENANCE work orders. For non-maintenance jenis,
@@ -55,6 +57,48 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
   const isMaint = jenis === "MAINTENANCE";
   const [addRole, setAddRole] = useState(null); // null | "existing" | "dicabut" | "pengganti" | "any"
   const [draft, setDraft] = useState({ nama_perangkat: "", nomor_registrasi: "" });
+  const [bank, setBank] = useState(null); // { matched, ambiguous, suggested, options }
+  const autoFilledRef = useRef(""); // last value we auto-filled, so we don't clobber manual edits
+
+  // Bank Data lookup: recognise device name from registration prefix (11-13 chars).
+  useEffect(() => {
+    const nomor = (draft.nomor_registrasi || "").trim();
+    if (nomor.length < 11) {
+      setBank(null);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await api.get("/perangkat/bank/lookup", { params: { nomor } });
+        if (cancelled) return;
+        setBank(data);
+        // Auto-fill only for an unambiguous match, and only when the name field is
+        // empty or still holds a previously auto-filled value (never override typing).
+        if (data.matched && !data.ambiguous) {
+          setDraft((d) => {
+            const cur = (d.nama_perangkat || "").trim();
+            if (!cur || cur === autoFilledRef.current) {
+              autoFilledRef.current = data.suggested;
+              return { ...d, nama_perangkat: data.suggested };
+            }
+            return d;
+          });
+        }
+      } catch {
+        if (!cancelled) setBank(null);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [draft.nomor_registrasi]);
+
+  const pickBankOption = (nama) => {
+    autoFilledRef.current = nama;
+    setDraft((d) => ({ ...d, nama_perangkat: nama }));
+  };
 
   const suggestions = useMemo(() => {
     const q = draft.nama_perangkat.trim().toLowerCase();
@@ -67,6 +111,8 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
   const closeAdd = () => {
     setAddRole(null);
     setDraft({ nama_perangkat: "", nomor_registrasi: "" });
+    setBank(null);
+    autoFilledRef.current = "";
   };
 
   const addItem = () => {
@@ -148,6 +194,44 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
                   className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm mono"
                 />
               </div>
+              {bank && bank.matched && !bank.ambiguous && (
+                <div
+                  data-testid="perangkat-bank-detected"
+                  className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-sm px-2 py-1"
+                >
+                  <CheckCircle size={12} weight="fill" />
+                  Terdeteksi otomatis dari bank data:
+                  <span className="font-medium mono">{bank.suggested}</span>
+                </div>
+              )}
+              {bank && bank.matched && bank.ambiguous && (
+                <div
+                  data-testid="perangkat-bank-options"
+                  className="mt-2 border border-amber-200 bg-amber-50 rounded-sm p-2"
+                >
+                  <div className="text-[11px] text-amber-800 mb-1.5 flex items-center gap-1.5">
+                    <MagnifyingGlass size={12} weight="bold" />
+                    Beberapa perangkat cocok untuk prefix ini, pilih salah satu:
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {bank.options.map((o) => (
+                      <button
+                        key={o.nama}
+                        type="button"
+                        data-testid={`perangkat-bank-option-${o.nama}`}
+                        onClick={() => pickBankOption(o.nama)}
+                        className={`text-[11px] px-2 py-1 rounded-sm border mono transition-colors ${
+                          draft.nama_perangkat === o.nama
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white border-border hover:bg-blue-50"
+                        }`}
+                      >
+                        {o.nama}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="mt-2 flex items-center gap-2">
                 <button
                   type="button"
