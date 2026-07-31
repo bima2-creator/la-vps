@@ -9,8 +9,8 @@ export default function LoginPage() {
   const { login } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
-  const [email, setEmail] = useState("admin@la-tracker.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -125,11 +125,6 @@ export default function LoginPage() {
           >
             {loading ? "Signing in…" : "Sign in →"}
           </button>
-
-          <div className="mt-6 text-xs text-muted-foreground border-t border-border pt-4">
-            <div className="uppercase tracking-[0.2em] text-[10px] mb-2">Demo</div>
-            <div className="mono">admin@la-tracker.com · admin123</div>
-          </div>
         </form>
       </div>
     </div>
