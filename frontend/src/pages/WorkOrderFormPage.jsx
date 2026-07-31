@@ -533,16 +533,18 @@ export default function WorkOrderFormPage() {
             onClick={() => nav("/workorders")}
             className="border border-border bg-secondary hover:bg-slate-100 text-sm px-4 py-2 rounded-sm"
           >
-            Cancel
+            {canEdit ? "Cancel" : "Back"}
           </button>
-          <button
-            data-testid={WOFORM.saveButton}
-            onClick={save}
-            disabled={saving}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-sm disabled:opacity-60"
-          >
-            <FloppyDisk size={16} weight="bold" /> {saving ? "Saving…" : "Save"}
-          </button>
+          {canEdit && (
+            <button
+              data-testid={WOFORM.saveButton}
+              onClick={save}
+              disabled={saving}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-sm disabled:opacity-60"
+            >
+              <FloppyDisk size={16} weight="bold" /> {saving ? "Saving…" : "Save"}
+            </button>
+          )}
         </div>
       </div>
 

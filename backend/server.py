@@ -3045,6 +3045,24 @@ async def list_audit_logs(
     } for d in docs]
 
 
+class AccessDeniedIn(BaseModel):
+    path: str = ""
+    required_roles: Optional[List[str]] = None
+
+
+@api.post("/audit/access-denied")
+async def log_access_denied(payload: AccessDeniedIn, user: dict = Depends(get_current_user)):
+    """Record an attempt by an authenticated user to open a page their role
+    is not allowed to access. Visible in the Audit Log for admin monitoring."""
+    await audit(
+        "access.denied",
+        user,
+        target=payload.path or "",
+        meta={"path": payload.path or "", "required_roles": payload.required_roles or []},
+    )
+    return {"ok": True}
+
+
 # ------------------------------------------------------------------
 # Health
 # ------------------------------------------------------------------

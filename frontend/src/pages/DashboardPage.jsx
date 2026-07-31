@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { DASHBOARD } from "@/constants/testIds";
 import {
   BarChart,
@@ -78,6 +79,8 @@ function Section({ title, children, right }) {
 
 export default function DashboardPage() {
   const nav = useNavigate();
+  const { user } = useAuth();
+  const isViewer = user?.role === "viewer";
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState("");
@@ -190,7 +193,7 @@ export default function DashboardPage() {
         <div className="text-sm text-muted-foreground mono">Loading…</div>
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 rise-in">
+          <div className={`grid grid-cols-2 ${isViewer ? "md:grid-cols-4" : "md:grid-cols-5"} gap-4 rise-in`}>
             <Kpi
               label="Total Orders"
               value={stats.total}
@@ -218,15 +221,17 @@ export default function DashboardPage() {
               tone="green"
               onClick={() => goToList({ status: "completed" })}
             />
-            <Kpi
-              label="Revenue Paid"
-              value={fmtIDR(stats.revenue_paid)}
-              hint={`Open ${fmtIDR(stats.revenue_open)} · klik untuk PAID`}
-              testid={DASHBOARD.revenueKpi}
-              icon={Money}
-              tone="green"
-              onClick={() => goToList({ inv_status: "PAID" })}
-            />
+            {!isViewer && (
+              <Kpi
+                label="Revenue Paid"
+                value={fmtIDR(stats.revenue_paid)}
+                hint={`Open ${fmtIDR(stats.revenue_open)} · klik untuk PAID`}
+                testid={DASHBOARD.revenueKpi}
+                icon={Money}
+                tone="green"
+                onClick={() => goToList({ inv_status: "PAID" })}
+              />
+            )}
             <Kpi
               label="SLA Compliance"
               value={`${stats.sla_pct}%`}
@@ -238,7 +243,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 rise-in">
+          <div className={`grid grid-cols-1 ${isViewer ? "lg:grid-cols-2" : "lg:grid-cols-3"} gap-4 rise-in`}>
             <Section title="Orders by Jenis Pekerjaan" right={<span className="text-[10px] text-muted-foreground mono">klik bar untuk filter</span>}>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={stats.by_jenis_order}>
@@ -305,6 +310,7 @@ export default function DashboardPage() {
               </div>
             </Section>
 
+            {!isViewer && (
             <Section title="Invoice Status" right={<span className="text-[10px] text-muted-foreground mono">klik untuk filter</span>}>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={stats.by_inv_status} layout="vertical">
@@ -334,6 +340,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             </Section>
+            )}
           </div>
         </>
       )}

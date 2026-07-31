@@ -5,6 +5,12 @@ import { LOGIN } from "@/constants/testIds";
 import { formatApiError } from "@/lib/api";
 import { Broadcast } from "@phosphor-icons/react";
 
+const USER_OPTIONS = [
+  { value: "admin", role: "Admin" },
+  { value: "operator", role: "Operator" },
+  { value: "guest", role: "Viewer" },
+];
+
 export default function LoginPage() {
   const { login } = useAuth();
   const nav = useNavigate();
@@ -85,16 +91,40 @@ export default function LoginPage() {
               <label className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                 Username
               </label>
-              <input
+              <div
                 data-testid={LOGIN.emailInput}
-                type="text"
-                required
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="mt-1 w-full bg-secondary border border-border rounded-sm px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mono transition-colors"
-                placeholder="username"
-              />
+                role="radiogroup"
+                aria-label="Username"
+                className="mt-2 grid grid-cols-3 gap-2"
+              >
+                {USER_OPTIONS.map((opt) => {
+                  const active = username === opt.value;
+                  return (
+                    <label
+                      key={opt.value}
+                      data-testid={`login-user-${opt.value}`}
+                      className={`cursor-pointer select-none rounded-lg border px-3 py-2.5 text-center transition-all ${
+                        active
+                          ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500"
+                          : "border-border bg-secondary hover:border-blue-400/60"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="username"
+                        value={opt.value}
+                        checked={active}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="sr-only"
+                      />
+                      <div className="mono text-sm font-semibold">{opt.value}</div>
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mt-0.5">
+                        {opt.role}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
             <div>
               <label className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">

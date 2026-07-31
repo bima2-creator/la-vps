@@ -590,9 +590,117 @@ metadata:
   test_sequence: 5
   run_ui: true
 
+frontend:
+  - task: "RBAC UI - Login radio buttons for username selection"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/LoginPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            CHANGE 1 — Login page now uses 3 radio-style cards (admin/operator/guest) instead of free-text username input.
+            Verify: 3 selectable cards labeled "admin" (Admin), "operator" (Operator), "guest" (Viewer) are present.
+            No free-text username input field should exist.
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Login radio buttons working correctly:
+            - 3 radio button cards present: admin (ADMIN), operator (OPERATOR), guest (VIEWER)
+            - No free-text username input field found
+            - Cards are selectable and styled correctly with data-testid attributes
+            - Login as operator successful with radio button selection
+            - Screenshot: final_change1_login_radio.png shows all 3 cards clearly
+
+  - task: "RBAC UI - Guest (viewer) is READ-ONLY on Work Orders"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/WorkOrdersPage.jsx, frontend/src/pages/WorkOrderFormPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            CHANGE 2 — Guest (viewer role) should have READ-ONLY access to Work Orders.
+            Verify: As guest on Work Orders page, NO "New Order" button, NO "Import Excel" button, 
+            NO "Template" button, NO edit/delete buttons in table rows. Export button should still be visible.
+            On Work Order detail page, NO "Save" button (only "Back" button).
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Guest READ-ONLY access working correctly:
+            - "New Order" button NOT present (hidden for guest)
+            - "Import Excel" button NOT present (hidden for guest)
+            - "Template" button NOT present (hidden for guest)
+            - "Export" button IS present (allowed for guest)
+            - NO edit/delete buttons in table rows
+            - Work Orders page shows only read-only view with Export functionality
+            - Screenshot: final_change2_workorders.png shows clean read-only interface
+
+  - task: "RBAC UI - Dashboard hides revenue for guest (viewer)"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/DashboardPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            CHANGE 3 — Dashboard should hide revenue-related information for guest (viewer role).
+            Verify: As guest on Dashboard, "Revenue Paid" KPI card is NOT shown, "Invoice Status" chart section is NOT shown.
+            Other KPIs (Total Orders, In Progress, Completed, SLA Compliance) and charts (Orders by Jenis Pekerjaan, Media Akses) should still be visible.
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Dashboard revenue hiding working correctly:
+            - "Revenue Paid" KPI card NOT shown for guest (isViewer conditional rendering working)
+            - "Invoice Status" chart section NOT shown for guest
+            - All 4 other KPIs visible: Total Orders, In Progress, Completed, SLA Compliance
+            - Both other charts visible: Orders by Jenis Pekerjaan, Media Akses
+            - Dashboard grid adjusts correctly: 4 KPI columns instead of 5, 2 chart columns instead of 3
+            - Screenshot: final_change3_dashboard.png shows guest dashboard without revenue information
+
+  - task: "RBAC UI - Access-denied page and audit logging"
+    implemented: true
+    working: true
+    file: "frontend/src/components/ProtectedRoute.jsx, frontend/src/components/Layout.jsx, frontend/src/pages/AuditLogPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            CHANGE 4 — Access-denied should be blocked and logged for unauthorized pages.
+            Verify: As guest, sidebar does NOT show "Invoices" link. Manually navigate to /invoices URL,
+            should show "Access denied" message mentioning role "viewer". Then login as admin, go to Audit Log,
+            should see recent log entry with action "access.denied" for user "guest" and path "/invoices".
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Access-denied blocking and logging working correctly:
+            - "Invoices" link NOT shown in sidebar for guest (role-based nav filtering working)
+            - Manual navigation to /invoices shows "Access denied" page
+            - Access denied message clearly states: "Your role (viewer) cannot access this page."
+            - Audit log contains "ACCESS.DENIED" entries for guest user attempting to access /invoices
+            - Audit log shows: user="guest", role="VIEWER", action="ACCESS.DENIED", path="/invoices"
+            - ProtectedRoute component correctly logs access-denied events to /api/audit/access-denied
+            - Screenshot: final_change4_access_denied.png shows access denied page with viewer role message
+            - Screenshot: final_change4_audit_log.png shows audit log with ACCESS.DENIED entries for guest
+
 test_plan:
   current_focus:
-    - "AUTH REFACTOR - Username-based login with 3 fixed users"
+    - "RBAC UI - Login radio buttons for username selection"
+    - "RBAC UI - Guest (viewer) is READ-ONLY on Work Orders"
+    - "RBAC UI - Dashboard hides revenue for guest (viewer)"
+    - "RBAC UI - Access-denied page and audit logging"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -612,6 +720,15 @@ agent_communication:
         7. Spot-check: create a WO as admin then GET it; created_by should be "admin" (username),
            not an email.
       Only these 3 users can log in. Report any 401/403/500 anomalies or missing fields.
+
+  - agent: "main"
+    message: |
+      RBAC UI ENHANCEMENTS — 4 new changes implemented. Please verify:
+      CHANGE 1: Login page now uses 3 radio-style cards (admin/operator/guest) instead of free-text username input.
+      CHANGE 2: Guest (viewer) is READ-ONLY on Work Orders (no New/Import/Template/Edit/Delete buttons).
+      CHANGE 3: Dashboard hides revenue for guest (no Revenue Paid KPI, no Invoice Status chart).
+      CHANGE 4: Access-denied is blocked and logged (no Invoices nav link for guest, access denied page, audit log entry).
+      Test all 4 changes and capture screenshots for each.
 
   - agent: "testing"
     message: |
@@ -733,6 +850,60 @@ agent_communication:
         * Expanded: 256px width (full sidebar)
       
       DASHBOARD PAGE VERIFICATION (✅ ALL PASSED):
+
+  - agent: "testing"
+    message: |
+      ✅ RBAC UI ENHANCEMENTS TESTING COMPLETE - ALL 4 CHANGES VERIFIED
+      
+      Comprehensive end-to-end testing completed for all 4 RBAC UI changes requested.
+      
+      TEST RESULTS SUMMARY:
+      
+      ✅ CHANGE 1: Login uses RADIO BUTTONS (PASS)
+         - 3 radio button cards present: admin (ADMIN), operator (OPERATOR), guest (VIEWER)
+         - No free-text username input field
+         - Cards are selectable with proper styling and data-testid attributes
+         - Login flow works correctly with radio button selection
+         - Screenshot: final_change1_login_radio.png
+      
+      ✅ CHANGE 2: Guest is READ-ONLY on Work Orders (PASS)
+         - "New Order" button NOT present for guest
+         - "Import Excel" button NOT present for guest
+         - "Template" button NOT present for guest
+         - "Export" button IS present (allowed for guest)
+         - NO edit/delete buttons in table rows
+         - Work Orders page shows clean read-only interface
+         - Screenshot: final_change2_workorders.png
+      
+      ✅ CHANGE 3: Dashboard hides revenue for guest (PASS)
+         - "Revenue Paid" KPI card NOT shown for guest
+         - "Invoice Status" chart section NOT shown for guest
+         - All 4 other KPIs visible: Total Orders, In Progress, Completed, SLA Compliance
+         - Both other charts visible: Orders by Jenis Pekerjaan, Media Akses
+         - Dashboard grid adjusts correctly (4 KPI columns instead of 5, 2 chart columns instead of 3)
+         - Screenshot: final_change3_dashboard.png
+      
+      ✅ CHANGE 4: Access-denied blocked and logged (PASS)
+         - "Invoices" link NOT shown in sidebar for guest
+         - Manual navigation to /invoices shows "Access denied" page
+         - Access denied message states: "Your role (viewer) cannot access this page."
+         - Audit log contains "ACCESS.DENIED" entries for guest user
+         - Audit log shows: user="guest", role="VIEWER", action="ACCESS.DENIED", path="/invoices"
+         - ProtectedRoute component correctly logs access-denied events
+         - Screenshots: final_change4_access_denied.png, final_change4_audit_log.png
+      
+      Test Details:
+      - Tested against production URL: https://project-bootstrap-18.preview.emergentagent.com
+      - All 4 changes working correctly with proper role-based access control
+      - Login radio buttons provide clear user selection interface
+      - Guest (viewer) role has appropriate read-only restrictions
+      - Dashboard conditionally renders based on user role (isViewer check)
+      - Access-denied page and audit logging working as expected
+      - No critical errors or console warnings
+      - All screenshots captured successfully
+      
+      RECOMMENDATION: All 4 RBAC UI enhancements are working correctly and ready for production use. The role-based access control is properly implemented across login, work orders, dashboard, and protected routes.
+
       - ✅ 5 KPI cards render with values and icon tiles:
         * Total Orders: 2
         * In Progress: 0
