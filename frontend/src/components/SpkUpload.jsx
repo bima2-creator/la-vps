@@ -8,16 +8,22 @@ import { Upload, Trash, FilePdf, Download } from "@phosphor-icons/react";
  * SPK files are PDF-only and stored as work-order attachments with kind="spk"
  * so they are automatically included as lampiran (attachment) on the invoice.
  */
-export default function SpkUpload({ workorderId, canEdit }) {
+export default function SpkUpload({ workorderId, canEdit, onEnsureSaved }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef(null);
 
-  const load = async () => {
+  const load = async (idArg) => {
+    const wid = idArg || workorderId;
+    if (!wid) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const { data } = await api.get(`/workorders/${workorderId}/attachments`);
+      const { data } = await api.get(`/workorders/${wid}/attachments`);
       setItems((data || []).filter((a) => (a.kind || "general") === "spk"));
     } catch (e) {
       /* ignore */
@@ -27,7 +33,7 @@ export default function SpkUpload({ workorderId, canEdit }) {
   };
 
   useEffect(() => {
-    if (workorderId) load();
+    load();
   }, [workorderId]);
 
   const upload = async (e) => {
@@ -40,16 +46,25 @@ export default function SpkUpload({ workorderId, canEdit }) {
       e.target.value = "";
       return;
     }
+    // If the work order hasn't been saved yet, create it on-the-fly first.
+    let wid = workorderId;
+    if (!wid && typeof onEnsureSaved === "function") {
+      wid = await onEnsureSaved();
+    }
+    if (!wid) {
+      e.target.value = "";
+      return;
+    }
     const fd = new FormData();
     fd.append("file", file);
     fd.append("kind", "spk");
     setUploading(true);
     try {
-      await api.post(`/workorders/${workorderId}/attachments`, fd, {
+      await api.post(`/workorders/${wid}/attachments`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       toast.success("SPK berhasil diupload");
-      load();
+      load(wid);
     } catch (err) {
       toast.error(formatApiError(err.response?.data?.detail) || "Upload SPK gagal");
     } finally {

@@ -21,7 +21,6 @@ import {
 import { WOFORM } from "@/constants/testIds";
 import { toast } from "sonner";
 import { CaretLeft, FloppyDisk, FilePdf, Lightning, ArrowsClockwise, ShareNetwork, Wrench, HardDrives, LockKey, MapPin } from "@phosphor-icons/react";
-import Attachments from "@/components/Attachments";
 import SpkUpload from "@/components/SpkUpload";
 import BoqItemsEditor, { computeBoqTotals } from "@/components/BoqItemsEditor";
 import PerangkatEditor from "@/components/PerangkatEditor";
@@ -121,6 +120,10 @@ export default function WorkOrderFormPage() {
   const { user } = useAuth();
   const canEdit = user && (user.role === "admin" || user.role === "operator");
   const isEdit = Boolean(id);
+  // Once a brand-new WO is saved (e.g. to allow SPK upload) we keep its id here
+  // without remounting the route, so `effectiveId` becomes the working id.
+  const [createdId, setCreatedId] = useState(null);
+  const effectiveId = id || createdId;
   const [form, setForm] = useState(emptyWorkOrder());
   const [active, setActive] = useState(SECTIONS[0].id);
   const [saving, setSaving] = useState(false);
@@ -232,8 +235,8 @@ export default function WorkOrderFormPage() {
       delete payload.created_at;
       delete payload.updated_at;
       delete payload.created_by;
-      if (isEdit) {
-        await api.put(`/workorders/${id}`, payload);
+      if (effectiveId) {
+        await api.put(`/workorders/${effectiveId}`, payload);
         toast.success("Updated");
       } else {
         await api.post("/workorders", payload);
@@ -244,6 +247,41 @@ export default function WorkOrderFormPage() {
       toast.error(formatApiError(e.response?.data?.detail) || "Save failed");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Creates the WO on-the-fly (without leaving the page) so the SPK document can
+  // be uploaded even before the user explicitly clicks Save. Returns the WO id.
+  const ensureSaved = async () => {
+    if (effectiveId) return effectiveId;
+    if (!String(form.pelanggan || "").trim()) {
+      toast.error("Isi Nama Pelanggan terlebih dahulu");
+      setActive("customer");
+      return null;
+    }
+    const hasSa = String(form.sa_id || "").trim();
+    const hasSi = String(form.si_id || "").trim();
+    if (!hasSa && !hasSi) {
+      toast.error("Isi SA ID atau SI ID terlebih dahulu");
+      setActive("customer");
+      return null;
+    }
+    try {
+      const payload = { ...form };
+      delete payload.id;
+      delete payload.created_at;
+      delete payload.updated_at;
+      delete payload.created_by;
+      const { data } = await api.post("/workorders", payload);
+      const newId = data.id || data._id;
+      setCreatedId(newId);
+      // Update the URL in place (no remount) so a refresh keeps editing this WO.
+      window.history.replaceState(null, "", `/workorders/${newId}`);
+      toast.success("Work Order tersimpan — melanjutkan upload SPK…");
+      return newId;
+    } catch (e) {
+      toast.error(formatApiError(e.response?.data?.detail) || "Gagal menyimpan Work Order");
+      return null;
     }
   };
 
@@ -853,18 +891,14 @@ export default function WorkOrderFormPage() {
           </div>
 
           {visibleActiveSection?.id === "spk" && (
-            isEdit ? (
-              <SpkUpload workorderId={id} canEdit={canEdit} />
-            ) : (
-              <div className="mt-6 border border-dashed border-blue-200 bg-blue-50/40 rounded-sm p-4 text-sm text-muted-foreground">
-                Simpan Work Order terlebih dahulu untuk mengunggah dokumen SPK (PDF).
-              </div>
-            )
+            <SpkUpload
+              workorderId={effectiveId}
+              canEdit={canEdit}
+              onEnsureSaved={ensureSaved}
+            />
           )}
         </section>
       </div>
-
-      {isEdit && <Attachments workorderId={id} canEdit={canEdit} />}
 
       <MapPicker
         open={mapPickerOpen}

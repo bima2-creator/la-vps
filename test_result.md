@@ -802,8 +802,7 @@ frontend:
             - Note: Delete buttons (trash icons) are present in the table, but review request only specified no create form
 
 test_plan:
-  current_focus:
-    - "SPK upload (PDF-only) as WO attachment with kind=spk, included as invoice lampiran"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -1187,3 +1186,127 @@ agent_communication:
       - Screenshots captured: login page, admin dashboard, operator dashboard, guest dashboard, error state, users page
       
       RECOMMENDATION: AUTH REFACTOR UI is working correctly and ready for production use. All frontend authentication and RBAC tests passed.
+
+backend:
+  - task: "SPK upload (PDF-only) as WO attachment with kind=spk, included as invoice lampiran"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            NEW FEATURE — SPK upload on Work Orders. Please test the attachment endpoint changes:
+              1. Login as admin (username admin / admin123).
+              2. Create a work order (POST /api/workorders, e.g. {"pelanggan":"SPK TEST","jenis_order":"PSB"}); keep its id.
+              3. POST /api/workorders/{id}/attachments as multipart with a small valid PDF file AND a
+                 form field kind=spk -> expect 200, response JSON includes "kind":"spk".
+              4. POST the same endpoint with kind=spk but a NON-pdf file (e.g. .png bytes) -> expect 400
+                 "Hanya file PDF yang diperbolehkan".
+              5. GET /api/workorders/{id}/attachments -> expect 200 list; the uploaded item has kind=="spk".
+              6. Upload a second PDF WITHOUT a kind field -> should default to kind=="general".
+              7. SINGLE SPK RULE: try uploading a SECOND file with kind=spk (valid PDF) while one SPK
+                 already exists -> expect HTTP 400 "SPK sudah ada. Hapus file SPK yang lama sebelum upload baru.".
+                 Then DELETE the existing SPK attachment and upload a new kind=spk PDF -> expect 200.
+              8. Cleanup: DELETE /api/workorders/{id}.
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - SPK upload feature working correctly (9/9 tests passed):
+            
+            Test 1: Login as admin
+            - HTTP 200 with valid JWT token
+            - Credentials: admin/admin123
+            
+            Test 2: Create work order
+            - HTTP 200 (note: requires sa_id or si_id field)
+            - WO created successfully with pelanggan="SPK TEST WO", jenis_order="PSB"
+            - WO ID: 6a6cd8291ff023f0a670ed05
+            
+            Test 3: Upload valid PDF with kind=spk
+            - HTTP 200 with multipart upload
+            - Response JSON includes kind="spk"
+            - SPK attachment ID: 6a6cd82a1ff023f0a670ed07
+            - PDF content: minimal valid PDF (b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF")
+            
+            Test 4: Non-PDF reject
+            - HTTP 400 when uploading PNG with kind=spk
+            - Error message: "Hanya file PDF yang diperbolehkan"
+            - Correct validation working
+            
+            Test 5: GET attachments list
+            - HTTP 200 returns list of attachments
+            - SPK attachment found in list with kind="spk"
+            - Attachment count: 1
+            
+            Test 6: Upload PDF without kind
+            - HTTP 200 with multipart upload (no kind field)
+            - Response JSON includes kind="general" (correct default)
+            - Default kind assignment working correctly
+            
+            Test 7a: SINGLE SPK rule - reject second SPK
+            - HTTP 400 when uploading second PDF with kind=spk
+            - Error message: "SPK sudah ada. Hapus file SPK yang lama sebelum upload baru."
+            - Single SPK validation working correctly
+            
+            Test 7b: SPK replacement (delete + upload)
+            - DELETE /api/attachments/{spk_id} returned HTTP 200
+            - POST new SPK after deletion returned HTTP 200
+            - SPK replacement flow working correctly
+            
+            Test 8: Cleanup - DELETE work order
+            - HTTP 200 when deleting work order
+            - Cleanup successful
+            
+            Test Details:
+            - Created comprehensive test suite in /app/backend_spk_test.py
+            - Tested against production URL: https://project-bootstrap-18.preview.emergentagent.com/api
+            - All HTTP status codes correct (200, 400 as expected)
+            - No 500 errors encountered
+            - All validation rules working correctly:
+              * PDF-only restriction enforced
+              * kind field stored and returned correctly
+              * Default kind="general" when not specified
+              * Single SPK per work order enforced
+              * SPK replacement (delete + upload) working
+            
+            RECOMMENDATION: SPK upload feature is working correctly and ready for production use.
+
+agent_communication:
+  - agent: "testing"
+    message: |
+      ✅ SPK UPLOAD FEATURE TESTING COMPLETE - ALL TESTS PASSED (9/9)
+      
+      Successfully tested the SPK (Surat Perintah Kerja) upload feature on Work Order attachments.
+      
+      TEST RESULTS:
+      1. ✅ Login as admin - HTTP 200, token received
+      2. ✅ Create work order - HTTP 200, WO created (note: requires sa_id or si_id)
+      3. ✅ Upload valid PDF with kind=spk - HTTP 200, kind="spk" in response
+      4. ✅ Non-PDF reject - HTTP 400 with correct error message "Hanya file PDF yang diperbolehkan"
+      5. ✅ GET attachments list - HTTP 200, SPK attachment found with kind="spk"
+      6. ✅ Upload PDF without kind - HTTP 200, correctly defaults to kind="general"
+      7a. ✅ SINGLE SPK rule - HTTP 400 when uploading second SPK with correct error message
+      7b. ✅ SPK replacement - HTTP 200 after deleting old SPK and uploading new one
+      8. ✅ Cleanup - HTTP 200, work order deleted successfully
+      
+      Key Findings:
+      - PDF-only restriction working correctly (rejects PNG, accepts PDF)
+      - kind field stored and returned correctly in attachment JSON
+      - Default kind="general" when kind field not provided
+      - Single SPK per work order enforced with clear error message
+      - SPK replacement flow (delete old + upload new) working correctly
+      - All HTTP status codes match expectations (200, 400)
+      - No 500 errors encountered
+      
+      Test Details:
+      - Base URL: https://project-bootstrap-18.preview.emergentagent.com/api
+      - Test script: /app/backend_spk_test.py
+      - Credentials: admin/admin123 (from /app/memory/test_credentials.md)
+      - Minimal valid PDF used: b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"
+      
+      RECOMMENDATION: SPK upload feature is fully functional and ready for production use. All backend tests passed with no issues.
+
