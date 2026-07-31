@@ -29,6 +29,13 @@ from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, Image as RLImage
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
 
+# For merging faktur pajak PDF into the invoice output
+try:
+    from pypdf import PdfReader, PdfWriter
+    _HAS_PYPDF = True
+except Exception:
+    _HAS_PYPDF = False
+
 # ------------------------------------------------------------------
 # Config
 # ------------------------------------------------------------------
@@ -1947,6 +1954,63 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
     doc.build(story)
     buf.seek(0)
     safe_no = (inv_no or "invoice").replace("/", "-").replace(" ", "_")
+
+    # -----------------------------------------------------------
+    # Append Faktur Pajak (if uploaded) as lampiran pages.
+    # -----------------------------------------------------------
+    fp = inv.get("faktur_pajak_attachment") or {}
+    if fp.get("storage_path") and _HAS_PYPDF:
+        try:
+            fp_bytes, fp_ctype = get_object(fp["storage_path"])
+            fp_ext = (fp.get("ext") or "").lower()
+            fp_pdf_bytes: Optional[bytes] = None
+            if fp_ext == "pdf" or (fp_ctype or "").lower() == "application/pdf":
+                fp_pdf_bytes = fp_bytes
+            elif fp_ext in ("png", "jpg", "jpeg"):
+                # Wrap image into a single-page PDF via reportlab
+                img_buf = io.BytesIO()
+                img_doc = SimpleDocTemplate(
+                    img_buf, pagesize=A4,
+                    leftMargin=10 * mm, rightMargin=10 * mm,
+                    topMargin=10 * mm, bottomMargin=10 * mm,
+                )
+                img_reader = RLImage(io.BytesIO(fp_bytes))
+                # Scale image to fit page width (~190mm)
+                max_w = 190 * mm
+                max_h = 260 * mm
+                try:
+                    iw = img_reader.imageWidth
+                    ih = img_reader.imageHeight
+                    ratio = min(max_w / iw, max_h / ih)
+                    img_reader.drawWidth = iw * ratio
+                    img_reader.drawHeight = ih * ratio
+                except Exception:
+                    img_reader.drawWidth = max_w
+                    img_reader.drawHeight = max_h
+                img_doc.build([img_reader])
+                fp_pdf_bytes = img_buf.getvalue()
+            if fp_pdf_bytes:
+                writer = PdfWriter()
+                # Append main invoice
+                for page in PdfReader(io.BytesIO(buf.getvalue())).pages:
+                    writer.add_page(page)
+                # Append faktur pajak
+                for page in PdfReader(io.BytesIO(fp_pdf_bytes)).pages:
+                    writer.add_page(page)
+                merged = io.BytesIO()
+                writer.write(merged)
+                merged.seek(0)
+                return StreamingResponse(
+                    merged,
+                    media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{safe_no}.pdf"'},
+                )
+        except Exception as e:
+            logging.getLogger("la-tracker").warning(
+                "faktur pajak merge failed for %s: %s", inv_id, e
+            )
+            # fall through to return invoice without lampiran
+
     return StreamingResponse(
         buf,
         media_type="application/pdf",
@@ -2104,6 +2168,7 @@ class InvoiceIn(BaseModel):
     jenis_pekerjaan: str
     invoice_no: Optional[str] = ""
     inv_no_eproc: Optional[str] = ""
+    faktur_pajak_no: Optional[str] = ""
     tanggal: Optional[str] = ""
     tgl_kirim: Optional[str] = ""
     tgl_bayar: Optional[str] = ""
@@ -2360,6 +2425,7 @@ async def create_invoice(
         "jenis_pekerjaan": jp,
         "invoice_no": invoice_no,
         "inv_no_eproc": (payload.inv_no_eproc or "").strip(),
+        "faktur_pajak_no": (payload.faktur_pajak_no or "").strip(),
         "tanggal": payload.tanggal or "",
         "tgl_kirim": payload.tgl_kirim or "",
         "tgl_bayar": payload.tgl_bayar or "",
@@ -2423,6 +2489,7 @@ async def update_invoice(
         "jenis_pekerjaan": jp,
         "invoice_no": invoice_no,
         "inv_no_eproc": (payload.inv_no_eproc or "").strip(),
+        "faktur_pajak_no": (payload.faktur_pajak_no or "").strip(),
         "tanggal": payload.tanggal or "",
         "tgl_kirim": payload.tgl_kirim or "",
         "tgl_bayar": payload.tgl_bayar or "",
@@ -2463,6 +2530,105 @@ async def delete_invoice(
     if res.deleted_count == 0:
         raise HTTPException(404, "Not found")
     await audit("invoice.delete", user, target=inv_id)
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------
+# Invoice - Faktur Pajak (upload PDF/image + store nomor)
+# ------------------------------------------------------------------
+FP_ALLOWED_EXT = {"pdf", "png", "jpg", "jpeg"}
+
+
+@api.post("/invoices/{inv_id}/faktur-pajak")
+async def upload_faktur_pajak(
+    inv_id: str,
+    file: UploadFile = File(...),
+    faktur_pajak_no: Optional[str] = None,
+    user: dict = Depends(require_roles("admin", "operator")),
+):
+    try:
+        oid = ObjectId(inv_id)
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    inv = await db.invoices.find_one({"_id": oid})
+    if not inv:
+        raise HTTPException(404, "Invoice tidak ditemukan")
+    data = await file.read()
+    if len(data) > 20 * 1024 * 1024:
+        raise HTTPException(413, "File terlalu besar (maks 20MB)")
+    fname = file.filename or "faktur_pajak"
+    ext = (fname.rsplit(".", 1)[-1] if "." in fname else "bin").lower()
+    if ext not in FP_ALLOWED_EXT:
+        raise HTTPException(400, "Format harus PDF, PNG, atau JPG")
+    ctype = file.content_type or MIME_TYPES.get(ext, "application/octet-stream")
+    file_uuid = str(uuid.uuid4())
+    path = f"{APP_NAME}/invoices/{inv_id}/faktur_pajak_{file_uuid}.{ext}"
+    result = put_object(path, data, ctype)
+    fp_attachment = {
+        "storage_path": result["path"],
+        "original_filename": fname,
+        "content_type": ctype,
+        "size": result.get("size", len(data)),
+        "ext": ext,
+        "uploaded_by": user["email"],
+        "uploaded_at": now_iso(),
+    }
+    update_set: Dict[str, Any] = {
+        "faktur_pajak_attachment": fp_attachment,
+        "updated_at": now_iso(),
+    }
+    if faktur_pajak_no is not None:
+        update_set["faktur_pajak_no"] = (faktur_pajak_no or "").strip()
+    await db.invoices.update_one({"_id": oid}, {"$set": update_set})
+    await audit(
+        "invoice.faktur_pajak.upload", user, target=inv_id,
+        meta={"filename": fname, "size": fp_attachment["size"], "no": update_set.get("faktur_pajak_no")},
+    )
+    return {"ok": True, "faktur_pajak_attachment": fp_attachment,
+            "faktur_pajak_no": update_set.get("faktur_pajak_no", inv.get("faktur_pajak_no", ""))}
+
+
+@api.get("/invoices/{inv_id}/faktur-pajak/download")
+async def download_faktur_pajak(inv_id: str, request: Request, auth: Optional[str] = Query(None)):
+    # Support ?auth= for inline preview; fallback to normal auth headers
+    if auth and "Authorization" not in request.headers:
+        request.scope["headers"] = list(request.scope["headers"]) + [(b"authorization", f"Bearer {auth}".encode())]
+    _ = await get_current_user(request)
+    try:
+        oid = ObjectId(inv_id)
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    inv = await db.invoices.find_one({"_id": oid})
+    if not inv:
+        raise HTTPException(404, "Invoice tidak ditemukan")
+    fp = inv.get("faktur_pajak_attachment") or {}
+    if not fp.get("storage_path"):
+        raise HTTPException(404, "Faktur pajak belum diupload")
+    data, ctype = get_object(fp["storage_path"])
+    return Response(
+        content=data,
+        media_type=fp.get("content_type") or ctype,
+        headers={"Content-Disposition": f'inline; filename="{fp.get("original_filename", "faktur_pajak")}"'},
+    )
+
+
+@api.delete("/invoices/{inv_id}/faktur-pajak")
+async def delete_faktur_pajak(
+    inv_id: str,
+    user: dict = Depends(require_roles("admin", "operator")),
+):
+    try:
+        oid = ObjectId(inv_id)
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    inv = await db.invoices.find_one({"_id": oid})
+    if not inv:
+        raise HTTPException(404, "Invoice tidak ditemukan")
+    await db.invoices.update_one(
+        {"_id": oid},
+        {"$unset": {"faktur_pajak_attachment": ""}, "$set": {"updated_at": now_iso()}},
+    )
+    await audit("invoice.faktur_pajak.delete", user, target=inv_id)
     return {"ok": True}
 
 
