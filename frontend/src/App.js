@@ -1,56 +1,76 @@
-import { useEffect } from "react";
+import React from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-import { HOME } from "@/constants/testIds";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/context/AuthContext";
+import { Toaster } from "@/components/ui/sonner";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Layout from "@/components/Layout";
+import LoginPage from "@/pages/LoginPage";
+import DashboardPage from "@/pages/DashboardPage";
+import WorkOrdersPage from "@/pages/WorkOrdersPage";
+import WorkOrderFormPage from "@/pages/WorkOrderFormPage";
+import ReportsPage from "@/pages/ReportsPage";
+import UsersPage from "@/pages/UsersPage";
+import AuditLogPage from "@/pages/AuditLogPage";
+import InvoicesPage from "@/pages/InvoicesPage";
+import MasterPerangkatPage from "@/pages/MasterPerangkatPage";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
+export default function App() {
   return (
-    <div>
-      <header className="App-header">
-        <a
-          data-testid={HOME.emergentLink}
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
-
-function App() {
-  return (
-    <div className="App">
+    <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/workorders" element={<WorkOrdersPage />} />
+            <Route
+              path="/workorders/new"
+              element={
+                <ProtectedRoute roles={["admin", "operator"]}>
+                  <WorkOrderFormPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workorders/:id"
+              element={
+                <ProtectedRoute roles={["admin", "operator"]}>
+                  <WorkOrderFormPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/invoices" element={<InvoicesPage />} />
+            <Route path="/perangkat" element={<MasterPerangkatPage />} />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <UsersPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/audit"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AuditLogPage />
+                </ProtectedRoute>
+              }
+            />
           </Route>
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
-    </div>
+      <Toaster richColors position="top-right" theme="dark" />
+    </AuthProvider>
   );
 }
-
-export default App;
