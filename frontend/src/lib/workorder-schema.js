@@ -117,9 +117,9 @@ export const SECTIONS = [
     label: "Info Pelanggan",
     fields: [
       { name: "info_kondisi", label: "Kondisi Pelanggan", type: "textarea" },
+      { name: "info_masalah", label: "Info Masalah", type: "textarea" },
       { name: "info_perizinan", label: "Perizinan", type: "text" },
       { name: "info_biaya", label: "Biaya", type: "text" },
-      { name: "info_masalah", label: "Info Masalah", type: "textarea" },
       { name: "info_tindak_lanjut", label: "Tindak Lanjut", type: "textarea" },
     ],
   },
