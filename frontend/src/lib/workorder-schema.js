@@ -181,6 +181,8 @@ const AKTIVASI_FIELDS = [
 const DISMANTLE_EXTRA_HIDDEN = [
   "sa_id",
   "bw",
+  "lat",
+  "lng",
   "rfs_la",
   "rfs_pelanggan",
   // SPK: keep survey nomor + tgl_doc + tgl_terima (relabeled as SPK Dismantle)

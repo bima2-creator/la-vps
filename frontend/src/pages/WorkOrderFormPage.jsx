@@ -716,21 +716,23 @@ export default function WorkOrderFormPage() {
                 <b>*</b> Nama Pelanggan wajib diisi &middot; SA ID atau SI ID wajib
                 diisi minimal salah satu untuk setiap Work Order.
               </div>
-              <div className="mb-4 flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  data-testid="workorder-form-map-picker-btn"
-                  onClick={() => setMapPickerOpen(true)}
-                  disabled={!canEdit}
-                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white text-sm font-medium px-3 py-2 rounded-sm transition-colors"
-                >
-                  <MapPin size={14} weight="fill" /> Pilih Titik Lokasi di Peta
-                </button>
-                <span className="text-[11px] text-muted-foreground">
-                  Otomatis mengisi Latitude &amp; Longitude dalam format DMS
-                  (mis. <span className="mono">{`6°12'31.68"S`}</span>).
-                </span>
-              </div>
+              {jenisChosen !== "DISMANTLE" && (
+                <div className="mb-4 flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    data-testid="workorder-form-map-picker-btn"
+                    onClick={() => setMapPickerOpen(true)}
+                    disabled={!canEdit}
+                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white text-sm font-medium px-3 py-2 rounded-sm transition-colors"
+                  >
+                    <MapPin size={14} weight="fill" /> Pilih Titik Lokasi di Peta
+                  </button>
+                  <span className="text-[11px] text-muted-foreground">
+                    Otomatis mengisi Latitude &amp; Longitude dalam format DMS
+                    (mis. <span className="mono">{`6°12'31.68"S`}</span>).
+                  </span>
+                </div>
+              )}
             </>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
