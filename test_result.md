@@ -820,7 +820,10 @@ agent_communication:
            "Hanya file PDF yang diperbolehkan".
         5. GET /api/workorders/{id}/attachments -> expect 200 list; the uploaded item has kind=="spk".
         6. Upload a second PDF WITHOUT a kind field -> should default to kind=="general".
-        7. Cleanup: DELETE /api/workorders/{id} (or leave; note it in report).
+        7. SINGLE SPK RULE: try uploading a SECOND file with kind=spk (valid PDF) while one SPK
+           already exists -> expect HTTP 400 "SPK sudah ada. Hapus file SPK yang lama sebelum upload baru.".
+           Then DELETE the existing SPK attachment and upload a new kind=spk PDF -> expect 200.
+        8. Cleanup: DELETE /api/workorders/{id}.
       Confirm the existing attachment behavior (PDF-only, list, download) is unchanged and that
       kind is stored/returned correctly. The invoice PDF merge pulls ALL WO attachments regardless
       of kind, so no separate invoice test is required unless trivial.

@@ -552,9 +552,13 @@ export default function WorkOrderFormPage() {
       <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4">
         <aside className="border border-border bg-card rounded-sm p-2 h-max">
           {(() => {
+            const hasNama = String(form.pelanggan || "").trim();
             const hasSa = String(form.sa_id || "").trim();
             const hasSi = String(form.si_id || "").trim();
-            const sectionsLocked = !hasSa && !hasSi;
+            const sectionsLocked = !hasNama || (!hasSa && !hasSi);
+            const lockMsg = !hasNama
+              ? "Isi Nama Pelanggan di section Customer terlebih dahulu"
+              : "Isi SA ID atau SI ID di section Customer terlebih dahulu";
             return visibleSections.map((s, i) => {
               const isCustomer = s.id === "customer";
               const isLocked = sectionsLocked && !isCustomer;
@@ -565,9 +569,7 @@ export default function WorkOrderFormPage() {
                   disabled={isLocked}
                   onClick={() => {
                     if (isLocked) {
-                      toast.error(
-                        "Isi SA ID atau SI ID di section Customer terlebih dahulu"
-                      );
+                      toast.error(lockMsg);
                       setActive("customer");
                       return;
                     }
@@ -582,7 +584,7 @@ export default function WorkOrderFormPage() {
                   }`}
                   title={
                     isLocked
-                      ? "Isi SA ID atau SI ID untuk membuka section ini"
+                      ? "Isi Nama Pelanggan dan (SA ID atau SI ID) untuk membuka section ini"
                       : ""
                   }
                 >

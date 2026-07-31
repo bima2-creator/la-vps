@@ -2201,6 +2201,13 @@ async def upload_attachment(wo_id: str, file: UploadFile = File(...), kind: str 
     kind = (kind or "general").strip().lower()
     if kind not in ("general", "spk"):
         kind = "general"
+    # Only a single SPK document is allowed per work order.
+    if kind == "spk":
+        existing_spk = await db.attachments.count_documents(
+            {"workorder_id": wo_id, "kind": "spk", "is_deleted": False}
+        )
+        if existing_spk >= 1:
+            raise HTTPException(400, "SPK sudah ada. Hapus file SPK yang lama sebelum upload baru.")
     file_uuid = str(uuid.uuid4())
     path = f"{APP_NAME}/workorders/{wo_id}/{file_uuid}.{ext}"
     result = put_object(path, data, ctype)

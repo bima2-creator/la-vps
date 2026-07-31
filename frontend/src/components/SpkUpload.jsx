@@ -88,7 +88,7 @@ export default function SpkUpload({ workorderId, canEdit }) {
             Upload file SPK (PDF). File ini otomatis menjadi lampiran invoice.
           </div>
         </div>
-        {canEdit && (
+        {canEdit && items.length === 0 && (
           <>
             <input
               ref={inputRef}
@@ -108,6 +108,11 @@ export default function SpkUpload({ workorderId, canEdit }) {
               <Upload size={16} /> {uploading ? "Mengupload…" : "Upload SPK"}
             </button>
           </>
+        )}
+        {canEdit && items.length >= 1 && (
+          <span className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-sm">
+            Hanya 1 file SPK. Hapus file lama untuk mengganti.
+          </span>
         )}
       </div>
 
