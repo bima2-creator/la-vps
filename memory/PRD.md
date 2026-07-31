@@ -26,7 +26,33 @@ tracking, SLA (durasi vs target), Bill of Quantity (BoQ), and Invoice lifecycle.
 7. Reports page with filters + Print/PDF and Excel export.
 8. Admin user management page.
 
-## DISMANTLE Minimal Fields (Feb 2026)
+## Bank Data Perangkat / Auto-Detect Registrasi (Jun 2026 — implemented)
+- **Tujuan**: operator mengetik nomor registrasi perangkat → sistem otomatis
+  mengenali NAMA perangkat dari prefix kode (11-13 karakter). Bank data
+  **belajar**: setiap perangkat (nama + nomor registrasi) yang ditambahkan ke WO
+  otomatis tersimpan jadi bank data (makin banyak input makin pintar).
+- **Backend** (`server.py`):
+  - Collection baru `perangkat_bank` `{prefix, plen, nama, count, updated_at}`,
+    index compound `{prefix:1, plen:1}`.
+  - `_learn_perangkat(items)` — dipanggil di `create_workorder` &
+    `update_workorder`; untuk tiap item simpan prefix panjang 11/12/13 → nama
+    (`$inc count`, upsert).
+  - `_seed_perangkat_bank()` — di `on_startup`, seed dari
+    `perangkat_bank_seed.json` (~99 baris dari `data perangkat.xlsx`) bila
+    koleksi kosong (idempotent).
+  - `GET /api/perangkat/bank/lookup?nomor=` — **longest-prefix match**: coba
+    13 → 12 → 11 karakter, kembalikan `{matched, prefix, length, ambiguous,
+    suggested, options[]}`. `<11` char → `matched=false`.
+- **Frontend** (`PerangkatEditor.jsx`):
+  - `useEffect` debounce 300ms pada `draft.nomor_registrasi` (min 11 char) →
+    call lookup.
+  - Match tunggal → auto-isi nama (bisa diedit; tidak menimpa ketikan manual)
+    + hint hijau "Terdeteksi otomatis" (`perangkat-bank-detected`).
+  - Match ambigu (mis. REMOTE HX50 vs MODEM HX50) → kotak amber berisi tombol
+    pilihan (`perangkat-bank-options` / `perangkat-bank-option-*`), klik untuk
+    isi nama.
+- **Status**: Tested end-to-end (backend 8/8 pytest, frontend 2/2 flow) — PASS.
+
 - Untuk jenis DISMANTLE, banyak field disembunyikan sesuai request:
   - Customer: `sa_id`, `lat`, `lng`, `bw`, `rfs_la`, `rfs_pelanggan` hidden.
   - SPK: hanya `spk_survey_nomor` + `spk_survey_tgl_doc` visible (sisanya
