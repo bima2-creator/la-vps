@@ -26,6 +26,26 @@ tracking, SLA (durasi vs target), Bill of Quantity (BoQ), and Invoice lifecycle.
 7. Reports page with filters + Print/PDF and Excel export.
 8. Admin user management page.
 
+## Kelola & Ekspor Bank Data + Auto-Isi di Tabel (Jun 2026 — implemented)
+- **Halaman admin `/bank-data`** (`BankDataPage.jsx`, menu "Kelola Bank Data"
+  grup Admin, admin-only): KPI (total entri, prefix unik, nama unik), pencarian
+  (prefix/nama), tabel entri dengan **edit inline** (prefix + nama), **hapus**,
+  dan **tambah entri manual**. Untuk memperbaiki entri prefix yang salah.
+- **Endpoint admin** (`server.py`, semua `require_roles("admin")`):
+  - `GET /api/perangkat/bank?q&page&page_size` — list + KPI.
+  - `POST /api/perangkat/bank {prefix, nama}` — tambah (validasi prefix 11-13
+    char; idempotent).
+  - `PUT /api/perangkat/bank/{id}` — ubah prefix/nama; **auto-merge count** bila
+    hasil edit bentrok dengan entri lain (`merged=true`).
+  - `DELETE /api/perangkat/bank/{id}` — hapus entri.
+  - `GET /api/perangkat/bank/export/xlsx` — unduh seluruh bank data ke Excel.
+- **Auto-isi di tabel perangkat** (`PerangkatEditor.jsx`): saat operator
+  mengedit `nomor_registrasi` pada baris perangkat yang sudah ada (bukan hanya
+  saat menambah), lookup dijalankan (debounce 300ms). Match tunggal → nama
+  terisi otomatis (tidak menimpa ketikan manual, dilindungi `rowAutoRef`);
+  match ambigu → chip pilihan (`perangkat-row-bank-options-{i}`) untuk dipilih.
+- **Status**: Tested end-to-end (backend 15/15 pytest, frontend 3/3 flow) — PASS.
+
 ## Bank Data Perangkat / Auto-Detect Registrasi (Jun 2026 — implemented)
 - **Tujuan**: operator mengetik nomor registrasi perangkat → sistem otomatis
   mengenali NAMA perangkat dari prefix kode (11-13 karakter). Bank data
