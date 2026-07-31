@@ -1220,7 +1220,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                     </div>
                   </div>
                 </div>
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
                     Status <span className="text-muted-foreground/70">(otomatis)</span>
                   </label>
