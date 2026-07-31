@@ -750,6 +750,7 @@ export default function WorkOrderFormPage() {
                       onChange={(items) => onChange("perangkat_items", items)}
                       disabled={!canEdit}
                       jenis={jenisChosen}
+                      hideAdd={faseChosen === "SURVEY"}
                     />
                     <div className="mt-2 text-[11px] text-muted-foreground">
                       1 nomor registrasi hanya boleh dimiliki 1 SA ID / SI ID (WO).

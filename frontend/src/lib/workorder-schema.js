@@ -297,7 +297,7 @@ export const JENIS_FIELD_LABEL_OVERRIDES = {
     spk_survey_tgl_doc: "Tanggal SPK",
     hasil_survey_status: "Status Maintenance",
     hasil_survey_datek: "Datek Maintenance",
-    perangkat_items: "Perangkat Terganggu / Diperbaiki",
+    perangkat_items: "flow perangkat",
   },
 };
 

@@ -50,7 +50,7 @@ function RoleBadge({ role }) {
   );
 }
 
-export default function PerangkatEditor({ items, onChange, disabled, jenis }) {
+export default function PerangkatEditor({ items, onChange, disabled, jenis, hideAdd }) {
   const list = items || [];
   const isMaint = jenis === "MAINTENANCE";
   const [addRole, setAddRole] = useState(null); // null | "existing" | "dicabut" | "pengganti" | "any"
@@ -95,7 +95,7 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis }) {
 
   return (
     <div data-testid="perangkat-editor" className="space-y-3">
-      {!disabled && (
+      {!disabled && !hideAdd && (
         <div>
           {addRole ? (
             <div
