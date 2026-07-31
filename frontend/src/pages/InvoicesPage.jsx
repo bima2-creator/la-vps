@@ -478,8 +478,10 @@ function InvoiceForm({ initial, onClose, onSaved }) {
           },
         });
         setCandidates(data);
-        // Auto-include ALL matching WOs — no manual picking
-        setSelected(new Set(data.map((c) => c.id)));
+        // Auto-include ALL matching WOs that already have an attachment;
+        // WOs without attachment are NOT selectable — user must upload
+        // their PDF lampiran first (SLA/BAST/dsb.) before invoicing.
+        setSelected(new Set(data.filter((c) => c.has_attachment !== false).map((c) => c.id)));
       } catch (e) {
         toast.error(formatApiError(e));
       } finally {
@@ -520,6 +522,12 @@ function InvoiceForm({ initial, onClose, onSaved }) {
       return acc;
     },
     { jasa: 0, material: 0, grand: 0 }
+  );
+
+  // WO tanpa attachment tidak boleh masuk invoice
+  const missingAttachmentWos = useMemo(
+    () => candidates.filter((c) => c.has_attachment === false),
+    [candidates],
   );
 
   const addPelanggan = (p) => {
@@ -899,6 +907,32 @@ function InvoiceForm({ initial, onClose, onSaved }) {
               <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1.5">
                 3 &middot; Ringkasan per Pelanggan
               </div>
+              {missingAttachmentWos.length > 0 && (
+                <div
+                  data-testid="invoice-form-missing-attachments"
+                  className="mb-2 border border-red-300 bg-red-50 rounded-sm px-3 py-2 text-sm text-red-800"
+                >
+                  <div className="font-semibold mb-1">
+                    {missingAttachmentWos.length} pekerjaan belum ada attachment PDF — tidak akan masuk invoice
+                  </div>
+                  <div className="text-[12px] text-red-700 mb-1">
+                    Upload lampiran PDF (BAST/SLA/dokumen pendukung) di halaman Work Order terlebih dahulu.
+                  </div>
+                  <ul className="list-disc list-inside text-[12px] max-h-24 overflow-auto">
+                    {missingAttachmentWos.slice(0, 20).map((c) => (
+                      <li key={c.id}>
+                        <span className="mono">{c.sa_id || c.id}</span>
+                        <span className="text-red-600"> — {c.pelanggan || "-"}</span>
+                      </li>
+                    ))}
+                    {missingAttachmentWos.length > 20 && (
+                      <li className="italic">
+                        …dan {missingAttachmentWos.length - 20} pekerjaan lainnya
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
               {loadingCand ? (
                 <div className="p-3 text-sm text-muted-foreground">Loading…</div>
               ) : (

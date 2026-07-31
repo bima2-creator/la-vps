@@ -2388,6 +2388,7 @@ async def invoice_candidates(
             already_billed_ids.add(str(wid))
 
     out = []
+    eligible_ids: List[str] = []
     for d in docs:
         if not _wo_matches_activity(d, jp):
             continue
@@ -2396,6 +2397,7 @@ async def invoice_candidates(
         # pelanggan yang belum dibuatkan invoice" per user's request.
         if wid in already_billed_ids:
             continue
+        eligible_ids.append(wid)
         out.append({
             "id": wid,
             "pelanggan": d.get("pelanggan", ""),
@@ -2408,7 +2410,16 @@ async def invoice_candidates(
             "boq_material": d.get("boq_material", 0),
             "boq_jumlah": d.get("boq_jumlah", 0),
             "activity_end": d.get(f"activity_{jp.lower()}_end") if jp in ("SURVEY", "INSTALASI", "AKTIVASI") else d.get("activity_instalasi_end"),
+            "has_attachment": False,
         })
+    if eligible_ids:
+        counts = await db.attachments.aggregate([
+            {"$match": {"workorder_id": {"$in": eligible_ids}, "is_deleted": False}},
+            {"$group": {"_id": "$workorder_id", "n": {"$sum": 1}}},
+        ]).to_list(len(eligible_ids))
+        have = {c["_id"] for c in counts if c.get("n", 0) > 0}
+        for row in out:
+            row["has_attachment"] = row["id"] in have
     return out
 
 
