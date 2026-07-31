@@ -1784,7 +1784,7 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
                 "",
             ],
         ]
-        meta_top = Table(meta_rows, colWidths=[90 * mm, 45 * mm, 45 * mm])
+        meta_top = Table(meta_rows, colWidths=[90 * mm, 45 * mm, 45 * mm], hAlign="LEFT")
         meta_style = list(banner_style) + [
             # Blue banner on EPROC header
             ("BACKGROUND", (1, 2), (1, 2), BRAND_BLUE_LIGHT),
@@ -1810,6 +1810,7 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
                 ],
             ],
             colWidths=[90 * mm, 45 * mm, 45 * mm],
+            hAlign="LEFT",
         )
         meta_top.setStyle(TableStyle(banner_style))
         story.append(meta_top)
