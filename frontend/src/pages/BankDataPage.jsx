@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { api, formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import {
   Database,
   MagnifyingGlass,
   DownloadSimple,
+  UploadSimple,
   Plus,
   Trash,
   PencilSimple,
@@ -28,6 +29,8 @@ export default function BankDataPage() {
   const [editing, setEditing] = useState(null); // { id, prefix, nama }
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ prefix: "", nama: "" });
+  const fileRef = useRef(null);
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async (search) => {
     setLoading(true);
@@ -95,8 +98,36 @@ export default function BankDataPage() {
     }
   };
 
-  const exportXlsx = async () => {
+  const importXlsx = async (e) => {
+    const file = e.target.files?.[0];
+    if (fileRef.current) fileRef.current.value = "";
+    if (!file) return;
+    setImporting(true);
     try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const { data } = await api.post("/perangkat/bank/import/xlsx", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success(
+        `Impor selesai: ${data.imported} entri ditambahkan${
+          data.skipped ? `, ${data.skipped} dilewati` : ""
+        }`
+      );
+      if (data.errors && data.errors.length) {
+        toast.warning(`${data.errors.length} baris bermasalah (lihat detail)`, {
+          description: data.errors.slice(0, 5).join(" • "),
+        });
+      }
+      load(q);
+    } catch (e2) {
+      toast.error(formatApiError(e2?.response?.data?.detail) || "Gagal mengimpor Excel");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const exportXlsx = async () => {    try {
       const resp = await api.get("/perangkat/bank/export/xlsx", { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([resp.data]));
       const a = document.createElement("a");
@@ -126,6 +157,14 @@ export default function BankDataPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={importXlsx}
+            className="hidden"
+            data-testid="bank-import-input"
+          />
           <button
             data-testid="bank-add-btn"
             onClick={() => {
@@ -135,6 +174,36 @@ export default function BankDataPage() {
             className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-2 rounded-sm"
           >
             <Plus size={16} weight="bold" /> Tambah Entri
+          </button>
+          <button
+            data-testid="bank-template-btn"
+            onClick={async () => {
+              try {
+                const resp = await api.get("/perangkat/bank/import/template.xlsx", {
+                  responseType: "blob",
+                });
+                const url = window.URL.createObjectURL(new Blob([resp.data]));
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "template-bank-data.xlsx";
+                a.click();
+                window.URL.revokeObjectURL(url);
+              } catch {
+                toast.error("Gagal mengunduh template");
+              }
+            }}
+            className="inline-flex items-center gap-2 border border-border bg-secondary hover:bg-slate-100 text-sm px-3 py-2 rounded-sm"
+          >
+            <DownloadSimple size={16} /> Template
+          </button>
+          <button
+            data-testid="bank-import-btn"
+            onClick={() => fileRef.current?.click()}
+            disabled={importing}
+            title="Unggah Excel dengan kolom 'Prefix' + 'Nama Perangkat' (atau 'Nomor Registrasi' + 'Nama Perangkat')"
+            className="inline-flex items-center gap-2 border border-border bg-secondary hover:bg-slate-100 disabled:opacity-60 text-sm px-3 py-2 rounded-sm"
+          >
+            <UploadSimple size={16} /> {importing ? "Mengimpor…" : "Import Excel"}
           </button>
           <button
             data-testid="bank-export-xlsx"

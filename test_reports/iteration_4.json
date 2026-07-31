@@ -1,0 +1,27 @@
+{
+  "summary": "Iteration 4 covered the two new Bank Data device auto-detect features: (A) POST /api/perangkat/bank/import/xlsx + GET /api/perangkat/bank/import/template.xlsx (both admin-only), and (B) the 'SOROT AUTO-ISI' green flash UX in the WO PerangkatEditor. Backend: 8/8 pytest cases pass -- template download (200 xlsx + Prefix+Nama Perangkat columns), RBAC 403 for operator+guest on both template + import, prefix-format import (imported=2, skipped=2 with SHORT/empty errors listed), full idempotency (re-import of the same rows -> imported=0, skipped=2), registrasi-format import + learning (a new serial sharing the imported prefix returns the learned nama via /perangkat/bank/lookup as 'suggested'), and bad-file 400 when neither Prefix nor Nomor/Registrasi columns exist. Frontend: /bank-data admin page renders all four buttons (bank-add-btn, bank-template-btn, bank-import-btn, bank-export-xlsx) and hidden bank-import-input (accept=.xlsx,.xls). Template button downloads 'template-bank-data.xlsx'. Uploading an .xlsx via bank-import-input shows 'Impor selesai … ditambahkan' toast and the table reloads to include the new rows. In a PSB/INSTALASI WO -> Hasil Pekerjaan section, opening the add-perangkat drawer and typing 'B2WS0100010305999' into perangkat-draft-nomor auto-fills perangkat-draft-nama to 'CANISTER 1.8 DIAMETER 4 INCHI' AND the input's className contains 'bank-flash'; the 'perangkat-bank-detected' banner appears. After confirming the row, editing perangkat-nomor-0 to 'B2WS0100010305777' (with nama cleared first) auto-fills perangkat-nama-0 and the input carries the 'bank-flash' class (verified via className, not just visually). Cleanup: all TSTIMP / UITEST / TEST_IMPORT / QWERTY test rows deleted; bank collection now at 80 entries (83 seeded - 3 stale QWERTY leftovers from prior iterations we also removed).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_perangkat_bank_import.py",
+    "/app/test_reports/pytest/perangkat_bank_import.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py perangkat_bank_import: registrasi-mode `imported` counter reports the number of accepted input rows -- but _learn_perangkat may fold duplicates (same prefix+nama) into a single bank row with count++, so 'imported' does NOT equal the number of NEW bank documents inserted. Consider renaming to 'accepted' or returning both counts for clarity.",
+    "In registrasi mode `mode='registrasi'` is only assigned inside the elif branch; if `prefix_col` is None AND `nomor_col` is None the function raises before the variable is used, so this is safe -- but a defensive `mode=None` at the top would future-proof.",
+    "Template endpoint is admin-only; consider allowing operators to download the template even though only admins can import -- may improve UX. Current spec explicitly restricts both to admin so this is by design.",
+    "PerangkatEditor: `draftFlash > 0 ? 'bank-flash' : ''` keeps the class attached after the first flash. Because the animation is retriggered by a `key` change on the input (React remount), this is fine, but the className remains present after animation ends -- makes the class a poor signal of 'currently flashing'. Not a bug, but noting.",
+    "BankDataPage import toast omits the count of errors in the main success line -- `data.errors.length` is only surfaced via a secondary `toast.warning`. If a user misses the warning they may not realise some rows had validation problems."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_perangkat_bank_import.py"
+  ],
+  "success_rate": {"backend": "100% (8/8 new import tests + prior 15/15 admin tests + 8/8 lookup tests)", "frontend": "100% (template dl, import upload + toast + persistence, draft flash, row flash)"},
+  "test_credentials": "admin/admin123, operator/operator, guest/guest (username login via role radio + password)",
+  "seed_data_creation": "Backend test module autouses a fixture that deletes any 'TSTIMP' or 'TEST_IMPORT' bank rows before and after the module. Frontend UI test uploaded /tmp/ui_import.xlsx with prefixes UITEST0PRFXA/B (deleted via the delete buttons after verification). Also removed 3 leftover QWERTY entries from prior iterations. Draft WO for flash test was never saved (no Save clicked).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The bank lookup response uses the key 'suggested' (not 'nama') for the resolved device name; also returns 'options' and 'ambiguous'. The Hasil Pekerjaan section tab is DISABLED until Nama Pelanggan + (SA ID or SI ID) are filled -- for any perangkat-editor tests in the WO form, fill those two inputs first before clicking [data-testid=workorder-form-section-tab-hasil]. bank-import-input is hidden and MUST be driven via page.set_input_files (clicking bank-import-btn only opens the native file chooser which Playwright can't interact with). Bank lookup is debounced ~300ms so wait ~1.5s after typing a serial. The 'bank-flash' class remains attached even after the CSS animation ends (its retrigger is a React key change on the input).",
+  "rca of the issue": "N/A -- no bugs found."
+}

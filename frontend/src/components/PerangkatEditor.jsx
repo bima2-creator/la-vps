@@ -59,6 +59,8 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
   const [draft, setDraft] = useState({ nama_perangkat: "", nomor_registrasi: "" });
   const [bank, setBank] = useState(null); // { matched, ambiguous, suggested, options }
   const autoFilledRef = useRef(""); // last value we auto-filled, so we don't clobber manual edits
+  const [draftFlash, setDraftFlash] = useState(0); // bump to trigger green flash on nama
+  const flashDraft = () => setDraftFlash((n) => n + 1);
 
   // Bank Data lookup: recognise device name from registration prefix (11-13 chars).
   useEffect(() => {
@@ -80,6 +82,7 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
             const cur = (d.nama_perangkat || "").trim();
             if (!cur || cur === autoFilledRef.current) {
               autoFilledRef.current = data.suggested;
+              flashDraft();
               return { ...d, nama_perangkat: data.suggested };
             }
             return d;
@@ -98,6 +101,7 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
   const pickBankOption = (nama) => {
     autoFilledRef.current = nama;
     setDraft((d) => ({ ...d, nama_perangkat: nama }));
+    flashDraft();
   };
 
   const suggestions = useMemo(() => {
@@ -143,11 +147,13 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
   const rowTimers = useRef({});
   const rowAutoRef = useRef({});
   const [rowBank, setRowBank] = useState({}); // idx -> lookup result
+  const [rowFlash, setRowFlash] = useState({}); // idx -> counter to trigger flash
 
   const setRowNama = (idx, nama) => {
     rowAutoRef.current[idx] = nama;
     const cur = listRef.current;
     onChange(cur.map((it, i) => (i === idx ? { ...it, nama_perangkat: nama } : it)));
+    setRowFlash((m) => ({ ...m, [idx]: (m[idx] || 0) + 1 }));
   };
 
   const scheduleRowLookup = (idx, nomor) => {
@@ -198,13 +204,16 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 relative">
                 <div className="relative">
                   <input
+                    key={`draft-nama-${draftFlash}`}
                     data-testid="perangkat-draft-nama"
                     placeholder="Nama perangkat (ketik untuk cari)"
                     value={draft.nama_perangkat}
                     onChange={(e) =>
                       setDraft({ ...draft, nama_perangkat: e.target.value.toUpperCase() })
                     }
-                    className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm"
+                    className={`w-full border border-border bg-white rounded-sm px-3 py-2 text-sm ${
+                      draftFlash > 0 ? "bank-flash" : ""
+                    }`}
                   />
                   {suggestions.length > 0 && (
                     <div className="absolute z-10 left-0 right-0 mt-1 border border-border bg-white rounded-sm shadow-lg max-h-52 overflow-y-auto">
@@ -348,11 +357,14 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
                 >
                   <td className="px-3 py-2">
                     <input
+                      key={`nama-${i}-${rowFlash[i] || 0}`}
                       data-testid={`perangkat-nama-${i}`}
                       value={it.nama_perangkat || ""}
                       onChange={(e) => patch(i, "nama_perangkat", e.target.value)}
                       disabled={disabled}
-                      className="w-full bg-white border border-border rounded-sm px-2 py-1 text-sm"
+                      className={`w-full bg-white border border-border rounded-sm px-2 py-1 text-sm ${
+                        (rowFlash[i] || 0) > 0 ? "bank-flash" : ""
+                      }`}
                     />
                   </td>
                   <td className="px-3 py-2">

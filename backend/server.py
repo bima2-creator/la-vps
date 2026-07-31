@@ -1022,6 +1022,106 @@ async def perangkat_bank_delete(entry_id: str, user: dict = Depends(require_role
     return {"ok": True}
 
 
+@api.post("/perangkat/bank/import/xlsx")
+async def perangkat_bank_import(file: UploadFile = File(...), user: dict = Depends(require_roles("admin"))):
+    """Import many prefix->nama pairs from Excel.
+
+    Two accepted layouts (auto-detected by headers):
+      1. PREFIX + NAMA PERANGKAT  -> direct import (prefix must be 11-13 chars).
+      2. NOMOR/KODE REGISTRASI + NAMA PERANGKAT -> derive prefixes via learning.
+    """
+    raw = await file.read()
+    try:
+        df = pd.read_excel(io.BytesIO(raw), sheet_name=0)
+    except Exception as e:
+        raise HTTPException(400, f"Gagal membaca file Excel: {e}")
+
+    cols = {str(c).strip().upper(): c for c in df.columns}
+
+    def find(*keys):
+        for norm, orig in cols.items():
+            if any(k in norm for k in keys):
+                return orig
+        return None
+
+    prefix_col = cols.get("PREFIX")
+    nama_col = find("NAMA")
+    nomor_col = find("REGISTRASI", "NOMOR", "KODE")
+
+    if not nama_col:
+        raise HTTPException(400, "Kolom nama perangkat tidak ditemukan. Gunakan template (kolom 'Prefix' + 'Nama Perangkat').")
+
+    def clean_cell(v) -> str:
+        s = str(v).strip()
+        return "" if s.lower() == "nan" else s
+
+    imported = 0
+    skipped = 0
+    errors: List[str] = []
+
+    if prefix_col is not None:
+        mode = "prefix"
+        for idx, row in df.iterrows():
+            prefix = _clean_nomor(clean_cell(row.get(prefix_col, "")))
+            nama = clean_cell(row.get(nama_col, ""))
+            if not prefix or not nama:
+                skipped += 1
+                continue
+            if not (11 <= len(prefix) <= 13):
+                skipped += 1
+                if len(errors) < 20:
+                    errors.append(f"Baris {idx + 2}: prefix '{prefix}' bukan 11-13 karakter")
+                continue
+            plen = len(prefix)
+            existing = await db.perangkat_bank.find_one({"prefix": prefix, "plen": plen, "nama": nama})
+            if existing:
+                skipped += 1
+                continue
+            await db.perangkat_bank.insert_one(
+                {"prefix": prefix, "plen": plen, "nama": nama, "count": 1, "updated_at": now_iso()}
+            )
+            imported += 1
+    elif nomor_col is not None:
+        mode = "registrasi"
+        items = []
+        for idx, row in df.iterrows():
+            nama = clean_cell(row.get(nama_col, ""))
+            nomor = _clean_nomor(clean_cell(row.get(nomor_col, "")))
+            if not nama or len(nomor) < 11:
+                skipped += 1
+                continue
+            items.append({"nama_perangkat": nama, "nomor_registrasi": nomor})
+        await _learn_perangkat(items)
+        imported = len(items)
+    else:
+        raise HTTPException(400, "Format tidak dikenali. Sertakan kolom 'Prefix' atau 'Nomor Registrasi'.")
+
+    return {"ok": True, "mode": mode, "imported": imported, "skipped": skipped, "errors": errors}
+
+
+@api.get("/perangkat/bank/import/template.xlsx")
+async def perangkat_bank_import_template(user: dict = Depends(require_roles("admin"))):
+    """Downloadable template showing the expected import columns."""
+    rows = [
+        {"Prefix": "B2WS01000103", "Nama Perangkat": "CANISTER 1.8 DIAMETER 4 INCHI"},
+        {"Prefix": "B2WS02A70201", "Nama Perangkat": "EVOLUTION X3 SATELLITE ROUTER"},
+        {"Prefix": "B2WS0100010I", "Nama Perangkat": "LNB,C-BAND LS EXTD BAND"},
+    ]
+    df = pd.DataFrame(rows, columns=["Prefix", "Nama Perangkat"])
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Template Bank Data")
+        ws = writer.sheets["Template Bank Data"]
+        ws.set_column(0, 0, 20)
+        ws.set_column(1, 1, 48)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=template-bank-data.xlsx"},
+    )
+
+
 
 
 

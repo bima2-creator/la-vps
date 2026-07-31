@@ -205,3 +205,23 @@ button:focus-visible {
 ::-webkit-scrollbar-thumb:hover {
     background: #b6c0d0;
 }
+
+/* Bank Data auto-fill flash: brief green highlight so operators notice
+   the system recognised the device name automatically. */
+@keyframes bank-flash {
+    0% {
+        background-color: #bbf7d0;
+        box-shadow: 0 0 0 2px #22c55e;
+    }
+    70% {
+        background-color: #dcfce7;
+        box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.5);
+    }
+    100% {
+        background-color: #ffffff;
+        box-shadow: none;
+    }
+}
+.bank-flash {
+    animation: bank-flash 1s ease-out;
+}
