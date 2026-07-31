@@ -52,20 +52,20 @@ export default function LoginPage() {
         <div className="relative z-10 p-12 flex flex-col justify-between w-full">
           <div className="flex items-center gap-3">
             <Broadcast size={28} weight="duotone" className="text-blue-400" />
-            <div className="font-display font-black text-2xl tracking-tighter">LA TRACKER</div>
+            <div className="font-display font-black text-2xl tracking-tighter text-white">LA TRACKER</div>
           </div>
           <div>
             <div className="text-[11px] uppercase tracking-[0.25em] text-blue-300/80 mb-3">
-              Portal Management · Provisioning · SLA
+              Portal Project Management and Delivery
             </div>
             <h1 className="font-display text-5xl font-black tracking-tighter leading-[1]">
-              Every survey, install &amp; activation.
+              Every Delivery Work Order
               <br />
               <span className="text-blue-400">One command center.</span>
             </h1>
             <p className="mt-6 text-sm text-slate-300 max-w-md">
-              Entry, pengolahan, dan penyajian data telekomunikasi — Survey → Instalasi → Aktivasi
-              dalam satu dashboard yang cepat &amp; tepat.
+              Entry, pengolahan, dan penyajian data telekomunikasi dalam satu dashboard
+              yang cepat &amp; tepat.
             </p>
           </div>
           <div className="mono text-[11px] text-slate-500">
