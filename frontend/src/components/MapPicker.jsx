@@ -35,6 +35,15 @@ export function toDMS(deg, isLat) {
   return `${d}°${pad(m)}'${pad(s, 5)}"${hemi}`;
 }
 
+/** Strict DMS format check, e.g. 6°12'31.68"S. Empty string is considered valid
+ *  (field optional). Decimal values are NOT accepted — DMS only. */
+export function isValidDMS(str) {
+  if (str === null || str === undefined) return true;
+  const s = String(str).trim();
+  if (!s) return true;
+  return /^\d{1,3}\s*[°º]\s*\d{1,2}\s*['′]\s*\d{1,2}(?:\.\d+)?\s*["″]\s*[NSEW]$/i.test(s);
+}
+
 /** Parse a lat/lng string (decimal OR DMS "6°12'31.68\"S") back to a decimal number.
  *  Returns null if unparseable. */
 export function parseCoord(str) {

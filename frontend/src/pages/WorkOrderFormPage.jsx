@@ -24,7 +24,7 @@ import { CaretLeft, FloppyDisk, FilePdf, Lightning, ArrowsClockwise, ShareNetwor
 import SpkUpload from "@/components/SpkUpload";
 import BoqItemsEditor, { computeBoqTotals } from "@/components/BoqItemsEditor";
 import PerangkatEditor from "@/components/PerangkatEditor";
-import MapPicker from "@/components/MapPicker";
+import MapPicker, { isValidDMS } from "@/components/MapPicker";
 
 // Migrate a legacy record (single boq_*) into boq_items[] if present.
 function ensureBoqItems(record) {
@@ -63,6 +63,49 @@ function Field({ f, value, onChange }) {
   // Individual fields can opt-out with `noUppercase: true`.
   const upper = (v) =>
     typeof v === "string" && !f.noUppercase ? v.toUpperCase() : v;
+  const dmsInvalid = f.dms && value && !isValidDMS(value);
+
+  // Composite Bandwidth field: numeric value + unit dropdown (Gbps/Mbps/Kbps).
+  if (f.type === "bandwidth") {
+    const parts = String(value ?? "").trim().match(/^([\d.]+)?\s*(Gbps|Mbps|Kbps)?$/i);
+    const num = parts?.[1] || "";
+    const unit = (parts?.[2] || "Mbps");
+    const unitNorm = unit.charAt(0).toUpperCase() + unit.slice(1).toLowerCase();
+    const emit = (n, u) => {
+      const nn = String(n).trim();
+      onChange(f.name, nn ? `${nn} ${u}` : "");
+    };
+    return (
+      <label className={`block ${f.wide ? "md:col-span-2" : ""}`}>
+        <span className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
+          {f.label}
+        </span>
+        <div className="flex gap-2">
+          <input
+            data-testid={`${WOFORM.input}-${f.name}`}
+            type="number"
+            min="0"
+            step="any"
+            value={num}
+            onChange={(e) => emit(e.target.value, unitNorm)}
+            className={`${base} flex-1`}
+            placeholder={f.placeholder}
+          />
+          <select
+            data-testid={`${WOFORM.input}-${f.name}-unit`}
+            value={unitNorm}
+            onChange={(e) => emit(num, e.target.value)}
+            className={`${base} w-28`}
+          >
+            <option value="Gbps">Gbps</option>
+            <option value="Mbps">Mbps</option>
+            <option value="Kbps">Kbps</option>
+          </select>
+        </div>
+      </label>
+    );
+  }
+
   return (
     <label className={`block ${f.wide ? "md:col-span-2" : ""}`}>
       <span className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
@@ -106,9 +149,16 @@ function Field({ f, value, onChange }) {
                 : upper(e.target.value)
             )
           }
-          className={`${base} ${monoClass}`}
+          className={`${base} ${monoClass} ${dmsInvalid ? "border-red-400 ring-1 ring-red-300" : ""}`}
           placeholder={f.placeholder}
         />
+      )}
+      {f.dms && (
+        <span className={`block text-[10px] mt-1 ${dmsInvalid ? "text-red-500" : "text-muted-foreground"}`}>
+          {dmsInvalid
+            ? `Format harus DMS, mis. 6°12'31.68"S. Gunakan "Pilih Titik Lokasi di Peta".`
+            : `Format DMS atau pilih di peta.`}
+        </span>
       )}
     </label>
   );
@@ -211,6 +261,17 @@ export default function WorkOrderFormPage() {
     const hasSi = String(form.si_id || "").trim();
     if (!hasSa && !hasSi) {
       toast.error("SA ID atau SI ID wajib diisi minimal salah satu");
+      setActive("customer");
+      return;
+    }
+    // Latitude/Longitude must be DMS format (or filled via map picker).
+    if (form.lat && !isValidDMS(form.lat)) {
+      toast.error(`Latitude harus format DMS (mis. 6°12'31.68"S) atau pilih titik di peta`);
+      setActive("customer");
+      return;
+    }
+    if (form.lng && !isValidDMS(form.lng)) {
+      toast.error(`Longitude harus format DMS (mis. 106°49'01.20"E) atau pilih titik di peta`);
       setActive("customer");
       return;
     }
