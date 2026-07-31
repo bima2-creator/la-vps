@@ -105,7 +105,7 @@ export const SECTIONS = [
         name: "hasil_aktivasi_status",
         label: "Aktivasi Status",
         type: "select",
-        options: ["", "OK", "PENDING", "BATAL", "DONE"],
+        options: ["", "OK", "PENDING", "BATAL"],
       },
       { name: "hasil_aktivasi_datek", label: "Aktivasi Datek", type: "textarea", wide: true, rows: 5 },
       { name: "hasil_aktivasi_npae", label: "Aktivasi NPAE", type: "text" },
