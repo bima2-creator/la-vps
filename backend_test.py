@@ -11,7 +11,7 @@ import requests
 from typing import Optional, Dict, Any
 
 # Backend URL from environment
-BASE_URL = "https://github-restart-1.preview.emergentagent.com/api"
+BASE_URL = "https://project-bootstrap-18.preview.emergentagent.com/api"
 
 # Test credentials
 ADMIN_EMAIL = "admin@la-tracker.com"

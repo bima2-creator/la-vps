@@ -336,7 +336,7 @@ agent_communication:
       
       Test Details:
       - Created comprehensive test suite in /app/backend_test.py
-      - Tested against production URL: https://github-restart-1.preview.emergentagent.com/api
+      - Tested against production URL: https://project-bootstrap-18.preview.emergentagent.com/api
       - All HTTP status codes correct (200, 400, 404 as expected)
       - All error messages in Indonesian as specified
       - PDF merge verified with pypdf (4 pages: main + 3 lampiran)
