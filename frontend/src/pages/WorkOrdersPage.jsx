@@ -134,6 +134,20 @@ export default function WorkOrdersPage() {
     }
   };
 
+  const onTemplate = async () => {
+    try {
+      const resp = await api.get("/workorders/import/template.xlsx", { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([resp.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "workorders_import_template.xlsx";
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error("Template download failed");
+    }
+  };
+
   const onDelete = async (id) => {
     if (!window.confirm("Delete this work order?")) return;
     try {
@@ -175,6 +189,14 @@ export default function WorkOrdersPage() {
                 className="inline-flex items-center gap-2 border border-border bg-secondary hover:bg-slate-100 text-sm px-3 py-2 rounded-sm transition-colors"
               >
                 <Upload size={16} /> Import Excel
+              </button>
+              <button
+                data-testid="wo-template-button"
+                onClick={onTemplate}
+                title="Download an Excel template ready to fill and import"
+                className="inline-flex items-center gap-2 border border-border bg-secondary hover:bg-slate-100 text-sm px-3 py-2 rounded-sm transition-colors"
+              >
+                <DownloadSimple size={16} /> Template
               </button>
             </>
           )}

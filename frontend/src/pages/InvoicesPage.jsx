@@ -12,6 +12,7 @@ import {
   MagnifyingGlass,
   Warning,
   FilePdf,
+  DownloadSimple,
 } from "@phosphor-icons/react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -113,6 +114,24 @@ export default function InvoicesPage() {
     setFormOpen(true);
   };
 
+  const onExport = async () => {
+    try {
+      const params = {};
+      if (q) params.pelanggan = q;
+      if (jenisFilter) params.jenis_pekerjaan = jenisFilter;
+      if (statusFilter) params.status = statusFilter;
+      const resp = await api.get("/invoices/export/xlsx", { params, responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([resp.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "invoices.xlsx";
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error("Export failed");
+    }
+  };
+
   const onEdit = (iv) => {
     setEditingInv(iv);
     setFormOpen(true);
@@ -153,6 +172,14 @@ export default function InvoicesPage() {
             className="border border-border bg-white hover:bg-slate-100 rounded-sm px-3 py-2 text-sm transition-colors"
           >
             <ArrowClockwise size={14} className="inline mr-1.5" /> Refresh
+          </button>
+          <button
+            data-testid="invoices-export"
+            onClick={onExport}
+            title="Export invoices to Excel (honors current filters)"
+            className="border border-border bg-white hover:bg-slate-100 rounded-sm px-3 py-2 text-sm transition-colors inline-flex items-center gap-1.5"
+          >
+            <DownloadSimple size={14} /> Export Excel
           </button>
           {canEdit && (
             <button

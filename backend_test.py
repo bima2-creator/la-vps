@@ -692,6 +692,265 @@ def test_edge_cases() -> bool:
         return False
 
 
+def test_workorder_import_template() -> bool:
+    """Test 9: Work Order import template - GET /api/workorders/import/template.xlsx"""
+    log("=" * 80)
+    log("TEST 9: Work Order import template")
+    log("=" * 80)
+    
+    try:
+        headers = {"Authorization": f"Bearer {TOKEN}"}
+        
+        # Test: Download template
+        log("Downloading work order import template...")
+        resp = requests.get(
+            f"{BASE_URL}/workorders/import/template.xlsx",
+            headers=headers,
+            timeout=10
+        )
+        
+        if resp.status_code != 200:
+            log(f"❌ Expected 200, got {resp.status_code}: {resp.text}", "ERROR")
+            return False
+        
+        log("✅ HTTP 200 received")
+        
+        # Verify Content-Type
+        content_type = resp.headers.get("Content-Type", "")
+        if "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" not in content_type:
+            log(f"❌ Expected spreadsheet Content-Type, got: {content_type}", "ERROR")
+            return False
+        
+        log(f"✅ Content-Type correct: {content_type}")
+        
+        # Verify Content-Disposition
+        content_disp = resp.headers.get("Content-Disposition", "")
+        if "attachment" not in content_disp or "workorders_import_template.xlsx" not in content_disp:
+            log(f"❌ Expected 'attachment; filename=workorders_import_template.xlsx', got: {content_disp}", "ERROR")
+            return False
+        
+        log(f"✅ Content-Disposition correct: {content_disp}")
+        
+        # Parse with openpyxl
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(resp.content))
+            ws = wb.active
+            
+            # Get header row (row 1)
+            headers_row = [cell.value for cell in ws[1]]
+            log(f"Header row has {len(headers_row)} columns")
+            
+            # Verify required headers are present
+            if "PELANGGAN" not in headers_row:
+                log(f"❌ Header row missing 'PELANGGAN': {headers_row}", "ERROR")
+                return False
+            
+            if "BOQ JUMLAH" not in headers_row:
+                log(f"❌ Header row missing 'BOQ JUMLAH': {headers_row}", "ERROR")
+                return False
+            
+            log(f"✅ Header row contains 'PELANGGAN' and 'BOQ JUMLAH'")
+            
+            # Verify exactly one example data row (row 2)
+            data_rows = list(ws.iter_rows(min_row=2, max_row=ws.max_row))
+            if len(data_rows) != 1:
+                log(f"❌ Expected exactly 1 example data row, got {len(data_rows)}", "ERROR")
+                return False
+            
+            log(f"✅ Exactly one example data row present (row 2)")
+            
+            # Verify example row has data
+            example_row = [cell.value for cell in data_rows[0]]
+            if not any(example_row):
+                log(f"❌ Example row is empty", "ERROR")
+                return False
+            
+            log(f"✅ Example row contains data")
+            
+        except ImportError:
+            log("⚠️  openpyxl not available, skipping Excel parsing", "WARN")
+            return False
+        except Exception as e:
+            log(f"❌ Failed to parse Excel file: {e}", "ERROR")
+            return False
+        
+        # Round-trip test: POST the template back to import endpoint
+        log("Testing round-trip: POSTing template to /api/workorders/import/xlsx...")
+        files = {"file": ("template.xlsx", resp.content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+        import_resp = requests.post(
+            f"{BASE_URL}/workorders/import/xlsx",
+            files=files,
+            headers=headers,
+            timeout=30
+        )
+        
+        if import_resp.status_code != 200:
+            log(f"❌ Import failed with {import_resp.status_code}: {import_resp.text}", "ERROR")
+            return False
+        
+        import_data = import_resp.json()
+        inserted = import_data.get("inserted", 0)
+        
+        if inserted < 1:
+            log(f"❌ Expected inserted >= 1, got {inserted}", "ERROR")
+            return False
+        
+        log(f"✅ Round-trip successful: {inserted} work order(s) imported")
+        
+        return True
+        
+    except Exception as e:
+        log(f"❌ Exception during work order import template test: {e}", "ERROR")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def test_invoices_export_xlsx() -> bool:
+    """Test 10: Invoices Excel export - GET /api/invoices/export/xlsx"""
+    log("=" * 80)
+    log("TEST 10: Invoices Excel export")
+    log("=" * 80)
+    
+    try:
+        headers = {"Authorization": f"Bearer {TOKEN}"}
+        
+        # Test: Download invoices export (no filter)
+        log("Downloading invoices export (no filter)...")
+        resp = requests.get(
+            f"{BASE_URL}/invoices/export/xlsx",
+            headers=headers,
+            timeout=10
+        )
+        
+        if resp.status_code != 200:
+            log(f"❌ Expected 200, got {resp.status_code}: {resp.text}", "ERROR")
+            # CRITICAL: Check if route was captured by /api/invoices/{inv_id}
+            if resp.status_code == 400 and "Invalid id" in resp.text:
+                log(f"❌ CRITICAL: Route captured by /api/invoices/{{inv_id}} - 'Invalid id' error", "ERROR")
+            elif resp.status_code == 404:
+                log(f"❌ CRITICAL: Route captured by /api/invoices/{{inv_id}} - 404 error", "ERROR")
+            return False
+        
+        log("✅ HTTP 200 received (route NOT captured by /api/invoices/{inv_id})")
+        
+        # Verify Content-Type
+        content_type = resp.headers.get("Content-Type", "")
+        if "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" not in content_type:
+            log(f"❌ Expected spreadsheet Content-Type, got: {content_type}", "ERROR")
+            return False
+        
+        log(f"✅ Content-Type correct: {content_type}")
+        
+        # Verify Content-Disposition
+        content_disp = resp.headers.get("Content-Disposition", "")
+        if "attachment" not in content_disp or "invoices.xlsx" not in content_disp:
+            log(f"❌ Expected 'attachment; filename=invoices.xlsx', got: {content_disp}", "ERROR")
+            return False
+        
+        log(f"✅ Content-Disposition correct: {content_disp}")
+        
+        # Parse with openpyxl
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(resp.content))
+            ws = wb.active
+            
+            # Get header row (row 1)
+            headers_row = [cell.value for cell in ws[1]]
+            log(f"Header row has {len(headers_row)} columns")
+            
+            # Verify required headers are present
+            required_headers = [
+                "NO INVOICE",
+                "PELANGGAN",
+                "JENIS PEKERJAAN",
+                "STATUS",
+                "JUMLAH WO",
+                "TOTAL JASA",
+                "TOTAL MATERIAL",
+                "GRAND TOTAL"
+            ]
+            
+            missing_headers = [h for h in required_headers if h not in headers_row]
+            if missing_headers:
+                log(f"❌ Missing required headers: {missing_headers}", "ERROR")
+                log(f"   Found headers: {headers_row}", "ERROR")
+                return False
+            
+            log(f"✅ All required headers present: {required_headers}")
+            
+            # Count data rows (excluding header)
+            total_data_rows = ws.max_row - 1
+            log(f"Total data rows in export: {total_data_rows}")
+            
+        except ImportError:
+            log("⚠️  openpyxl not available, skipping Excel parsing", "WARN")
+            return False
+        except Exception as e:
+            log(f"❌ Failed to parse Excel file: {e}", "ERROR")
+            import traceback
+            traceback.print_exc()
+            return False
+        
+        # Test: Filter by status=OPEN
+        log("Testing filter: status=OPEN...")
+        
+        # First, get count from API
+        api_resp = requests.get(
+            f"{BASE_URL}/invoices",
+            params={"status": "OPEN"},
+            headers=headers,
+            timeout=10
+        )
+        
+        if api_resp.status_code != 200:
+            log(f"⚠️  Could not fetch invoices from API for comparison: {api_resp.status_code}", "WARN")
+        else:
+            api_invoices = api_resp.json()
+            api_count = len(api_invoices)
+            log(f"API returns {api_count} OPEN invoices")
+            
+            # Now get export with filter
+            export_resp = requests.get(
+                f"{BASE_URL}/invoices/export/xlsx",
+                params={"status": "OPEN"},
+                headers=headers,
+                timeout=10
+            )
+            
+            if export_resp.status_code != 200:
+                log(f"❌ Export with filter failed: {export_resp.status_code}", "ERROR")
+                return False
+            
+            # Parse filtered export
+            try:
+                wb_filtered = openpyxl.load_workbook(io.BytesIO(export_resp.content))
+                ws_filtered = wb_filtered.active
+                filtered_data_rows = ws_filtered.max_row - 1
+                
+                log(f"Export with status=OPEN has {filtered_data_rows} data rows")
+                
+                if filtered_data_rows != api_count:
+                    log(f"❌ Row count mismatch: API has {api_count} OPEN invoices, export has {filtered_data_rows}", "ERROR")
+                    return False
+                
+                log(f"✅ Filter working correctly: {filtered_data_rows} OPEN invoices in export matches API count")
+                
+            except Exception as e:
+                log(f"❌ Failed to parse filtered Excel file: {e}", "ERROR")
+                return False
+        
+        return True
+        
+    except Exception as e:
+        log(f"❌ Exception during invoices export test: {e}", "ERROR")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def main():
     """Run all tests and report results."""
     log("=" * 80)
@@ -713,6 +972,8 @@ def main():
         ("Bukti Potong PDF-only", test_bukti_potong_pdf_only),
         ("Invoice PDF merge", test_invoice_pdf_merge),
         ("Edge Cases", test_edge_cases),
+        ("Work Order import template", test_workorder_import_template),
+        ("Invoices Excel export", test_invoices_export_xlsx),
     ]
     
     for name, test_func in tests:

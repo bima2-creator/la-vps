@@ -268,6 +268,73 @@ backend:
             - pypdf merge functionality working correctly
             - Note: Backend gracefully handles invalid PDFs by logging warning and skipping (tested in logs)
 
+  - task: "Work Order import template (GET /api/workorders/import/template.xlsx)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            NEW endpoint. GET /api/workorders/import/template.xlsx (admin/operator only)
+            should return HTTP 200 with Content-Type
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet and a
+            Content-Disposition attachment filename workorders_import_template.xlsx.
+            The workbook must contain a header row matching EXPORT_COLUMNS labels (e.g.
+            "PELANGGAN", "BOQ JUMLAH") plus one example data row. Verify the file opens
+            with openpyxl and header labels are present. Round-trip: downloading this
+            template and POSTing it back to /api/workorders/import/xlsx should import the
+            example row (inserted >= 1).
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Work Order import template working correctly:
+            - GET /api/workorders/import/template.xlsx returns HTTP 200
+            - Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+            - Content-Disposition: attachment; filename=workorders_import_template.xlsx
+            - Excel file opens successfully with openpyxl
+            - Header row (67 columns) contains required labels: "PELANGGAN", "BOQ JUMLAH"
+            - Exactly one example data row present (row 2) with valid data
+            - Round-trip test successful: downloaded template imported via POST /api/workorders/import/xlsx
+            - Import returned {"inserted": 1} confirming successful import
+
+  - task: "Invoices Excel export (GET /api/invoices/export/xlsx)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            NEW endpoint. GET /api/invoices/export/xlsx returns an Excel file of invoices
+            honoring optional query filters: pelanggan (regex), jenis_pekerjaan (upper),
+            status (upper). Verify HTTP 200, Content-Type spreadsheet, Content-Disposition
+            filename invoices.xlsx. Columns include NO INVOICE, PELANGGAN, JENIS PEKERJAAN,
+            STATUS, JUMLAH WO, TOTAL JASA, TOTAL MATERIAL, GRAND TOTAL. Verify with openpyxl
+            that header row present and row count matches number of invoices for a given
+            filter. IMPORTANT: route must resolve BEFORE /api/invoices/{inv_id} (no 404/400
+            "Invalid id"). Also confirm filter param status=OPEN only returns OPEN invoices.
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Invoices Excel export working correctly:
+            - GET /api/invoices/export/xlsx returns HTTP 200
+            - Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+            - Content-Disposition: attachment; filename=invoices.xlsx
+            - CRITICAL: Route NOT captured by /api/invoices/{inv_id} (no "Invalid id" or 404 error)
+            - Excel file opens successfully with openpyxl
+            - Header row (15 columns) contains all required labels:
+              * NO INVOICE, PELANGGAN, JENIS PEKERJAAN, STATUS, JUMLAH WO
+              * TOTAL JASA, TOTAL MATERIAL, GRAND TOTAL
+            - Filter test with status=OPEN: row count (1) matches GET /api/invoices?status=OPEN count (1)
+            - Filter functionality working correctly
+
 frontend:
   - task: "N/A (frontend to be tested separately)"
     implemented: true
@@ -284,18 +351,11 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Login & Auth"
-    - "Work Order Attachment PDF-only restriction"
-    - "Invoice Candidates includes has_attachment flag"
-    - "Invoice create/update rejects WO without attachment"
-    - "Faktur Pajak upload/download/delete (PDF only)"
-    - "Bukti Potong upload/download/delete (PDF only)"
-    - "Invoice PDF merges lampiran"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -303,22 +363,24 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: |
-      Please regression-test the LA Tracker backend end-to-end focusing on the recent
-      invoice-related changes:
+      NEW FEATURE — "More export options". Please test ONLY the two new endpoints
+      (the previous invoice features already passed and are unchanged):
         1. Login as admin@la-tracker.com / admin123.
-        2. Ensure /api/workorders/{id}/attachments rejects non-PDF (send e.g. .png) with 400
-           and accepts a real PDF (any tiny valid PDF bytes).
-        3. Create a WO (or pick existing) WITHOUT any attachment, then try POST /api/invoices
-           with that WO — expect HTTP 400 mentioning "wajib upload attachment PDF".
-        4. Upload a PDF attachment to that WO, then invoice create should now succeed
-           (given jenis_pekerjaan matches WO activity + boq_jumlah > 0).
-        5. Once invoice created, upload faktur-pajak (PDF only — check rejection of non-PDF).
-           Same for bukti-potong.
-        6. GET /api/invoices/{id}/pdf and verify Content-Type is application/pdf and
-           page count > 1 when lampiran exists (via pypdf PdfReader on response bytes).
-        7. Test edge: DELETE faktur-pajak / bukti-potong endpoints work and remove the
-           sub-document.
-      Report any 500 errors, wrong status codes, or missing fields.
+        2. GET /api/workorders/import/template.xlsx
+           - Expect 200, spreadsheet content-type, filename workorders_import_template.xlsx.
+           - Open bytes with openpyxl; verify header row contains labels like "PELANGGAN"
+             and "BOQ JUMLAH", and there is exactly one example data row.
+           - Round-trip: POST the downloaded bytes to /api/workorders/import/xlsx and
+             expect {"inserted": >= 1}.
+        3. GET /api/invoices/export/xlsx
+           - Expect 200, spreadsheet content-type, filename invoices.xlsx.
+           - Open with openpyxl; verify header labels (NO INVOICE, PELANGGAN, GRAND TOTAL...).
+           - Verify it did NOT get captured by /api/invoices/{inv_id} (i.e. no 400 "Invalid id").
+           - With filter ?status=OPEN, verify only OPEN invoices are included (data rows count
+             matches GET /api/invoices?status=OPEN length).
+      Report any 500s, wrong status codes, route-shadowing (export path captured by {inv_id}),
+      or missing/blank headers.
+
   - agent: "testing"
     message: |
       ✅ BACKEND REGRESSION TESTING COMPLETE - ALL TESTS PASSED (8/8)
@@ -349,3 +411,33 @@ agent_communication:
       - invoice_no has unique index, so each invoice must have unique number
       
       RECOMMENDATION: All backend features are working correctly. Ready for production use.
+
+  - agent: "testing"
+    message: |
+      ✅ NEW ENDPOINTS TESTING COMPLETE - ALL TESTS PASSED (10/10)
+      
+      Successfully tested the two new export endpoints:
+      
+      9. ✅ Work Order import template (GET /api/workorders/import/template.xlsx)
+         - HTTP 200 with correct Content-Type and Content-Disposition headers
+         - Excel file contains 67-column header row with required labels (PELANGGAN, BOQ JUMLAH)
+         - Exactly one example data row present
+         - Round-trip test successful: template can be downloaded and re-imported
+         - Import endpoint returned {"inserted": 1}
+      
+      10. ✅ Invoices Excel export (GET /api/invoices/export/xlsx)
+          - HTTP 200 with correct Content-Type and Content-Disposition headers
+          - CRITICAL: Route NOT captured by /api/invoices/{inv_id} (no route shadowing)
+          - Excel file contains all required headers: NO INVOICE, PELANGGAN, JENIS PEKERJAAN, 
+            STATUS, JUMLAH WO, TOTAL JASA, TOTAL MATERIAL, GRAND TOTAL
+          - Filter functionality working: status=OPEN filter returns correct number of rows
+          - Row count matches API endpoint count (verified with GET /api/invoices?status=OPEN)
+      
+      Test Details:
+      - Updated /app/backend_test.py with two new test functions
+      - All tests run against production URL: https://project-bootstrap-18.preview.emergentagent.com/api
+      - Used openpyxl to parse and verify Excel file structure
+      - No 500 errors, no route shadowing issues
+      - All HTTP status codes correct (200 as expected)
+      
+      RECOMMENDATION: Both new export endpoints are working correctly and ready for production use.

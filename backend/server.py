@@ -959,6 +959,45 @@ async def import_workorders(file: UploadFile = File(...), user: dict = Depends(r
     return {"inserted": len(result.inserted_ids)}
 
 
+@api.get("/workorders/import/template.xlsx")
+async def import_template(user: dict = Depends(require_roles("admin", "operator"))):
+    """Return a ready-to-fill Excel template whose header row matches exactly what
+    the flat-format importer expects, plus one illustrative example row."""
+    labels = [label for _, label in EXPORT_COLUMNS]
+    example = {
+        "PELANGGAN": "PT Contoh Sejahtera",
+        "ALAMAT": "Jl. Contoh No. 1, Jakarta",
+        "JENIS ORDER": "PSB",
+        "SA ID": "SA-0001",
+        "SI ID": "SI-0001",
+        "BW": "100 Mbps",
+        "MEDIA AKSES JENIS": "FIBER",
+        "HASIL INSTALASI STATUS": "DONE",
+        "BOQ JASA": 1000000,
+        "BOQ MATERIAL": 500000,
+        "BOQ JUMLAH": 1500000,
+        "INV STATUS": "OPEN",
+        "KETERANGAN": "Baris contoh — hapus sebelum import",
+    }
+    row = {label: example.get(label, "") for label in labels}
+    df = pd.DataFrame([row], columns=labels)
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Workorders")
+        wb = writer.book
+        ws = writer.sheets["Workorders"]
+        header_fmt = wb.add_format({"bold": True, "bg_color": "#1E293B", "font_color": "#FFFFFF", "border": 1})
+        for i, label in enumerate(labels):
+            ws.write(0, i, label, header_fmt)
+            ws.set_column(i, i, max(14, min(len(label) + 4, 40)))
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=workorders_import_template.xlsx"},
+    )
+
+
 # ------------------------------------------------------------------
 # Dashboard
 # ------------------------------------------------------------------
@@ -2449,6 +2488,91 @@ async def list_invoices(
         if not d.get("pelanggans"):
             d["pelanggans"] = [d.get("pelanggan")] if d.get("pelanggan") else []
     return docs
+
+
+INVOICE_EXPORT_COLUMNS: List[tuple] = [
+    ("invoice_no", "NO INVOICE"),
+    ("inv_no_eproc", "NO EPROC"),
+    ("faktur_pajak_no", "NO FAKTUR PAJAK"),
+    ("pelanggan_display", "PELANGGAN"),
+    ("jenis_pekerjaan", "JENIS PEKERJAAN"),
+    ("tanggal", "TANGGAL"),
+    ("tgl_kirim", "TGL KIRIM"),
+    ("tgl_bayar", "TGL BAYAR"),
+    ("status", "STATUS"),
+    ("wo_count", "JUMLAH WO"),
+    ("total_jasa", "TOTAL JASA"),
+    ("total_material", "TOTAL MATERIAL"),
+    ("grand_total", "GRAND TOTAL"),
+    ("keterangan", "KETERANGAN"),
+    ("created_at", "DIBUAT"),
+]
+
+
+@api.get("/invoices/export/xlsx")
+async def export_invoices(
+    pelanggan: Optional[str] = None,
+    jenis_pekerjaan: Optional[str] = None,
+    status: Optional[str] = None,
+    user: dict = Depends(get_current_user),
+):
+    """Export invoices (honoring the same filters as the list view) to Excel."""
+    query: Dict[str, Any] = {}
+    if pelanggan:
+        query["$or"] = [
+            {"pelanggan": {"$regex": pelanggan, "$options": "i"}},
+            {"pelanggans": {"$regex": pelanggan, "$options": "i"}},
+        ]
+    if jenis_pekerjaan:
+        query["jenis_pekerjaan"] = jenis_pekerjaan.upper()
+    if status:
+        query["status"] = status.upper()
+
+    docs = await db.invoices.find(query).sort("created_at", -1).to_list(5000)
+    rows = []
+    for d in docs:
+        pelanggans = d.get("pelanggans") or ([d.get("pelanggan")] if d.get("pelanggan") else [])
+        row = {
+            "invoice_no": d.get("invoice_no", ""),
+            "inv_no_eproc": d.get("inv_no_eproc", ""),
+            "faktur_pajak_no": d.get("faktur_pajak_no", ""),
+            "pelanggan_display": ", ".join([p for p in pelanggans if p]),
+            "jenis_pekerjaan": d.get("jenis_pekerjaan", ""),
+            "tanggal": d.get("tanggal", ""),
+            "tgl_kirim": d.get("tgl_kirim", ""),
+            "tgl_bayar": d.get("tgl_bayar", ""),
+            "status": d.get("status", ""),
+            "wo_count": len(d.get("work_order_ids", []) or []),
+            "total_jasa": float(d.get("total_jasa") or 0),
+            "total_material": float(d.get("total_material") or 0),
+            "grand_total": float(d.get("grand_total") or 0),
+            "keterangan": d.get("keterangan", ""),
+            "created_at": (d.get("created_at") or "")[:10],
+        }
+        rows.append({label: row.get(field, "") for field, label in INVOICE_EXPORT_COLUMNS})
+
+    labels = [label for _, label in INVOICE_EXPORT_COLUMNS]
+    df = pd.DataFrame(rows, columns=labels)
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Invoices")
+        wb = writer.book
+        ws = writer.sheets["Invoices"]
+        header_fmt = wb.add_format({"bold": True, "bg_color": "#1E293B", "font_color": "#FFFFFF", "border": 1})
+        rp_fmt = wb.add_format({"num_format": '"Rp" #,##0'})
+        money_labels = {"TOTAL JASA", "TOTAL MATERIAL", "GRAND TOTAL"}
+        for i, label in enumerate(labels):
+            ws.write(0, i, label, header_fmt)
+            if label in money_labels:
+                ws.set_column(i, i, 18, rp_fmt)
+            else:
+                ws.set_column(i, i, max(14, min(len(label) + 4, 40)))
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=invoices.xlsx"},
+    )
 
 
 @api.get("/invoices/{inv_id}")
