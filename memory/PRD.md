@@ -296,6 +296,16 @@ tracking, SLA (durasi vs target), Bill of Quantity (BoQ), and Invoice lifecycle.
 - Verified end-to-end via Playwright: picker renders, DISMANTLE hides aktivasi,
   MAINTENANCE keeps BoQ, PSB shows everything, save persists jenis_order.
 
+## Panduan Instalasi Windows (Docker) + PDF (Jun 2026 — updated)
+- **README-LOCAL.md** ditulis ulang: metode Docker Desktop, database MongoDB
+  otomatis (container `la-tracker-mongo`, data persisten di `.\data\mongo`),
+  bagian Database (lokasi/backup/restore), akses LAN, skrip, update, troubleshoot.
+- **Login diperbaiki**: username-based (admin/admin123, operator/operator,
+  guest/guest) — bukan email lagi. `local.env.example` + `start.bat` diperbarui
+  (tambah OPERATOR_PASSWORD & GUEST_PASSWORD; ADMIN_EMAIL jadi alamat notifikasi).
+- **PDF cetak**: `Panduan-Instalasi-LA-Tracker-Windows.pdf` dibuat via reportlab
+  (`scripts/gen_install_pdf.py`) — 10 bagian + ringkasan, siap dibagikan/dicetak.
+
 ## Local / Offline Deployment (Feb 2026)
 - Full Docker Compose bundle: MongoDB + FastAPI backend + React/nginx frontend.
 - New backend `STORAGE_MODE=local` writes attachments to `/data/attachments`

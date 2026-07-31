@@ -85,10 +85,11 @@ echo ============================================
 echo   Akses lokal (PC ini)     : http://localhost:3000
 if defined LANIP echo   Akses dari LAN/WiFi     : http://!LANIP!:3000
 echo.
-echo   Login default:
-echo     Email    : admin@la-tracker.com
-echo     Password : admin123
-echo   (bisa diubah di file local.env)
+echo   Login default (pakai USERNAME, bukan email):
+echo     Username : admin      Password : admin123   (Administrator)
+echo     Username : operator   Password : operator   (Operator)
+echo     Username : guest      Password : guest      (Viewer/lihat saja)
+echo   (password bisa diubah di file local.env)
 echo.
 echo   Perintah berguna:
 echo     stop.bat        - matikan semua service
