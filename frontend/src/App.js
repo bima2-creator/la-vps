@@ -48,7 +48,14 @@ export default function App() {
               }
             />
             <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/invoices" element={<InvoicesPage />} />
+            <Route
+              path="/invoices"
+              element={
+                <ProtectedRoute roles={["admin", "operator"]}>
+                  <InvoicesPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/perangkat" element={<MasterPerangkatPage />} />
             <Route
               path="/users"
