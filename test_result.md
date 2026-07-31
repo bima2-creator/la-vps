@@ -587,7 +587,7 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 5
+  test_sequence: 6
   run_ui: true
 
 frontend:
@@ -695,12 +695,118 @@ frontend:
             - Screenshot: final_change4_access_denied.png shows access denied page with viewer role message
             - Screenshot: final_change4_audit_log.png shows audit log with ACCESS.DENIED entries for guest
 
+frontend:
+  - task: "Login Page Tweaks - ROLE label and single-word cards"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/LoginPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "user"
+          comment: |
+            Verify login page tweaks:
+            1. Field label above role cards reads "ROLE" (not "Username")
+            2. Exactly 3 selectable cards showing single words: "Admin", "Operator", "Guest" (no username text, no sub-label)
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Login page tweaks verified:
+            - Field label reads "ROLE" (line 93 in LoginPage.jsx)
+            - Exactly 3 role cards present with single-word labels: "Admin", "Operator", "Guest"
+            - No username text or sub-labels under the cards
+            - Cards display only the label text (line 121: {opt.label})
+            - Screenshot: login_page_initial.png shows clean card interface
+
+  - task: "Guest Login - No Password Required"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/LoginPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "user"
+          comment: |
+            Verify Guest login behavior:
+            1. Click Guest card - password field should DISAPPEAR
+            2. Helper text about guest not needing password should appear
+            3. Click Sign in WITHOUT password - should succeed and land on Dashboard as VIEWER
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Guest login working correctly:
+            - Clicked Guest card, password field NOT visible (conditional rendering: username !== "guest")
+            - Helper text displayed: "Guest tidak memerlukan password — klik Sign in untuk masuk sebagai Viewer."
+            - Login succeeded WITHOUT entering password
+            - Landed on Dashboard successfully
+            - User card shows role "VIEWER" (bottom sidebar)
+            - Backend automatically uses "guest" password internally (line 28: const pw = username === "guest" ? "guest" : password)
+            - Screenshots: login_guest_no_password.png, dashboard_guest_viewer.png
+
+  - task: "Admin Login - Password Required"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/LoginPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "user"
+          comment: |
+            Verify Admin login behavior:
+            1. Click Admin card - password field should be SHOWN
+            2. Enter password "admin123" and Sign in - should succeed and land on Dashboard as ADMIN
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Admin login working correctly:
+            - Clicked Admin card, password field IS visible
+            - Entered password "admin123"
+            - Login succeeded
+            - Landed on Dashboard successfully
+            - User card shows role "ADMIN" (bottom sidebar)
+            - Screenshots: login_admin_with_password.png, dashboard_admin.png
+
+  - task: "Users Page - No Create Form"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/UsersPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "user"
+          comment: |
+            Verify Users page has NO create form:
+            1. As admin, navigate to Users page
+            2. Should only show heading and table of 3 users (admin/operator/guest) with their roles
+            3. NO "New User" create form, NO "Create" button
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - Users page verified:
+            - Navigated to Users page as admin
+            - Page heading "Users & Roles" present
+            - NO "New User" create form found
+            - NO "Create" button found
+            - Table shows all 3 users: admin, operator, guest
+            - Table columns: Name, Username, Email, Role, Created
+            - Role badges displayed correctly: ADMIN (red), OPERATOR (blue), VIEWER (green)
+            - Screenshot: users_page_no_create_form.png
+            - Note: Delete buttons (trash icons) are present in the table, but review request only specified no create form
+
 test_plan:
   current_focus:
-    - "RBAC UI - Login radio buttons for username selection"
-    - "RBAC UI - Guest (viewer) is READ-ONLY on Work Orders"
-    - "RBAC UI - Dashboard hides revenue for guest (viewer)"
-    - "RBAC UI - Access-denied page and audit logging"
+    - "Login Page Tweaks - ROLE label and single-word cards"
+    - "Guest Login - No Password Required"
+    - "Admin Login - Password Required"
+    - "Users Page - No Create Form"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -915,6 +1021,65 @@ agent_communication:
         * Media Akses (pie chart with UNSPECIFIED data)
         * Invoice Status (bar chart with OPEN status)
       - ✅ Filter toolbar present with all elements:
+
+  - agent: "testing"
+    message: |
+      ✅ LOGIN & USERS PAGE TWEAKS TESTING COMPLETE - ALL TESTS PASSED (4/4)
+      
+      Comprehensive testing completed for small login-page and users-page tweaks in LA Tracker app.
+      
+      TEST RESULTS:
+      
+      1. ✅ Login Page - ROLE Label and Single-Word Cards
+         - Field label above role cards reads "ROLE" (not "Username")
+         - Exactly 3 selectable cards present
+         - Cards show single words only: "Admin", "Operator", "Guest"
+         - No username text, no sub-labels under cards
+         - Clean, professional card interface
+         - Screenshot: login_page_initial.png
+      
+      2. ✅ Guest Login - No Password Required
+         - Clicked Guest card
+         - Password field DISAPPEARS (not shown)
+         - Helper text appears: "Guest tidak memerlukan password — klik Sign in untuk masuk sebagai Viewer."
+         - Sign in WITHOUT entering password succeeds
+         - Lands on Dashboard as VIEWER role
+         - User card at bottom sidebar shows "Guest" with role "VIEWER"
+         - Backend automatically uses "guest" password internally
+         - Screenshots: login_guest_no_password.png, dashboard_guest_viewer.png
+      
+      3. ✅ Admin Login - Password Required
+         - Clicked Admin card
+         - Password field IS SHOWN
+         - Entered password "admin123"
+         - Sign in succeeds
+         - Lands on Dashboard as ADMIN role
+         - User card at bottom sidebar shows "Administrator" with role "ADMIN"
+         - Screenshots: login_admin_with_password.png, dashboard_admin.png
+      
+      4. ✅ Users Page - No Create Form
+         - Navigated to Users page as admin
+         - Page shows heading "Users & Roles"
+         - NO "New User" create form present
+         - NO "Create" button present
+         - Table shows all 3 users: admin, operator, guest
+         - Table columns: Name, Username, Email, Role, Created
+         - Role badges displayed correctly: ADMIN (red), OPERATOR (blue), VIEWER (green)
+         - Screenshot: users_page_no_create_form.png
+         - Note: Delete buttons (trash icons) are present in table rows, but review request only specified no create form
+      
+      Test Details:
+      - Tested against production URL: https://project-bootstrap-18.preview.emergentagent.com
+      - All 4 requirements from review request verified and working
+      - Login page conditional rendering working correctly (password field shows/hides based on role selection)
+      - Guest login flow simplified (no password input required from user)
+      - Admin login flow unchanged (password required)
+      - Users page shows read-only table of fixed system accounts
+      - No critical errors or console warnings
+      - All screenshots captured successfully
+      
+      RECOMMENDATION: All login and users page tweaks are working correctly and ready for production use. The simplified guest login experience and clean role selection interface improve usability.
+
         * Media dropdown, Jenis dropdown, Date From/To inputs, Reset button
       - ✅ KPI card navigation works: clicking Total Orders navigates to Work Orders page
       

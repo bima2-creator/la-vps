@@ -2,13 +2,11 @@ import React, { useEffect, useState } from "react";
 import { api, formatApiError } from "@/lib/api";
 import { USERS } from "@/constants/testIds";
 import { toast } from "sonner";
-import { UserPlus, Trash } from "@phosphor-icons/react";
+import { Trash } from "@phosphor-icons/react";
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ name: "", username: "", email: "", password: "", role: "operator" });
-  const [creating, setCreating] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -24,21 +22,6 @@ export default function UsersPage() {
   useEffect(() => {
     load();
   }, []);
-
-  const create = async (e) => {
-    e.preventDefault();
-    setCreating(true);
-    try {
-      await api.post("/users", form);
-      toast.success("User created");
-      setForm({ name: "", username: "", email: "", password: "", role: "operator" });
-      load();
-    } catch (err) {
-      toast.error(formatApiError(err.response?.data?.detail) || "Create failed");
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const del = async (id) => {
     if (!window.confirm("Delete this user?")) return;
@@ -62,65 +45,8 @@ export default function UsersPage() {
       <div>
         <div className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Administration</div>
         <h1 className="font-display text-4xl font-black tracking-tighter">Users &amp; Roles</h1>
+        <p className="text-sm text-muted-foreground mt-1">Akun sistem tetap: admin, operator, dan guest.</p>
       </div>
-
-      <form onSubmit={create} className="border border-border bg-card rounded-sm p-5 space-y-3">
-        <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">New User</div>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-          <input
-            data-testid={USERS.nameInput}
-            required
-            placeholder="Name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="bg-secondary border border-border rounded-sm px-3 py-2 text-sm"
-          />
-          <input
-            data-testid={USERS.emailInput}
-            required
-            type="text"
-            placeholder="Username"
-            value={form.username}
-            onChange={(e) => setForm({ ...form, username: e.target.value })}
-            className="bg-secondary border border-border rounded-sm px-3 py-2 text-sm mono"
-          />
-          <input
-            data-testid="users-email-input"
-            type="email"
-            placeholder="Email (optional)"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="bg-secondary border border-border rounded-sm px-3 py-2 text-sm mono"
-          />
-          <input
-            data-testid={USERS.passwordInput}
-            required
-            type="password"
-            placeholder="Password (min 4)"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            className="bg-secondary border border-border rounded-sm px-3 py-2 text-sm"
-            minLength={4}
-          />
-          <select
-            data-testid={USERS.roleSelect}
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value })}
-            className="bg-secondary border border-border rounded-sm px-3 py-2 text-sm"
-          >
-            <option value="admin">Admin</option>
-            <option value="operator">Operator</option>
-            <option value="viewer">Viewer</option>
-          </select>
-          <button
-            data-testid={USERS.createButton}
-            disabled={creating}
-            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-sm disabled:opacity-60"
-          >
-            <UserPlus size={16} /> Create
-          </button>
-        </div>
-      </form>
 
       <div className="border border-border rounded-sm bg-card overflow-hidden">
         <table className="w-full data-table text-sm">

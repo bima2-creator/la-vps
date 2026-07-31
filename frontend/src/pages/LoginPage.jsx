@@ -6,9 +6,9 @@ import { formatApiError } from "@/lib/api";
 import { Broadcast } from "@phosphor-icons/react";
 
 const USER_OPTIONS = [
-  { value: "admin", role: "Admin" },
-  { value: "operator", role: "Operator" },
-  { value: "guest", role: "Viewer" },
+  { value: "admin", label: "Admin" },
+  { value: "operator", label: "Operator" },
+  { value: "guest", label: "Guest" },
 ];
 
 export default function LoginPage() {
@@ -25,7 +25,8 @@ export default function LoginPage() {
     setErr("");
     setLoading(true);
     try {
-      await login(username, password);
+      const pw = username === "guest" ? "guest" : password;
+      await login(username, pw);
       const to = loc.state?.from?.pathname || "/dashboard";
       nav(to, { replace: true });
     } catch (e) {
@@ -89,12 +90,12 @@ export default function LoginPage() {
           <div className="mt-8 space-y-4">
             <div>
               <label className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                Username
+                Role
               </label>
               <div
                 data-testid={LOGIN.emailInput}
                 role="radiogroup"
-                aria-label="Username"
+                aria-label="Role"
                 className="mt-2 grid grid-cols-3 gap-2"
               >
                 {USER_OPTIONS.map((opt) => {
@@ -103,7 +104,7 @@ export default function LoginPage() {
                     <label
                       key={opt.value}
                       data-testid={`login-user-${opt.value}`}
-                      className={`cursor-pointer select-none rounded-lg border px-3 py-2.5 text-center transition-all ${
+                      className={`cursor-pointer select-none rounded-lg border px-3 py-3 text-center transition-all ${
                         active
                           ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500"
                           : "border-border bg-secondary hover:border-blue-400/60"
@@ -117,29 +118,33 @@ export default function LoginPage() {
                         onChange={(e) => setUsername(e.target.value)}
                         className="sr-only"
                       />
-                      <div className="mono text-sm font-semibold">{opt.value}</div>
-                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mt-0.5">
-                        {opt.role}
-                      </div>
+                      <div className="text-sm font-semibold">{opt.label}</div>
                     </label>
                   );
                 })}
               </div>
             </div>
-            <div>
-              <label className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                Password
-              </label>
-              <input
-                data-testid={LOGIN.passwordInput}
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full bg-secondary border border-border rounded-sm px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mono transition-colors"
-                placeholder="••••••••"
-              />
-            </div>
+            {username !== "guest" && (
+              <div>
+                <label className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Password
+                </label>
+                <input
+                  data-testid={LOGIN.passwordInput}
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1 w-full bg-secondary border border-border rounded-sm px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mono transition-colors"
+                  placeholder="••••••••"
+                />
+              </div>
+            )}
+            {username === "guest" && (
+              <p className="text-xs text-muted-foreground">
+                Guest tidak memerlukan password — klik Sign in untuk masuk sebagai Viewer.
+              </p>
+            )}
           </div>
 
           {err && (
