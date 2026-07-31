@@ -2539,6 +2539,48 @@ async def delete_invoice(
 FP_ALLOWED_EXT = {"pdf", "png", "jpg", "jpeg"}
 
 
+def _extract_faktur_pajak_no(pdf_bytes: bytes) -> Optional[str]:
+    """Try to auto-detect the 16-digit Nomor Seri Faktur Pajak from PDF text.
+
+    Handles both plain format "0400260028205717" and dotted/dashed format
+    "040.026-00.28205717". Returns the pure 16-digit string, or None.
+    """
+    if not _HAS_PYPDF:
+        return None
+    try:
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        text_parts = []
+        for page in reader.pages[:3]:  # only first pages needed
+            try:
+                text_parts.append(page.extract_text() or "")
+            except Exception:
+                continue
+        text = "\n".join(text_parts)
+    except Exception:
+        return None
+    if not text:
+        return None
+    import re
+    # 1. Look for labeled line first (Indonesian invoices)
+    labeled = re.search(
+        r"Kode\s*dan\s*Nomor\s*Seri\s*Faktur\s*Pajak\s*[:\-]?\s*([\d.\-\s]{16,25})",
+        text, re.IGNORECASE,
+    )
+    if labeled:
+        digits = re.sub(r"\D", "", labeled.group(1))
+        if len(digits) == 16:
+            return digits
+    # 2. Dotted/dashed pattern anywhere
+    dotted = re.search(r"\b(\d{3})\.(\d{3})[-.](\d{2})\.(\d{8})\b", text)
+    if dotted:
+        return "".join(dotted.groups())
+    # 3. Bare 16-digit fallback (must not be part of longer number)
+    bare = re.search(r"(?<!\d)(\d{16})(?!\d)", text)
+    if bare:
+        return bare.group(1)
+    return None
+
+
 @api.post("/invoices/{inv_id}/faktur-pajak")
 async def upload_faktur_pajak(
     inv_id: str,
@@ -2561,6 +2603,12 @@ async def upload_faktur_pajak(
     if ext not in FP_ALLOWED_EXT:
         raise HTTPException(400, "Format harus PDF, PNG, atau JPG")
     ctype = file.content_type or MIME_TYPES.get(ext, "application/octet-stream")
+
+    # Try auto-extract for PDFs
+    detected_no: Optional[str] = None
+    if ext == "pdf":
+        detected_no = _extract_faktur_pajak_no(data)
+
     file_uuid = str(uuid.uuid4())
     path = f"{APP_NAME}/invoices/{inv_id}/faktur_pajak_{file_uuid}.{ext}"
     result = put_object(path, data, ctype)
@@ -2572,20 +2620,32 @@ async def upload_faktur_pajak(
         "ext": ext,
         "uploaded_by": user["email"],
         "uploaded_at": now_iso(),
+        "auto_detected_no": detected_no or "",
     }
     update_set: Dict[str, Any] = {
         "faktur_pajak_attachment": fp_attachment,
         "updated_at": now_iso(),
     }
-    if faktur_pajak_no is not None:
-        update_set["faktur_pajak_no"] = (faktur_pajak_no or "").strip()
+    # Resolve final faktur_pajak_no with priority:
+    #   1) explicit form field from client
+    #   2) auto-detected from PDF
+    #   3) keep existing value on the invoice
+    final_no = (faktur_pajak_no or "").strip()
+    if not final_no and detected_no:
+        final_no = detected_no
+    if final_no:
+        update_set["faktur_pajak_no"] = final_no
     await db.invoices.update_one({"_id": oid}, {"$set": update_set})
     await audit(
         "invoice.faktur_pajak.upload", user, target=inv_id,
-        meta={"filename": fname, "size": fp_attachment["size"], "no": update_set.get("faktur_pajak_no")},
+        meta={"filename": fname, "size": fp_attachment["size"], "no": final_no, "auto": bool(detected_no)},
     )
-    return {"ok": True, "faktur_pajak_attachment": fp_attachment,
-            "faktur_pajak_no": update_set.get("faktur_pajak_no", inv.get("faktur_pajak_no", ""))}
+    return {
+        "ok": True,
+        "faktur_pajak_attachment": fp_attachment,
+        "faktur_pajak_no": final_no or inv.get("faktur_pajak_no", ""),
+        "auto_detected": bool(detected_no),
+    }
 
 
 @api.get("/invoices/{inv_id}/faktur-pajak/download")
