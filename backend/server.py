@@ -1767,43 +1767,52 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
         LINTASARTA_BILL["name"],
         "<br/>".join(LINTASARTA_BILL["address_lines"]),
     )
-    meta_top = Table(
-        [
+    # Meta top: BILL TO + INVOICE # / DATE, optionally with EPROC # inline
+    # so it sits directly under the INVOICE # value (no big vertical gap).
+    if eproc:
+        meta_rows = [
             ["BILL TO", "INVOICE #", "DATE"],
             [
                 Paragraph(bill_lines, small_style),
                 Paragraph(f'<para align="center"><b>{inv_no}</b></para>', small_style),
                 Paragraph(f'<para align="center">{tanggal}</para>', small_style),
             ],
-        ],
-        colWidths=[90 * mm, 45 * mm, 45 * mm],
-    )
-    meta_top.setStyle(TableStyle(banner_style))
-    story.append(meta_top)
-
-    # Optional EPROC row (only if filled)
-    if eproc:
-        eproc_row = Table(
+            ["", "INVOICE EPROC #", ""],
             [
-                ["", "INVOICE EPROC #", ""],
-                ["", Paragraph(f'<para align="center"><b>{eproc}</b></para>', small_style), ""],
+                "",
+                Paragraph(f'<para align="center"><b>{eproc}</b></para>', small_style),
+                "",
+            ],
+        ]
+        meta_top = Table(meta_rows, colWidths=[90 * mm, 45 * mm, 45 * mm])
+        meta_style = list(banner_style) + [
+            # Blue banner on EPROC header
+            ("BACKGROUND", (1, 2), (1, 2), BRAND_BLUE_LIGHT),
+            ("TEXTCOLOR", (1, 2), (1, 2), colors.white),
+            ("FONTNAME", (1, 2), (1, 2), "Helvetica-Bold"),
+            ("FONTSIZE", (1, 2), (1, 2), 7),
+            ("ALIGN", (1, 2), (1, 2), "CENTER"),
+            # BILL TO cell spans across all 4 rows (address stays visible top)
+            ("SPAN", (0, 1), (0, 3)),
+            # DATE cell spans across the extra 2 EPROC rows to keep border clean
+            ("SPAN", (2, 1), (2, 3)),
+        ]
+        meta_top.setStyle(TableStyle(meta_style))
+        story.append(meta_top)
+    else:
+        meta_top = Table(
+            [
+                ["BILL TO", "INVOICE #", "DATE"],
+                [
+                    Paragraph(bill_lines, small_style),
+                    Paragraph(f'<para align="center"><b>{inv_no}</b></para>', small_style),
+                    Paragraph(f'<para align="center">{tanggal}</para>', small_style),
+                ],
             ],
             colWidths=[90 * mm, 45 * mm, 45 * mm],
         )
-        eproc_row.setStyle(TableStyle([
-            ("BACKGROUND", (1, 0), (1, 0), BRAND_BLUE_LIGHT),
-            ("TEXTCOLOR", (1, 0), (1, 0), colors.white),
-            ("FONTNAME", (1, 0), (1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (1, 0), (1, 0), 7),
-            ("ALIGN", (1, 0), (1, 0), "CENTER"),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING", (0, 0), (-1, -1), 2.5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
-            ("LEFTPADDING", (0, 0), (-1, -1), 4),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ]))
-        story.append(Spacer(1, 1 * mm))
-        story.append(eproc_row)
+        meta_top.setStyle(TableStyle(banner_style))
+        story.append(meta_top)
 
     story.append(Spacer(1, 3 * mm))
 
