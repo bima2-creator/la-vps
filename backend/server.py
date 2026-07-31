@@ -1348,9 +1348,9 @@ def _device_current_status(wo_history: List[dict]) -> str:
         if role == "dicabut":
             return "DISMANTLED"
         if role in ("pengganti", "existing"):
-            return "TERPASANG"
+            return "TERPASANG_MAINT"
         return "MAINTENANCE"
-    return "TERPASANG"
+    return "TERPASANG_INSTAL"
 
 
 @api.get("/perangkat/registry")

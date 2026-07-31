@@ -12,10 +12,22 @@ import {
 } from "@phosphor-icons/react";
 
 const STATUS_STYLE = {
-  TERPASANG: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  MAINTENANCE: "bg-amber-50 text-amber-700 border-amber-200",
+  TERPASANG_INSTAL: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  TERPASANG_MAINT: "bg-teal-50 text-teal-700 border-teal-200",
+  MAINTENANCE: "bg-red-50 text-red-700 border-red-200",
   DISMANTLED: "bg-slate-100 text-slate-600 border-slate-200",
   UNKNOWN: "bg-slate-50 text-slate-500 border-slate-200",
+  // legacy fallback
+  TERPASANG: "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
+const STATUS_LABEL = {
+  TERPASANG_INSTAL: "Terpasang untuk Instal/Aktivasi",
+  TERPASANG_MAINT: "Terpasang untuk Maintenance",
+  MAINTENANCE: "Problem/Rusak",
+  DISMANTLED: "Dismantled",
+  UNKNOWN: "Unknown",
+  TERPASANG: "Terpasang",
 };
 
 const JENIS_STYLE = {
@@ -26,13 +38,20 @@ const JENIS_STYLE = {
   MAINTENANCE: "text-amber-700 bg-amber-50 border-amber-200",
 };
 
-function KpiCard({ label, value, sub, testid }) {
+function KpiCard({ label, value, sub, testid, onClick, active }) {
+  const clickable = typeof onClick === "function";
   return (
     <div
       data-testid={testid}
-      className="border border-border bg-card p-5 rounded-sm"
+      onClick={onClick}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e) => (e.key === "Enter" || e.key === " ") && onClick() : undefined}
+      className={`border bg-card p-5 rounded-sm transition-all ${
+        clickable ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : ""
+      } ${active ? "border-blue-500 ring-1 ring-blue-500" : "border-border"}`}
     >
-      <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+      <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground leading-tight min-h-[24px]">
         {label}
       </div>
       <div className="mt-2 font-display font-black text-3xl mono">{value}</div>
@@ -80,7 +99,7 @@ function DrillPanel({ device, onClose }) {
             </div>
             <div className="mt-3 flex items-center gap-2 flex-wrap">
               <Badge className={STATUS_STYLE[device.current_status] || STATUS_STYLE.UNKNOWN}>
-                {device.current_status}
+                {STATUS_LABEL[device.current_status] || device.current_status}
               </Badge>
               <Badge className="bg-slate-50 text-slate-700 border-slate-200">
                 {device.wo_count} WO
@@ -185,13 +204,14 @@ export default function MasterPerangkatPage() {
   const [loading, setLoading] = useState(true);
   const [drill, setDrill] = useState(null);
 
-  const load = async () => {
+  const load = async (overrides = {}) => {
     setLoading(true);
     try {
+      const eff = { q, jenisWO, status, ...overrides };
       const params = { page: 1, page_size: 500 };
-      if (q) params.q = q;
-      if (jenisWO) params.jenis_wo = jenisWO;
-      if (status) params.status = status;
+      if (eff.q) params.q = eff.q;
+      if (eff.jenisWO) params.jenis_wo = eff.jenisWO;
+      if (eff.status) params.status = eff.status;
       const { data } = await api.get("/perangkat/registry", { params });
       setData(data);
     } catch (e) {
@@ -199,6 +219,12 @@ export default function MasterPerangkatPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const filterByStatus = (val) => {
+    const next = status === val ? "" : val; // toggle off if already active
+    setStatus(next);
+    load({ status: next });
   };
 
   useEffect(() => {
@@ -229,8 +255,9 @@ export default function MasterPerangkatPage() {
   };
 
   const byStatus = data.kpi?.by_status || {};
-  const terpasang = byStatus.TERPASANG || 0;
-  const inMaint = byStatus.MAINTENANCE || 0;
+  const terpasangInstal = byStatus.TERPASANG_INSTAL || 0;
+  const terpasangMaint = byStatus.TERPASANG_MAINT || 0;
+  const problem = byStatus.MAINTENANCE || 0;
   const dismantled = byStatus.DISMANTLED || 0;
 
   const items = data.items || [];
@@ -243,7 +270,7 @@ export default function MasterPerangkatPage() {
             Asset Tracking
           </div>
           <h1 className="font-display text-4xl font-black tracking-tighter">
-            Master Perangkat
+            Flow Perangkat
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Registry unik perangkat berdasarkan nomor registrasi, di-aggregate
@@ -262,30 +289,41 @@ export default function MasterPerangkatPage() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <KpiCard
           testid="perangkat-kpi-total"
           label="Total Perangkat"
           value={data.kpi?.total_devices ?? 0}
-          sub={`${data.kpi?.total_wo_links ?? 0} link WO total`}
+          active={status === ""}
+          onClick={() => filterByStatus("")}
         />
         <KpiCard
-          testid="perangkat-kpi-terpasang"
-          label="Terpasang"
-          value={terpasang}
-          sub="Latest WO ≠ DISMANTLE/MAINT"
+          testid="perangkat-kpi-terpasang-instal"
+          label="Terpasang untuk Instal/Aktivasi"
+          value={terpasangInstal}
+          active={status === "TERPASANG_INSTAL"}
+          onClick={() => filterByStatus("TERPASANG_INSTAL")}
         />
         <KpiCard
-          testid="perangkat-kpi-maintenance"
-          label="Under Maintenance"
-          value={inMaint}
-          sub="Latest WO = MAINTENANCE"
+          testid="perangkat-kpi-terpasang-maint"
+          label="Terpasang untuk Maintenance"
+          value={terpasangMaint}
+          active={status === "TERPASANG_MAINT"}
+          onClick={() => filterByStatus("TERPASANG_MAINT")}
+        />
+        <KpiCard
+          testid="perangkat-kpi-problem"
+          label="Problem/Rusak"
+          value={problem}
+          active={status === "MAINTENANCE"}
+          onClick={() => filterByStatus("MAINTENANCE")}
         />
         <KpiCard
           testid="perangkat-kpi-dismantled"
           label="Dismantled"
           value={dismantled}
-          sub="Latest WO = DISMANTLE"
+          active={status === "DISMANTLED"}
+          onClick={() => filterByStatus("DISMANTLED")}
         />
       </div>
 
@@ -328,13 +366,14 @@ export default function MasterPerangkatPage() {
             className="bg-secondary border border-border rounded-sm px-3 py-2 text-sm"
           >
             <option value="">Semua Status</option>
-            <option value="TERPASANG">Terpasang</option>
-            <option value="MAINTENANCE">Maintenance</option>
+            <option value="TERPASANG_INSTAL">Terpasang untuk Instal/Aktivasi</option>
+            <option value="TERPASANG_MAINT">Terpasang untuk Maintenance</option>
+            <option value="MAINTENANCE">Problem/Rusak</option>
             <option value="DISMANTLED">Dismantled</option>
           </select>
           <button
             data-testid="perangkat-apply-filters"
-            onClick={load}
+            onClick={() => load()}
             className="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-sm"
           >
             {loading ? "Memuat…" : "Terapkan"}
@@ -401,7 +440,7 @@ export default function MasterPerangkatPage() {
                           STATUS_STYLE[d.current_status] || STATUS_STYLE.UNKNOWN
                         }
                       >
-                        {d.current_status}
+                        {STATUS_LABEL[d.current_status] || d.current_status}
                       </Badge>
                     </td>
                     <td className="px-3 py-2">

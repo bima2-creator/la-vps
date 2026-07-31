@@ -20,7 +20,7 @@ const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: ChartBar, testid: NAV.dashboard, roles: ["admin", "operator", "viewer"], group: "main" },
   { to: "/workorders", label: "Work Orders", icon: Table, testid: NAV.workorders, roles: ["admin", "operator", "viewer"], group: "main" },
   { to: "/invoices", label: "Invoices", icon: Receipt, testid: "nav-invoices", roles: ["admin", "operator"], group: "main" },
-  { to: "/perangkat", label: "Master Perangkat", icon: HardDrives, testid: "nav-perangkat", roles: ["admin", "operator", "viewer"], group: "main" },
+  { to: "/perangkat", label: "Flow Perangkat", icon: HardDrives, testid: "nav-perangkat", roles: ["admin", "operator", "viewer"], group: "main" },
   { to: "/reports", label: "Reports", icon: FileText, testid: NAV.reports, roles: ["admin", "operator", "viewer"], group: "main" },
   { to: "/audit", label: "Audit Log", icon: FileText, testid: NAV.audit, roles: ["admin"], group: "admin" },
   { to: "/users", label: "Users", icon: Users, testid: NAV.users, roles: ["admin"], group: "admin" },
