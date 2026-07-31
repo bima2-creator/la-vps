@@ -1815,6 +1815,7 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
         table_data,
         colWidths=[8 * mm, 80 * mm, 22 * mm, 10 * mm, 28 * mm, 32 * mm],
         repeatRows=1,
+        hAlign="LEFT",
     )
     tbl.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), BRAND_BLUE_LIGHT),
@@ -1837,24 +1838,30 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
     story.append(tbl)
     story.append(Spacer(1, 3 * mm))
 
-    # Totals block (right-aligned)
+    # Totals block — mirror parent items table column widths so amounts
+    # line up exactly under the "Total Amount (Rp)" column.
     totals_tbl = Table(
         [
-            ["Subtotal (DPP)", _fmt_rp(subtotal)],
-            ["PPN 12%", _fmt_rp(ppn)],
-            ["Grand Total", _fmt_rp(grand_total)],
+            ["", "", "Subtotal (DPP)", "", "", _fmt_rp(subtotal)],
+            ["", "", "PPN 12%", "", "", _fmt_rp(ppn)],
+            ["", "", "Grand Total", "", "", _fmt_rp(grand_total)],
         ],
-        colWidths=[38 * mm, 38 * mm],
-        hAlign="RIGHT",
+        colWidths=[8 * mm, 80 * mm, 22 * mm, 10 * mm, 28 * mm, 32 * mm],
+        hAlign="LEFT",
     )
     totals_tbl.setStyle(TableStyle([
         ("FONTSIZE", (0, 0), (-1, -1), 7),
-        ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
-        ("FONTNAME", (0, 2), (-1, 2), "Helvetica-Bold"),
-        ("BACKGROUND", (0, 2), (-1, 2), colors.HexColor("#e5e7eb")),
-        ("LINEABOVE", (0, 2), (-1, 2), 0.5, colors.black),
+        ("SPAN", (2, 0), (4, 0)),
+        ("SPAN", (2, 1), (4, 1)),
+        ("SPAN", (2, 2), (4, 2)),
+        ("ALIGN", (2, 0), (5, -1), "RIGHT"),
+        ("FONTNAME", (2, 2), (5, 2), "Helvetica-Bold"),
+        ("BACKGROUND", (2, 2), (5, 2), colors.HexColor("#e5e7eb")),
+        ("LINEABOVE", (2, 2), (5, 2), 0.5, colors.black),
         ("TOPPADDING", (0, 0), (-1, -1), 1.5),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
     ]))
     story.append(totals_tbl)
     story.append(Spacer(1, 8 * mm))
