@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { NAV } from "@/constants/testIds";
+import IdleTimeoutManager from "@/components/IdleTimeoutManager";
 import {
   ChartBar,
   Table,
@@ -103,6 +104,7 @@ export default function Layout() {
       <main className="flex-1 min-w-0 flex flex-col">
         <Outlet />
       </main>
+      <IdleTimeoutManager />
     </div>
   );
 }
