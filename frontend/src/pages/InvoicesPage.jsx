@@ -943,7 +943,7 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                     {missingAttachmentWos.length} pekerjaan belum ada attachment PDF — tidak akan masuk invoice
                   </div>
                   <div className="text-[12px] text-red-700 mb-1">
-                    Upload lampiran PDF (BAST/SLA/dokumen pendukung) di halaman Work Order terlebih dahulu.
+                    Upload lampiran PDF (SPK/dokumen pendukung) di halaman Work Order terlebih dahulu.
                   </div>
                   <ul className="list-disc list-inside text-[12px] max-h-24 overflow-auto">
                     {missingAttachmentWos.slice(0, 20).map((c) => (
