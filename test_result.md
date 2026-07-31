@@ -398,6 +398,73 @@ backend:
             - Filter functionality working correctly
 
 frontend:
+  - task: "AUTH REFACTOR UI - Username-based login with role-based access"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/LoginPage.jsx, frontend/src/components/Layout.jsx, frontend/src/pages/UsersPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            AUTH REFACTOR UI — verify username-based login (not email) and role-based access. Test:
+            1. Login page shows "Username" field (not Email) and no DEMO credentials box
+            2. Login as admin (username "admin", password "admin123") - verify Dashboard, sidebar shows "Audit Log" and "Users" under Admin group, role shows "ADMIN", then logout
+            3. Login as operator (username "operator", password "operator") - verify role shows "OPERATOR", sidebar does NOT show "Users" or "Audit Log", then logout
+            4. Login as guest (username "guest", password "guest") - verify role shows "VIEWER", then logout
+            5. Negative test: wrong password for admin should show error
+            6. As admin, navigate to Users page and verify "Username" column shows admin/operator/guest, and "Email" column shows support@almar.co.id for admin and "—" for operator/guest
+        - working: true
+          agent: "testing"
+          comment: |
+            ✅ PASS - AUTH REFACTOR UI working correctly (6/6 test scenarios passed):
+            
+            Test 1: Login Page Verification
+            - ✅ Login field label shows "Username" (not "Email")
+            - ✅ No DEMO credentials box visible on login page
+            
+            Test 2: Admin Login & Role-Based Access
+            - ✅ Login successful with username "admin" / password "admin123"
+            - ✅ Landed on Dashboard
+            - ✅ Sidebar shows admin-only items: "Audit Log" and "Users" under "Admin" group
+            - ✅ User card displays "Administrator" with role "ADMIN"
+            - ✅ Logout successful
+            
+            Test 3: Operator Login & Role-Based Access
+            - ✅ Login successful with username "operator" / password "operator"
+            - ✅ Landed on Dashboard
+            - ✅ User card displays "Operator" with role "OPERATOR"
+            - ✅ Sidebar correctly HIDES admin-only items ("Audit Log" and "Users" not visible)
+            - ✅ Logout successful
+            
+            Test 4: Guest Login & Role-Based Access
+            - ✅ Login successful with username "guest" / password "guest"
+            - ✅ Landed on Dashboard
+            - ✅ User card displays "Guest" with role "VIEWER"
+            - ✅ Sidebar correctly HIDES admin-only items ("Audit Log" and "Users" not visible)
+            - ✅ Logout successful
+            
+            Test 5: Negative Test - Wrong Password
+            - ✅ Attempted login with username "admin" and wrong password "nope"
+            - ✅ Stayed on login page (not redirected)
+            - ✅ Error message displayed: "Invalid username or password"
+            
+            Test 6: Users Page - Username & Email Columns
+            - ✅ Navigated to Users page as admin
+            - ✅ Table has "Username" column header
+            - ✅ Table has "Email" column header
+            - ✅ Usernames displayed: admin, operator, guest
+            - ✅ Admin email shows: support@almar.co.id
+            - ✅ Operator and guest emails show: "—" (em dash for empty values)
+            - ✅ Role badges displayed correctly: ADMIN (red), OPERATOR (blue), VIEWER (green)
+            
+            Screenshots captured: login_page_username.png, admin_dashboard_sidebar.png, operator_dashboard.png, guest_dashboard.png, wrong_password_error.png, users_page_table.png
+            
+            All authentication flows working correctly. Role-based access control properly implemented. Username-based login fully functional.
+
+
   - task: "Work Orders page - Template button"
     implemented: true
     working: true
@@ -728,3 +795,58 @@ agent_communication:
       - Actor field correctly set to username for audit trails
       
       RECOMMENDATION: AUTH REFACTOR is working correctly and ready for production use. All backend authentication tests passed.
+
+  - agent: "testing"
+    message: |
+      ✅ AUTH REFACTOR UI TESTING COMPLETE - ALL TESTS PASSED (6/6 test scenarios)
+      
+      Comprehensive UI testing completed for username-based login and role-based access control.
+      
+      TEST RESULTS:
+      
+      1. ✅ Login Page Verification
+         - Login field label shows "Username" (not "Email")
+         - No DEMO credentials box visible on login page
+         - Clean, professional login UI
+      
+      2. ✅ Admin Login & Role-Based Access (username: admin, password: admin123)
+         - Login successful, landed on Dashboard
+         - Sidebar shows admin-only items: "Audit Log" and "Users" under "Admin" group
+         - User card displays: "Administrator" with role "ADMIN"
+         - Logout successful
+      
+      3. ✅ Operator Login & Role-Based Access (username: operator, password: operator)
+         - Login successful, landed on Dashboard
+         - User card displays: "Operator" with role "OPERATOR"
+         - Sidebar correctly HIDES admin-only items ("Audit Log" and "Users" not visible)
+         - Logout successful
+      
+      4. ✅ Guest Login & Role-Based Access (username: guest, password: guest)
+         - Login successful, landed on Dashboard
+         - User card displays: "Guest" with role "VIEWER"
+         - Sidebar correctly HIDES admin-only items ("Audit Log" and "Users" not visible)
+         - Logout successful
+      
+      5. ✅ Negative Test - Wrong Password
+         - Attempted login with username "admin" and wrong password "nope"
+         - Stayed on login page (not redirected)
+         - Error message displayed: "Invalid username or password"
+      
+      6. ✅ Users Page - Username & Email Columns
+         - Navigated to Users page as admin
+         - Table has "Username" column header (not "Email")
+         - Table has "Email" column header
+         - Usernames displayed: admin, operator, guest
+         - Admin email shows: support@almar.co.id
+         - Operator and guest emails show: "—" (em dash for empty values)
+         - Role badges displayed correctly: ADMIN (red), OPERATOR (blue), VIEWER (green)
+      
+      Test Details:
+      - Tested against production URL: https://project-bootstrap-18.preview.emergentagent.com
+      - All 3 role logins working correctly (admin, operator, guest)
+      - Role-based navigation working: admin sees all items, operator/guest see only non-admin items
+      - Error handling working: wrong password shows error message
+      - Users table correctly displays username and email columns
+      - Screenshots captured: login page, admin dashboard, operator dashboard, guest dashboard, error state, users page
+      
+      RECOMMENDATION: AUTH REFACTOR UI is working correctly and ready for production use. All frontend authentication and RBAC tests passed.
