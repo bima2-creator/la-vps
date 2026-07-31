@@ -1604,7 +1604,7 @@ LINTASARTA_BILL = {
 }
 BANK_INFO = {
     "acc_no": "736081066",
-    "bank_name": "BCA Cabang Duren Sawit",
+    "bank_name": "BANK BSI SYARIAH CAB. DUREN SAWIT",
     "recipient": "PT. ALMAR MITRA NIAGA",
 }
 SIGNATORY = {"name": "Chairuz Zamany", "title": "Direktur"}
@@ -1713,7 +1713,7 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
     # -----------------------------------------------------------
     logo_path = os.path.join(os.path.dirname(__file__), "static", "almar_logo.png")
     if os.path.exists(logo_path):
-        logo_flow = RLImage(logo_path, width=34 * mm, height=11.5 * mm)
+        logo_flow = RLImage(logo_path, width=44 * mm, height=15 * mm)
     else:
         logo_flow = Paragraph("<b>almar networks</b>", small_bold)
 
@@ -1881,7 +1881,7 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
             ["Bank Name", BANK_INFO['bank_name']],
             ["Recipient", BANK_INFO['recipient']],
         ],
-        colWidths=[20 * mm, 35 * mm],
+        colWidths=[15 * mm, 40 * mm],
     )
     bank_tbl.setStyle(TableStyle([
         ("SPAN", (0, 0), (1, 0)),
@@ -1890,14 +1890,14 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
         ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-        ("FONTSIZE", (0, 0), (-1, 0), 6.5),
-        ("FONTSIZE", (0, 1), (-1, -1), 6),
+        ("FONTSIZE", (0, 0), (-1, 0), 6),
+        ("FONTSIZE", (0, 1), (-1, -1), 5.5),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#94a3b8")),
-        ("LEFTPADDING", (0, 0), (-1, -1), 3),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
-        ("TOPPADDING", (0, 0), (-1, -1), 1.5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2.5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 2.5),
+        ("TOPPADDING", (0, 0), (-1, -1), 1),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
     ]))
 
     # Signature (right column) pushed down a couple lines so it sits beside
