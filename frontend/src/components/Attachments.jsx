@@ -30,6 +30,13 @@ export default function Attachments({ workorderId, canEdit }) {
   const upload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const fname = (file.name || "").toLowerCase();
+    const isPdf = file.type === "application/pdf" || fname.endsWith(".pdf");
+    if (!isPdf) {
+      toast.error("Hanya file PDF yang diperbolehkan sebagai attachment");
+      e.target.value = "";
+      return;
+    }
     const fd = new FormData();
     fd.append("file", file);
     setUploading(true);
@@ -79,6 +86,7 @@ export default function Attachments({ workorderId, canEdit }) {
             <input
               ref={inputRef}
               type="file"
+              accept="application/pdf,.pdf"
               className="hidden"
               onChange={upload}
               data-testid={ATTACHMENTS.fileInput}
@@ -99,7 +107,7 @@ export default function Attachments({ workorderId, canEdit }) {
         <div className="text-sm text-muted-foreground mono">Loading…</div>
       ) : items.length === 0 ? (
         <div className="text-sm text-muted-foreground py-6 text-center border border-dashed border-border rounded-sm">
-          No attachments yet. Upload photos, BAST, or SLA reports.
+          No attachments yet. Upload BAST, SLA, or supporting documents in PDF format.
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

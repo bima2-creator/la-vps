@@ -2080,7 +2080,10 @@ async def upload_attachment(wo_id: str, file: UploadFile = File(...), user: dict
     if len(data) > 20 * 1024 * 1024:
         raise HTTPException(413, "File too large (max 20MB)")
     ext = (file.filename.rsplit(".", 1)[-1] if "." in file.filename else "bin").lower()
-    ctype = file.content_type or MIME_TYPES.get(ext, "application/octet-stream")
+    # Only PDF attachments are allowed on work orders
+    if ext != "pdf" and (file.content_type or "").lower() != "application/pdf":
+        raise HTTPException(400, "Hanya file PDF yang diperbolehkan")
+    ctype = "application/pdf"
     file_uuid = str(uuid.uuid4())
     path = f"{APP_NAME}/workorders/{wo_id}/{file_uuid}.{ext}"
     result = put_object(path, data, ctype)

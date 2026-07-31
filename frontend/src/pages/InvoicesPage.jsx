@@ -411,7 +411,6 @@ function InvoiceForm({ initial, onClose, onSaved }) {
   const [meta, setMeta] = useState({
     invoice_no: initial?.invoice_no || "",
     inv_no_eproc: initial?.inv_no_eproc || "",
-    faktur_pajak_no: initial?.faktur_pajak_no || "",
     tanggal: initial?.tanggal || new Date().toISOString().slice(0, 10),
     tgl_kirim: initial?.tgl_kirim || "",
     tgl_bayar: initial?.tgl_bayar || "",
@@ -552,7 +551,6 @@ function InvoiceForm({ initial, onClose, onSaved }) {
     try {
       const form = new FormData();
       form.append("file", file);
-      if (meta.faktur_pajak_no) form.append("faktur_pajak_no", meta.faktur_pajak_no);
       const { data } = await api.post(
         `/invoices/${initial.id}/faktur-pajak`,
         form,
@@ -605,7 +603,6 @@ function InvoiceForm({ initial, onClose, onSaved }) {
         jenis_pekerjaan: jenisPekerjaan,
         invoice_no: meta.invoice_no,
         inv_no_eproc: meta.inv_no_eproc,
-        faktur_pajak_no: meta.faktur_pajak_no,
         tanggal: meta.tanggal,
         tgl_kirim: meta.tgl_kirim,
         tgl_bayar: meta.tgl_bayar,
@@ -974,78 +971,56 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                   <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
                     Faktur Pajak (lampiran invoice)
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                        Nomor Faktur Pajak
-                      </label>
-                      <input
-                        data-testid="invoice-form-faktur-pajak-no"
-                        value={meta.faktur_pajak_no}
-                        onChange={(e) =>
-                          setMeta({
-                            ...meta,
-                            faktur_pajak_no: e.target.value.replace(/\s/g, ""),
-                          })
-                        }
-                        placeholder="MIS. 040026 00282057917"
-                        className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm mono"
-                      />
-                      <div className="text-[10px] text-muted-foreground mt-1">
-                        Kode + Nomor Seri Faktur Pajak (16 digit)
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                      File Faktur Pajak (PDF/PNG/JPG)
+                    </label>
+                    {!isEdit && (
+                      <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5">
+                        Simpan invoice dulu, kemudian buka Edit untuk upload file.
                       </div>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                        File Faktur Pajak (PDF/PNG/JPG)
-                      </label>
-                      {!isEdit && (
-                        <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5">
-                          Simpan invoice dulu, kemudian buka Edit untuk upload file.
-                        </div>
-                      )}
-                      {isEdit && (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <label className="inline-flex items-center gap-1.5 border border-border bg-white hover:bg-slate-100 rounded-sm px-3 py-1.5 text-sm cursor-pointer">
-                            {uploadingFp ? "Mengupload…" : (fpAttachment ? "Ganti file" : "Pilih file")}
-                            <input
-                              type="file"
-                              accept=".pdf,image/png,image/jpeg"
-                              className="hidden"
-                              disabled={uploadingFp}
-                              data-testid="invoice-form-faktur-pajak-file"
-                              onChange={(e) => {
-                                const f = e.target.files && e.target.files[0];
-                                if (f) uploadFakturPajak(f);
-                                e.target.value = "";
-                              }}
-                            />
-                          </label>
-                          {fpAttachment ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={previewFakturPajak}
-                                className="text-sm text-blue-600 hover:underline"
-                              >
-                                Lihat: {fpAttachment.original_filename || "faktur_pajak"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={deleteFakturPajak}
-                                className="text-sm text-red-600 hover:underline"
-                              >
-                                Hapus
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-[11px] text-muted-foreground">
-                              Belum ada file. Setelah upload, otomatis jadi lampiran PDF invoice.
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    )}
+                    {isEdit && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <label className="inline-flex items-center gap-1.5 border border-border bg-white hover:bg-slate-100 rounded-sm px-3 py-1.5 text-sm cursor-pointer">
+                          {uploadingFp ? "Mengupload…" : (fpAttachment ? "Ganti file" : "Pilih file")}
+                          <input
+                            type="file"
+                            accept=".pdf,image/png,image/jpeg"
+                            className="hidden"
+                            disabled={uploadingFp}
+                            data-testid="invoice-form-faktur-pajak-file"
+                            onChange={(e) => {
+                              const f = e.target.files && e.target.files[0];
+                              if (f) uploadFakturPajak(f);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                        {fpAttachment ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={previewFakturPajak}
+                              className="text-sm text-blue-600 hover:underline"
+                            >
+                              Lihat: {fpAttachment.original_filename || "faktur_pajak"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={deleteFakturPajak}
+                              className="text-sm text-red-600 hover:underline"
+                            >
+                              Hapus
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground">
+                            Belum ada file. Setelah upload, otomatis jadi lampiran PDF invoice.
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div>
