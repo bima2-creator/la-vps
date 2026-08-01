@@ -2632,6 +2632,25 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
     lampiran_pdfs: List[bytes] = []
     log = logging.getLogger("la-tracker")
 
+    def _first_last_pdf(pdf_bytes: bytes) -> bytes:
+        """Ambil halaman PERTAMA (Surat Perintah Kerja) & TERAKHIR (Berita Acara) dari SPK."""
+        if not _HAS_PYPDF:
+            return pdf_bytes
+        try:
+            reader = PdfReader(io.BytesIO(pdf_bytes))
+            n = len(reader.pages)
+            if n <= 2:
+                return pdf_bytes
+            writer = PdfWriter()
+            writer.add_page(reader.pages[0])
+            writer.add_page(reader.pages[n - 1])
+            out = io.BytesIO()
+            writer.write(out)
+            return out.getvalue()
+        except Exception as e:
+            log.warning("first/last SPK extract failed: %s", e)
+            return pdf_bytes
+
     # 1) Faktur Pajak
     fp = inv.get("faktur_pajak_attachment") or {}
     if fp.get("storage_path"):
@@ -2670,6 +2689,9 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
                         raw, ext_a, ctype_a or att.get("content_type") or "",
                     )
                     if pdf_bytes:
+                        # SPK: cukup lampirkan halaman pertama (SPK) & terakhir (Berita Acara)
+                        if (att.get("kind") or "").lower() == "spk":
+                            pdf_bytes = _first_last_pdf(pdf_bytes)
                         lampiran_pdfs.append(pdf_bytes)
                 except Exception as e:
                     log.warning(

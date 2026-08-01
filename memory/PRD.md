@@ -296,6 +296,15 @@ tracking, SLA (durasi vs target), Bill of Quantity (BoQ), and Invoice lifecycle.
 - Verified end-to-end via Playwright: picker renders, DISMANTLE hides aktivasi,
   MAINTENANCE keeps BoQ, PSB shows everything, save persists jenis_order.
 
+## SPK Lampiran Invoice: Halaman Pertama & Terakhir (Jun 2026 — implemented)
+- Saat membuat PDF invoice, lampiran SPK (attachment `kind="spk"`) kini **hanya
+  mengambil halaman pertama (Surat Perintah Kerja) & halaman terakhir (Berita
+  Acara)**, bukan seluruh halaman. Attachment non-SPK tetap utuh.
+- Helper `_first_last_pdf` di `invoice_pdf` (server.py): jika SPK >2 halaman →
+  ambil halaman[0] + halaman[terakhir]; ≤2 halaman → apa adanya.
+- **Diuji end-to-end**: SPK 9 halaman → invoice PDF jadi 3 halaman (invoice +
+  SPK hal.1 + Berita Acara). Data uji dibersihkan.
+
 ## Detail WO per Teknisi + Export KPI Excel (Jun 2026 — implemented)
 - **Detail WO per Teknisi**: di halaman KPI Teknisi, klik nama teknisi
   (`kpi-open-<nama>`) → modal (`kpi-detail-modal`) menampilkan daftar WO yang
