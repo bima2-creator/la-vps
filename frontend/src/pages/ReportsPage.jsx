@@ -127,6 +127,7 @@ export default function ReportsPage() {
   const [segments, setSegments] = useState([]);
   const [segTotals, setSegTotals] = useState(null);
   const [segLoading, setSegLoading] = useState(true);
+  const [kpiTeknisi, setKpiTeknisi] = useState(null);
 
   const loadSegments = async () => {
     setSegLoading(true);
@@ -138,6 +139,15 @@ export default function ReportsPage() {
       const { data } = await api.get("/reports/by-jenis", { params });
       setSegments(data.segments || []);
       setSegTotals(data.totals || null);
+      try {
+        const kp = {};
+        if (filters.date_from) kp.date_from = filters.date_from;
+        if (filters.date_to) kp.date_to = filters.date_to;
+        const kres = await api.get("/kpi/teknisi", { params: kp });
+        setKpiTeknisi(kres.data);
+      } catch {
+        /* non-blocking */
+      }
     } catch (e) {
       toast.error("Gagal memuat report per jenis");
     } finally {
@@ -352,6 +362,54 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
+
+      {/* Rekap KPI per Teknisi */}
+      {kpiTeknisi && (kpiTeknisi.technicians || []).length > 0 && (
+        <div
+          data-testid="report-kpi-teknisi"
+          className="border border-border rounded-sm bg-card overflow-hidden print:break-inside-avoid"
+        >
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+              Rekap per Teknisi
+            </div>
+            <div className="text-[10px] mono text-muted-foreground">
+              Selesai = OK/Batal · Success = OK ÷ total
+            </div>
+          </div>
+          <table className="w-full data-table text-sm">
+            <thead className="bg-slate-50 border-b border-border">
+              <tr className="text-left text-[10px] uppercase tracking-widest text-muted-foreground">
+                <th>Nama Teknisi</th>
+                <th>Tim</th>
+                <th className="text-right">Total WO</th>
+                <th className="text-right">Selesai</th>
+                <th className="text-right">OK</th>
+                <th className="text-right">Batal</th>
+                <th className="text-right">Pending</th>
+                <th className="text-right">Success Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {kpiTeknisi.technicians.map((r, i) => (
+                <tr
+                  key={`${r.nama}-${r.tim}`}
+                  className={`border-b border-border/60 ${i % 2 ? "bg-slate-50/60" : ""}`}
+                >
+                  <td className="font-medium">{r.nama}</td>
+                  <td className="mono text-xs">{r.tim}</td>
+                  <td className="mono text-right">{r.total}</td>
+                  <td className="mono text-right">{r.selesai}</td>
+                  <td className="mono text-right text-emerald-600">{r.ok}</td>
+                  <td className="mono text-right text-red-500">{r.batal}</td>
+                  <td className="mono text-right text-muted-foreground">{r.pending}</td>
+                  <td className="mono text-right font-semibold">{r.success_rate}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="border border-border rounded-sm bg-card overflow-hidden">
         <table className="w-full data-table text-sm">

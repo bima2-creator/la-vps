@@ -403,6 +403,10 @@ async def on_startup() -> None:
         await db.perangkat_bank.create_index([("prefix", 1), ("plen", 1)])
     except Exception:
         pass
+    try:
+        await db.teknisi_master.create_index([("nama", 1), ("tim", 1)], unique=True)
+    except Exception:
+        pass
     await _seed_perangkat_bank()
 
     # Initialize object storage (non-blocking on failure)
@@ -783,6 +787,7 @@ async def create_workorder(payload: WorkOrderIn, user: dict = Depends(require_ro
     res = await db.workorders.insert_one(doc)
     doc["_id"] = res.inserted_id
     await _learn_perangkat(doc.get("perangkat_items"))
+    await _learn_teknisi(doc.get("tim_pelaksana"), doc.get("teknisi_pelaksana"))
     await audit("workorder.create", user, workorder_id=str(res.inserted_id), meta={"pelanggan": doc.get("pelanggan")})
     return workorder_to_out(doc)
 
@@ -798,6 +803,7 @@ async def update_workorder(wo_id: str, payload: WorkOrderIn, user: dict = Depend
         raise HTTPException(404, "Not found")
     updated = await db.workorders.find_one({"_id": ObjectId(wo_id)})
     await _learn_perangkat(doc.get("perangkat_items"))
+    await _learn_teknisi(doc.get("tim_pelaksana"), doc.get("teknisi_pelaksana"))
     await audit("workorder.update", user, workorder_id=wo_id, meta={"pelanggan": updated.get("pelanggan")})
     return workorder_to_out(updated)
 
@@ -809,6 +815,135 @@ async def delete_workorder(wo_id: str, user: dict = Depends(require_roles("admin
         raise HTTPException(404, "Not found")
     await audit("workorder.delete", user, workorder_id=wo_id)
     return {"ok": True}
+
+
+# ------------------------------------------------------------------
+# Tim Pelaksana: master teknisi (autocomplete) + KPI per teknisi/tim
+# ------------------------------------------------------------------
+async def _learn_teknisi(tim, names) -> None:
+    """Kumpulkan nama teknisi ke master (untuk autocomplete konsisten)."""
+    tim_norm = (tim or "").strip().upper()
+    if tim_norm not in ("INTERNAL", "MITRA"):
+        return
+    for n in names or []:
+        nama = str(n or "").strip()
+        if not nama:
+            continue
+        await db.teknisi_master.update_one(
+            {"nama": nama, "tim": tim_norm},
+            {"$inc": {"count": 1}, "$set": {"updated_at": now_iso()}},
+            upsert=True,
+        )
+
+
+def _wo_effective_status(wo: dict) -> str:
+    """Status akhir WO: ambil status fase paling maju yang sudah terisi."""
+    for k in ("hasil_aktivasi_status", "hasil_instalasi_status", "hasil_survey_status"):
+        v = (wo.get(k) or "").strip().upper()
+        if v:
+            return v
+    return ""
+
+
+@api.get("/teknisi/master")
+async def teknisi_master(tim: Optional[str] = None, q: Optional[str] = None,
+                         user: dict = Depends(get_current_user)):
+    query: Dict[str, Any] = {}
+    if tim and tim.strip().upper() in ("INTERNAL", "MITRA"):
+        query["tim"] = tim.strip().upper()
+    if q and q.strip():
+        query["nama"] = {"$regex": q.strip(), "$options": "i"}
+    names = await db.teknisi_master.distinct("nama", query)
+    names = sorted([n for n in names if n], key=lambda s: s.lower())
+    return {"names": names}
+
+
+@api.get("/media/perangkat-names")
+async def media_perangkat_names(q: Optional[str] = None, user: dict = Depends(get_current_user)):
+    """Nilai media_perangkat unik yang pernah diinput (untuk autocomplete)."""
+    query: Dict[str, Any] = {"media_perangkat": {"$nin": ["", None]}}
+    if q and q.strip():
+        query["media_perangkat"] = {"$regex": q.strip(), "$options": "i"}
+    names = await db.workorders.distinct("media_perangkat", query)
+    names = sorted([str(n).strip() for n in names if str(n).strip()], key=lambda s: s.lower())
+    return {"names": names}
+
+
+@api.get("/kpi/teknisi")
+async def kpi_teknisi(date_from: Optional[str] = None, date_to: Optional[str] = None,
+                      tim: Optional[str] = None, user: dict = Depends(get_current_user)):
+    """KPI per teknisi & ringkasan Internal vs Mitra.
+    Selesai = status OK atau BATAL; success_rate = OK / total."""
+    query: Dict[str, Any] = {"tim_pelaksana": {"$in": ["INTERNAL", "MITRA"]}}
+    if tim and tim.strip().upper() in ("INTERNAL", "MITRA"):
+        query["tim_pelaksana"] = tim.strip().upper()
+    if date_from:
+        query.setdefault("created_at", {})["$gte"] = date_from
+    if date_to:
+        query.setdefault("created_at", {})["$lte"] = date_to + "T23:59:59"
+
+    docs = await db.workorders.find(query).to_list(100000)
+
+    per: Dict[tuple, dict] = {}
+    summary = {
+        "INTERNAL": {"teknisi": set(), "total": 0, "selesai": 0, "ok": 0, "batal": 0},
+        "MITRA": {"teknisi": set(), "total": 0, "selesai": 0, "ok": 0, "batal": 0},
+    }
+    for wo in docs:
+        tim_wo = (wo.get("tim_pelaksana") or "").strip().upper()
+        if tim_wo not in ("INTERNAL", "MITRA"):
+            continue
+        st = _wo_effective_status(wo)
+        is_ok = st == "OK"
+        is_batal = st == "BATAL"
+        is_selesai = is_ok or is_batal
+        names = [str(n).strip() for n in (wo.get("teknisi_pelaksana") or []) if str(n).strip()]
+        summary[tim_wo]["total"] += 1
+        summary[tim_wo]["ok"] += 1 if is_ok else 0
+        summary[tim_wo]["batal"] += 1 if is_batal else 0
+        summary[tim_wo]["selesai"] += 1 if is_selesai else 0
+        for nm in names:
+            summary[tim_wo]["teknisi"].add(nm)
+            key = (nm, tim_wo)
+            row = per.setdefault(key, {"nama": nm, "tim": tim_wo, "total": 0,
+                                       "selesai": 0, "ok": 0, "batal": 0, "pending": 0})
+            row["total"] += 1
+            row["ok"] += 1 if is_ok else 0
+            row["batal"] += 1 if is_batal else 0
+            row["selesai"] += 1 if is_selesai else 0
+            row["pending"] += 0 if is_selesai else 1
+
+    technicians = []
+    for row in per.values():
+        row["success_rate"] = round((row["ok"] / row["total"] * 100), 1) if row["total"] else 0
+        technicians.append(row)
+    technicians.sort(key=lambda r: (-r["total"], r["nama"].lower()))
+
+    def sumout(s):
+        return {
+            "teknisi_count": len(s["teknisi"]),
+            "total": s["total"], "selesai": s["selesai"], "ok": s["ok"], "batal": s["batal"],
+            "success_rate": round((s["ok"] / s["total"] * 100), 1) if s["total"] else 0,
+        }
+
+    all_total = summary["INTERNAL"]["total"] + summary["MITRA"]["total"]
+    all_ok = summary["INTERNAL"]["ok"] + summary["MITRA"]["ok"]
+    all_batal = summary["INTERNAL"]["batal"] + summary["MITRA"]["batal"]
+    all_selesai = summary["INTERNAL"]["selesai"] + summary["MITRA"]["selesai"]
+    all_teknisi = summary["INTERNAL"]["teknisi"] | summary["MITRA"]["teknisi"]
+
+    return {
+        "technicians": technicians,
+        "summary": {
+            "internal": sumout(summary["INTERNAL"]),
+            "mitra": sumout(summary["MITRA"]),
+            "all": {
+                "teknisi_count": len(all_teknisi), "total": all_total, "selesai": all_selesai,
+                "ok": all_ok, "batal": all_batal,
+                "success_rate": round((all_ok / all_total * 100), 1) if all_total else 0,
+            },
+        },
+    }
 
 
 # ------------------------------------------------------------------

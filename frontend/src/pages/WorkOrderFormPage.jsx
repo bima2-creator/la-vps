@@ -182,6 +182,27 @@ export default function WorkOrderFormPage() {
   const [jenisPicked, setJenisPicked] = useState(isEdit);
   // Map picker modal
   const [mapPickerOpen, setMapPickerOpen] = useState(false);
+  // Autocomplete sources (learned data)
+  const [mediaPerangkatOpts, setMediaPerangkatOpts] = useState([]);
+  const [teknisiInternalOpts, setTeknisiInternalOpts] = useState([]);
+  const [teknisiMitraOpts, setTeknisiMitraOpts] = useState([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [mp, ti, tm] = await Promise.all([
+          api.get("/media/perangkat-names"),
+          api.get("/teknisi/master", { params: { tim: "INTERNAL" } }),
+          api.get("/teknisi/master", { params: { tim: "MITRA" } }),
+        ]);
+        setMediaPerangkatOpts(mp.data.names || []);
+        setTeknisiInternalOpts(ti.data.names || []);
+        setTeknisiMitraOpts(tm.data.names || []);
+      } catch {
+        /* non-blocking */
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -744,6 +765,21 @@ export default function WorkOrderFormPage() {
             </>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <datalist id="media-perangkat-list">
+              {mediaPerangkatOpts.map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
+            <datalist id="teknisi-internal-list">
+              {teknisiInternalOpts.map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
+            <datalist id="teknisi-mitra-list">
+              {teknisiMitraOpts.map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
             {(visibleActiveSection?.fields || []).map((f) => {
               // Lock jenis_order — user harus batal untuk ganti
               if (f.name === "jenis_order") {
@@ -986,6 +1022,7 @@ export default function WorkOrderFormPage() {
                             data-testid={`teknisi-${idx}`}
                             value={list[idx] || ""}
                             disabled={!canEdit}
+                            list={tim === "INTERNAL" ? "teknisi-internal-list" : "teknisi-mitra-list"}
                             onChange={(e) => setTeknisi(idx, e.target.value)}
                             placeholder={count > 1 ? `Nama Teknisi ${idx + 1}` : "Nama Teknisi"}
                             className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm"
@@ -997,6 +1034,24 @@ export default function WorkOrderFormPage() {
                       Data tim pelaksana ini dipakai untuk penilaian pencapaian KPI &amp; target.
                     </div>
                   </div>
+                );
+              }
+              // Media perangkat — text + autocomplete dari data yang pernah diinput
+              if (f.name === "media_perangkat") {
+                return (
+                  <label key={f.name} className="block">
+                    <span className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
+                      {f.label}
+                    </span>
+                    <input
+                      data-testid="media-perangkat-input"
+                      list="media-perangkat-list"
+                      value={form.media_perangkat ?? ""}
+                      disabled={!canEdit}
+                      onChange={(e) => onChange("media_perangkat", e.target.value.toUpperCase())}
+                      className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm"
+                    />
+                  </label>
                 );
               }
               return (

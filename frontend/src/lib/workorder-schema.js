@@ -77,8 +77,8 @@ export const SECTIONS = [
       },
       { name: "media_perangkat", label: "Perangkat", type: "text" },
       { name: "cp_la", label: "CP LA", type: "text" },
-      { name: "cp_mitra", label: "CP Pelaksana", type: "text" },
       { name: "cp_pelanggan", label: "CP Pelanggan", type: "text" },
+      { name: "cp_mitra", label: "CP Pelaksana", type: "text" },
       {
         name: "tim_pelaksana",
         label: "Tim Pelaksana",

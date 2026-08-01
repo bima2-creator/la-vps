@@ -5,6 +5,7 @@ import { NAV } from "@/constants/testIds";
 import IdleTimeoutManager from "@/components/IdleTimeoutManager";
 import {
   ChartBar,
+  ChartLineUp,
   Table,
   FileText,
   Users,
@@ -23,6 +24,7 @@ const navItems = [
   { to: "/invoices", label: "Invoices", icon: Receipt, testid: "nav-invoices", roles: ["admin", "operator"], group: "main" },
   { to: "/perangkat", label: "Flow Perangkat", icon: HardDrives, testid: "nav-perangkat", roles: ["admin", "operator", "viewer"], group: "main" },
   { to: "/reports", label: "Reports", icon: FileText, testid: NAV.reports, roles: ["admin", "operator", "viewer"], group: "main" },
+  { to: "/kpi-teknisi", label: "KPI Teknisi", icon: ChartLineUp, testid: "nav-kpi-teknisi", roles: ["admin", "operator", "viewer"], group: "main" },
   { to: "/audit", label: "Audit Log", icon: FileText, testid: NAV.audit, roles: ["admin"], group: "admin" },
   { to: "/bank-data", label: "Kelola Bank Data", icon: Database, testid: "nav-bank-data", roles: ["admin"], group: "admin" },
   { to: "/users", label: "Users", icon: Users, testid: NAV.users, roles: ["admin"], group: "admin" },

@@ -82,6 +82,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const isViewer = user?.role === "viewer";
   const [stats, setStats] = useState(null);
+  const [kpi, setKpi] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -106,6 +107,20 @@ export default function DashboardPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const params = {};
+        if (dateFrom) params.date_from = dateFrom;
+        if (dateTo) params.date_to = dateTo;
+        const { data } = await api.get("/kpi/teknisi", { params });
+        setKpi(data);
+      } catch {
+        /* non-blocking */
+      }
+    })();
+  }, [dateFrom, dateTo]);
 
   const fmtIDR = (n) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n || 0);
@@ -342,6 +357,76 @@ export default function DashboardPage() {
             </Section>
             )}
           </div>
+
+          {/* KPI Teknisi ringkas */}
+          {kpi && (
+            <div className="mt-6" data-testid="dashboard-kpi-teknisi">
+              <Section
+                title="KPI Teknisi (Internal vs Mitra)"
+                right={
+                  <button
+                    onClick={() => nav("/kpi-teknisi")}
+                    className="text-[11px] text-blue-600 hover:underline"
+                  >
+                    Lihat detail →
+                  </button>
+                }
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                  {[
+                    { key: "internal", label: "Internal", tone: "text-blue-700 bg-blue-50" },
+                    { key: "mitra", label: "Mitra", tone: "text-amber-700 bg-amber-50" },
+                    { key: "all", label: "Semua", tone: "text-emerald-700 bg-emerald-50" },
+                  ].map((c) => {
+                    const d = kpi.summary?.[c.key] || {};
+                    return (
+                      <div key={c.key} className={`rounded-lg border border-border p-3 ${c.tone}`}>
+                        <div className="text-[10px] uppercase tracking-widest font-semibold">
+                          {c.label}
+                        </div>
+                        <div className="flex items-end justify-between mt-2">
+                          <div>
+                            <div className="text-2xl font-black mono leading-none">
+                              {d.success_rate ?? 0}%
+                            </div>
+                            <div className="text-[10px] mt-1 opacity-80">success rate (OK)</div>
+                          </div>
+                          <div className="text-right text-[11px] mono">
+                            <div>{d.total ?? 0} WO</div>
+                            <div className="opacity-80">{d.teknisi_count ?? 0} teknisi</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="text-[10px] uppercase tracking-widest text-slate-600 mb-2">
+                  Top Teknisi
+                </div>
+                <div className="space-y-1.5">
+                  {(kpi.technicians || []).slice(0, 5).map((r) => (
+                    <div key={`${r.nama}-${r.tim}`} className="flex items-center gap-3 text-sm">
+                      <span className="flex-1 truncate font-medium">{r.nama}</span>
+                      <span className="text-[10px] mono uppercase text-muted-foreground w-16">
+                        {r.tim}
+                      </span>
+                      <span className="mono text-xs w-14 text-right">{r.total} WO</span>
+                      <div className="w-32 bg-slate-100 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="h-full bg-blue-600 rounded-full"
+                          style={{ width: `${Math.min(100, r.success_rate)}%` }}
+                        />
+                      </div>
+                      <span className="mono text-xs w-12 text-right">{r.success_rate}%</span>
+                    </div>
+                  ))}
+                  {(kpi.technicians || []).length === 0 && (
+                    <div className="text-sm text-muted-foreground">Belum ada data teknisi.</div>
+                  )}
+                </div>
+              </Section>
+            </div>
+          )}
         </>
       )}
     </div>

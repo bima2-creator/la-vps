@@ -15,6 +15,7 @@ import AuditLogPage from "@/pages/AuditLogPage";
 import InvoicesPage from "@/pages/InvoicesPage";
 import MasterPerangkatPage from "@/pages/MasterPerangkatPage";
 import BankDataPage from "@/pages/BankDataPage";
+import KpiTeknisiPage from "@/pages/KpiTeknisiPage";
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
               }
             />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/kpi-teknisi" element={<KpiTeknisiPage />} />
             <Route
               path="/invoices"
               element={
