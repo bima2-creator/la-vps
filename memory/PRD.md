@@ -296,6 +296,16 @@ tracking, SLA (durasi vs target), Bill of Quantity (BoQ), and Invoice lifecycle.
 - Verified end-to-end via Playwright: picker renders, DISMANTLE hides aktivasi,
   MAINTENANCE keeps BoQ, PSB shows everything, save persists jenis_order.
 
+## Fix Docker Build: yarn.lock not found (Jun 2026)
+- **Gejala**: `docker build` frontend gagal — `"/yarn.lock": not found` /
+  `failed to compute cache key`.
+- **Akar masalah**: `frontend/yarn.lock` tidak ikut ter-commit ke Git (untracked,
+  meski tidak di-ignore), sehingga hilang saat kode di-push/di-download →
+  `COPY package.json yarn.lock ./` gagal.
+- **Perbaikan**: `frontend/Dockerfile` → `COPY package.json yarn.lock* ./`
+  (wildcard, opsional) + `yarn install` (tanpa `--frozen-lockfile`), sehingga
+  build tetap sukses walau yarn.lock tidak ada (lockfile dibuat ulang di image).
+
 ## Panduan Instalasi Windows (Docker) + PDF (Jun 2026 — updated)
 - **README-LOCAL.md** ditulis ulang: metode Docker Desktop, database MongoDB
   otomatis (container `la-tracker-mongo`, data persisten di `.\data\mongo`),

@@ -2,9 +2,10 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Install deps first (better cache)
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile --network-timeout 600000
+# Install deps first (better cache). yarn.lock* = wildcard so build tetap jalan
+# walau yarn.lock tidak ikut ter-copy (mis. tidak ikut saat download/clone).
+COPY package.json yarn.lock* ./
+RUN yarn install --network-timeout 600000
 
 COPY . .
 
