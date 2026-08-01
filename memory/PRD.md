@@ -296,6 +296,26 @@ tracking, SLA (durasi vs target), Bill of Quantity (BoQ), and Invoice lifecycle.
 - Verified end-to-end via Playwright: picker renders, DISMANTLE hides aktivasi,
   MAINTENANCE keeps BoQ, PSB shows everything, save persists jenis_order.
 
+## KPI Teknisi + Autocomplete + Layout Media (Jun 2026 — implemented)
+- **Layout Media & Kontak**: urutan diatur → (CP LA | CP Pelanggan), lalu
+  (CP Pelaksana | Tim Pelaksana).
+- **Autocomplete**:
+  - Field Perangkat (`media_perangkat`) → datalist dari nilai yang pernah
+    diinput (`GET /api/media/perangkat-names`, self-clean atas workorders).
+  - Nama Teknisi → datalist dari master yang otomatis terkumpul saat WO disimpan
+    (`_learn_teknisi` → koleksi `teknisi_master`; `GET /api/teknisi/master?tim=`).
+- **KPI Teknisi** (`GET /api/kpi/teknisi?date_from&date_to&tim`): agregasi per
+  teknisi + ringkasan Internal/Mitra/Semua. WO "selesai" = status hasil (fase
+  aktivasi>instalasi>survey) **OK atau BATAL**. Metrik dipisah **Selesai - OK**
+  dan **Selesai - Batal** + Pending + Total WO.
+  - Catatan: field `success_rate` masih dikembalikan backend tapi **tidak
+    ditampilkan** (dihapus dari UI atas permintaan user).
+- **Tampilan**: halaman baru **KPI Teknisi** (`/kpi-teknisi`, menu semua role),
+  section ringkas di **Dashboard** (data-testid `dashboard-kpi-teknisi`), dan
+  **Rekap per Teknisi** di **Reports** (`report-kpi-teknisi`).
+- **Status**: Backend 9/9 pytest (`tests/test_kpi_teknisi.py`, jalankan `-n0`),
+  UI diverifikasi via screenshot.
+
 ## Tim Pelaksana + CP Pelaksana (Jun 2026 — implemented)
 - Section **Media & Kontak** di semua Work Order:
   - Label **"CP Mitra" → "CP Pelaksana"** (field `cp_mitra`, label saja).

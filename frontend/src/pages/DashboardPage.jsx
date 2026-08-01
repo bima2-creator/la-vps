@@ -387,12 +387,12 @@ export default function DashboardPage() {
                         <div className="flex items-end justify-between mt-2">
                           <div>
                             <div className="text-2xl font-black mono leading-none">
-                              {d.success_rate ?? 0}%
+                              {d.total ?? 0}
                             </div>
-                            <div className="text-[10px] mt-1 opacity-80">success rate (OK)</div>
+                            <div className="text-[10px] mt-1 opacity-80">total WO</div>
                           </div>
                           <div className="text-right text-[11px] mono">
-                            <div>{d.total ?? 0} WO</div>
+                            <div>OK {d.ok ?? 0} · Batal {d.batal ?? 0}</div>
                             <div className="opacity-80">{d.teknisi_count ?? 0} teknisi</div>
                           </div>
                         </div>
@@ -410,14 +410,13 @@ export default function DashboardPage() {
                       <span className="text-[10px] mono uppercase text-muted-foreground w-16">
                         {r.tim}
                       </span>
-                      <span className="mono text-xs w-14 text-right">{r.total} WO</span>
-                      <div className="w-32 bg-slate-100 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="h-full bg-blue-600 rounded-full"
-                          style={{ width: `${Math.min(100, r.success_rate)}%` }}
-                        />
-                      </div>
-                      <span className="mono text-xs w-12 text-right">{r.success_rate}%</span>
+                      <span className="mono text-xs w-16 text-right">{r.total} WO</span>
+                      <span className="mono text-xs w-24 text-right text-emerald-600">
+                        OK {r.ok}
+                      </span>
+                      <span className="mono text-xs w-20 text-right text-red-500">
+                        Batal {r.batal}
+                      </span>
                     </div>
                   ))}
                   {(kpi.technicians || []).length === 0 && (

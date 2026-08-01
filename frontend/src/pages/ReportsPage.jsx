@@ -374,7 +374,7 @@ export default function ReportsPage() {
               Rekap per Teknisi
             </div>
             <div className="text-[10px] mono text-muted-foreground">
-              Selesai = OK/Batal · Success = OK ÷ total
+              Selesai = OK atau Batal
             </div>
           </div>
           <table className="w-full data-table text-sm">
@@ -383,11 +383,9 @@ export default function ReportsPage() {
                 <th>Nama Teknisi</th>
                 <th>Tim</th>
                 <th className="text-right">Total WO</th>
-                <th className="text-right">Selesai</th>
-                <th className="text-right">OK</th>
-                <th className="text-right">Batal</th>
+                <th className="text-right whitespace-nowrap">Selesai - OK</th>
+                <th className="text-right whitespace-nowrap">Selesai - Batal</th>
                 <th className="text-right">Pending</th>
-                <th className="text-right">Success Rate</th>
               </tr>
             </thead>
             <tbody>
@@ -399,11 +397,9 @@ export default function ReportsPage() {
                   <td className="font-medium">{r.nama}</td>
                   <td className="mono text-xs">{r.tim}</td>
                   <td className="mono text-right">{r.total}</td>
-                  <td className="mono text-right">{r.selesai}</td>
                   <td className="mono text-right text-emerald-600">{r.ok}</td>
                   <td className="mono text-right text-red-500">{r.batal}</td>
                   <td className="mono text-right text-muted-foreground">{r.pending}</td>
-                  <td className="mono text-right font-semibold">{r.success_rate}%</td>
                 </tr>
               ))}
             </tbody>

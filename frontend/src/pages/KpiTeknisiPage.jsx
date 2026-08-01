@@ -17,25 +17,11 @@ function SummaryCard({ label, icon: Icon, accent, data }) {
         <div className="mono text-right font-semibold">{data?.teknisi_count ?? 0}</div>
         <div className="text-muted-foreground">Total WO</div>
         <div className="mono text-right font-semibold">{data?.total ?? 0}</div>
-        <div className="text-muted-foreground">Selesai (OK/Batal)</div>
-        <div className="mono text-right">{data?.selesai ?? 0}</div>
-        <div className="text-muted-foreground">OK</div>
+        <div className="text-muted-foreground">Selesai - OK</div>
         <div className="mono text-right text-emerald-600">{data?.ok ?? 0}</div>
-        <div className="text-muted-foreground">Batal</div>
+        <div className="text-muted-foreground">Selesai - Batal</div>
         <div className="mono text-right text-red-500">{data?.batal ?? 0}</div>
-        <div className="col-span-2 pt-2 mt-1 border-t border-border flex items-center justify-between">
-          <span className="text-xs uppercase tracking-[0.15em] font-semibold">Success Rate</span>
-          <span className="text-lg font-bold text-blue-700 mono">{data?.success_rate ?? 0}%</span>
-        </div>
       </div>
-    </div>
-  );
-}
-
-function Bar({ pct }) {
-  return (
-    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-      <div className="h-full bg-blue-600 rounded-full" style={{ width: `${Math.min(100, pct)}%` }} />
     </div>
   );
 }
@@ -82,7 +68,7 @@ export default function KpiTeknisiPage() {
           <h1 className="font-display text-4xl font-black tracking-tighter">KPI Teknisi</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             Pencapaian per teknisi & tim (Internal vs Mitra). WO dihitung selesai bila status
-            hasil pekerjaan <b>OK</b> atau <b>Batal</b>; success rate = OK ÷ total.
+            hasil pekerjaan <b>OK</b> atau <b>Batal</b>.
           </p>
         </div>
       </div>
@@ -173,17 +159,15 @@ export default function KpiTeknisiPage() {
               <th className="text-left px-3 py-2">Nama Teknisi</th>
               <th className="text-left px-3 py-2 w-24">Tim</th>
               <th className="text-right px-3 py-2 w-24">Total WO</th>
-              <th className="text-right px-3 py-2 w-24">Selesai</th>
-              <th className="text-right px-3 py-2 w-20">OK</th>
-              <th className="text-right px-3 py-2 w-20">Batal</th>
+              <th className="text-right px-3 py-2 w-28 whitespace-nowrap">Selesai - OK</th>
+              <th className="text-right px-3 py-2 w-28 whitespace-nowrap">Selesai - Batal</th>
               <th className="text-right px-3 py-2 w-24">Pending</th>
-              <th className="text-left px-3 py-2 w-52">Success Rate</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-10 text-center text-muted-foreground">
+                <td colSpan={6} className="px-3 py-10 text-center text-muted-foreground">
                   {loading ? "Memuat…" : "Belum ada data teknisi."}
                 </td>
               </tr>
@@ -207,16 +191,9 @@ export default function KpiTeknisiPage() {
                     </span>
                   </td>
                   <td className="px-3 py-2 text-right mono font-semibold">{r.total}</td>
-                  <td className="px-3 py-2 text-right mono">{r.selesai}</td>
                   <td className="px-3 py-2 text-right mono text-emerald-600">{r.ok}</td>
                   <td className="px-3 py-2 text-right mono text-red-500">{r.batal}</td>
                   <td className="px-3 py-2 text-right mono text-muted-foreground">{r.pending}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <Bar pct={r.success_rate} />
-                      <span className="mono text-xs w-12 text-right">{r.success_rate}%</span>
-                    </div>
-                  </td>
                 </tr>
               ))
             )}
