@@ -296,6 +296,19 @@ tracking, SLA (durasi vs target), Bill of Quantity (BoQ), and Invoice lifecycle.
 - Verified end-to-end via Playwright: picker renders, DISMANTLE hides aktivasi,
   MAINTENANCE keeps BoQ, PSB shows everything, save persists jenis_order.
 
+## Detail WO per Teknisi + Export KPI Excel (Jun 2026 — implemented)
+- **Detail WO per Teknisi**: di halaman KPI Teknisi, klik nama teknisi
+  (`kpi-open-<nama>`) → modal (`kpi-detail-modal`) menampilkan daftar WO yang
+  ditangani (pelanggan, SA ID, jenis, media, status OK/Batal, tanggal) + tombol
+  buka WO ke `/workorders/:id`. Endpoint `GET /api/kpi/teknisi/workorders?nama=&tim=&date_from&date_to`.
+- **Export KPI Excel**: tombol `kpi-export-xlsx` unduh rekap KPI ke `.xlsx`
+  (2 sheet: Ringkasan Internal/Mitra/Semua + Per Teknisi). Endpoint
+  `GET /api/kpi/teknisi/export/xlsx`. Agregasi direfactor ke helper
+  `_compute_kpi_teknisi` (dipakai bersama endpoint kpi & export).
+- **Status**: Backend diuji via curl (WO-list & export xlsx valid), UI via
+  screenshot (modal 2 WO OK/Batal, tombol export). teknisi_master dibersihkan
+  dari data uji (0 entri).
+
 ## KPI Teknisi + Autocomplete + Layout Media (Jun 2026 — implemented)
 - **Layout Media & Kontak**: urutan diatur → (CP LA | CP Pelanggan), lalu
   (CP Pelaksana | Tim Pelaksana).

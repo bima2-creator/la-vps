@@ -1,7 +1,16 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { ChartLineUp, MagnifyingGlass, UsersThree, Buildings } from "@phosphor-icons/react";
+import {
+  ChartLineUp,
+  MagnifyingGlass,
+  UsersThree,
+  Buildings,
+  DownloadSimple,
+  X,
+  ArrowSquareOut,
+} from "@phosphor-icons/react";
 
 function SummaryCard({ label, icon: Icon, accent, data }) {
   return (
@@ -33,6 +42,10 @@ export default function KpiTeknisiPage() {
   const [dateTo, setDateTo] = useState("");
   const [tim, setTim] = useState("");
   const [q, setQ] = useState("");
+  const nav = useNavigate();
+  const [detail, setDetail] = useState(null); // { nama, tim }
+  const [detailItems, setDetailItems] = useState([]);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,6 +67,42 @@ export default function KpiTeknisiPage() {
     load();
   }, [load]);
 
+  const openDetail = async (row) => {
+    setDetail({ nama: row.nama, tim: row.tim });
+    setDetailLoading(true);
+    setDetailItems([]);
+    try {
+      const params = { nama: row.nama, tim: row.tim };
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+      const { data } = await api.get("/kpi/teknisi/workorders", { params });
+      setDetailItems(data.items || []);
+    } catch {
+      toast.error("Gagal memuat daftar WO teknisi");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const exportXlsx = async () => {
+    try {
+      const params = {};
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+      if (tim) params.tim = tim;
+      const resp = await api.get("/kpi/teknisi/export/xlsx", { params, responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([resp.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "kpi-teknisi.xlsx";
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Excel diunduh");
+    } catch {
+      toast.error("Gagal ekspor Excel");
+    }
+  };
+
   const rows = (data.technicians || []).filter((r) =>
     !q.trim() ? true : r.nama.toLowerCase().includes(q.trim().toLowerCase())
   );
@@ -68,9 +117,16 @@ export default function KpiTeknisiPage() {
           <h1 className="font-display text-4xl font-black tracking-tighter">KPI Teknisi</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             Pencapaian per teknisi & tim (Internal vs Mitra). WO dihitung selesai bila status
-            hasil pekerjaan <b>OK</b> atau <b>Batal</b>.
+            hasil pekerjaan <b>OK</b> atau <b>Batal</b>. Klik nama teknisi untuk melihat daftar WO.
           </p>
         </div>
+        <button
+          data-testid="kpi-export-xlsx"
+          onClick={exportXlsx}
+          className="inline-flex items-center gap-2 border border-border bg-secondary hover:bg-slate-100 text-sm px-3 py-2 rounded-sm"
+        >
+          <DownloadSimple size={16} /> Export Excel
+        </button>
       </div>
 
       {/* Filters */}
@@ -178,7 +234,16 @@ export default function KpiTeknisiPage() {
                   data-testid={`kpi-row-${r.nama}`}
                   className="border-b border-border last:border-0 hover:bg-slate-50/60"
                 >
-                  <td className="px-3 py-2 font-medium">{r.nama}</td>
+                  <td className="px-3 py-2 font-medium">
+                    <button
+                      data-testid={`kpi-open-${r.nama}`}
+                      onClick={() => openDetail(r)}
+                      className="text-blue-700 hover:underline text-left inline-flex items-center gap-1"
+                    >
+                      {r.nama}
+                      <ArrowSquareOut size={13} className="opacity-60" />
+                    </button>
+                  </td>
                   <td className="px-3 py-2">
                     <span
                       className={`inline-flex px-2 py-0.5 rounded-sm border text-[10px] uppercase tracking-widest mono ${
@@ -203,6 +268,108 @@ export default function KpiTeknisiPage() {
       <div className="text-xs text-muted-foreground">
         Menampilkan {rows.length} teknisi.
       </div>
+
+      {/* Detail WO per teknisi */}
+      {detail && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-4 sm:p-8 overflow-y-auto"
+          onClick={() => setDetail(null)}
+          data-testid="kpi-detail-modal"
+        >
+          <div
+            className="bg-white rounded-lg w-full max-w-3xl shadow-xl border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+              <div>
+                <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                  Detail WO Teknisi
+                </div>
+                <div className="font-display text-lg font-bold">
+                  {detail.nama}{" "}
+                  <span className="text-xs mono text-muted-foreground">({detail.tim})</span>
+                </div>
+              </div>
+              <button
+                data-testid="kpi-detail-close"
+                onClick={() => setDetail(null)}
+                className="p-1.5 rounded-sm hover:bg-slate-100 text-slate-500"
+              >
+                <X size={18} weight="bold" />
+              </button>
+            </div>
+            <div className="max-h-[65vh] overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-border sticky top-0">
+                  <tr className="text-left text-[10px] uppercase tracking-widest text-muted-foreground">
+                    <th className="px-4 py-2">Pelanggan</th>
+                    <th className="px-4 py-2">SA ID</th>
+                    <th className="px-4 py-2">Jenis</th>
+                    <th className="px-4 py-2">Media</th>
+                    <th className="px-4 py-2">Status</th>
+                    <th className="px-4 py-2">Tanggal</th>
+                    <th className="px-4 py-2 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detailLoading ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                        Memuat…
+                      </td>
+                    </tr>
+                  ) : detailItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                        Tidak ada WO.
+                      </td>
+                    </tr>
+                  ) : (
+                    detailItems.map((w) => (
+                      <tr
+                        key={w.id}
+                        data-testid={`kpi-detail-row-${w.id}`}
+                        className="border-b border-border/60 hover:bg-slate-50/60"
+                      >
+                        <td className="px-4 py-2 font-medium">{w.pelanggan || "—"}</td>
+                        <td className="px-4 py-2 mono text-xs">{w.sa_id || "—"}</td>
+                        <td className="px-4 py-2">{w.jenis_order || "—"}</td>
+                        <td className="px-4 py-2">{w.media_jenis || "—"}</td>
+                        <td className="px-4 py-2">
+                          <span
+                            className={`text-[10px] mono uppercase px-1.5 py-0.5 rounded-sm border ${
+                              w.status === "OK"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : w.status === "BATAL"
+                                ? "bg-red-50 text-red-600 border-red-200"
+                                : "bg-slate-50 text-slate-500 border-slate-200"
+                            }`}
+                          >
+                            {w.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 mono text-xs">{(w.created_at || "").slice(0, 10) || "—"}</td>
+                        <td className="px-4 py-2">
+                          <button
+                            onClick={() => nav(`/workorders/${w.id}`)}
+                            title="Buka WO"
+                            className="p-1 rounded-sm text-blue-600 hover:bg-blue-50"
+                          >
+                            <ArrowSquareOut size={15} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-5 py-2.5 border-t border-border text-xs text-muted-foreground">
+              Total {detailItems.length} WO
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

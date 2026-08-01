@@ -997,11 +997,6 @@ export default function WorkOrderFormPage() {
                   <div key={f.name} className="md:col-span-2">
                     <span className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
                       {f.label}
-                      {count > 0 && (
-                        <span className="ml-2 normal-case tracking-normal text-blue-600">
-                          ({tim === "INTERNAL" ? "Internal — 4 teknisi" : "Mitra — 1 teknisi"})
-                        </span>
-                      )}
                     </span>
                     {count === 0 ? (
                       <div

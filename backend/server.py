@@ -873,7 +873,11 @@ async def media_perangkat_names(q: Optional[str] = None, user: dict = Depends(ge
 async def kpi_teknisi(date_from: Optional[str] = None, date_to: Optional[str] = None,
                       tim: Optional[str] = None, user: dict = Depends(get_current_user)):
     """KPI per teknisi & ringkasan Internal vs Mitra.
-    Selesai = status OK atau BATAL; success_rate = OK / total."""
+    Selesai = status OK atau BATAL."""
+    return await _compute_kpi_teknisi(date_from, date_to, tim)
+
+
+def _kpi_query(date_from, date_to, tim) -> Dict[str, Any]:
     query: Dict[str, Any] = {"tim_pelaksana": {"$in": ["INTERNAL", "MITRA"]}}
     if tim and tim.strip().upper() in ("INTERNAL", "MITRA"):
         query["tim_pelaksana"] = tim.strip().upper()
@@ -881,7 +885,11 @@ async def kpi_teknisi(date_from: Optional[str] = None, date_to: Optional[str] = 
         query.setdefault("created_at", {})["$gte"] = date_from
     if date_to:
         query.setdefault("created_at", {})["$lte"] = date_to + "T23:59:59"
+    return query
 
+
+async def _compute_kpi_teknisi(date_from, date_to, tim) -> dict:
+    query = _kpi_query(date_from, date_to, tim)
     docs = await db.workorders.find(query).to_list(100000)
 
     per: Dict[tuple, dict] = {}
@@ -944,6 +952,67 @@ async def kpi_teknisi(date_from: Optional[str] = None, date_to: Optional[str] = 
             },
         },
     }
+
+
+@api.get("/kpi/teknisi/workorders")
+async def kpi_teknisi_workorders(nama: str, tim: Optional[str] = None,
+                                 date_from: Optional[str] = None, date_to: Optional[str] = None,
+                                 user: dict = Depends(get_current_user)):
+    """Daftar Work Order yang ditangani seorang teknisi (untuk detail per teknisi)."""
+    query = _kpi_query(date_from, date_to, tim)
+    query["teknisi_pelaksana"] = nama.strip()
+    docs = await db.workorders.find(query).sort("created_at", -1).to_list(100000)
+    items = []
+    for wo in docs:
+        items.append({
+            "id": str(wo["_id"]),
+            "pelanggan": wo.get("pelanggan", ""),
+            "sa_id": wo.get("sa_id", ""),
+            "jenis_order": wo.get("jenis_order", ""),
+            "media_jenis": wo.get("media_jenis", ""),
+            "tim_pelaksana": wo.get("tim_pelaksana", ""),
+            "status": _wo_effective_status(wo) or "-",
+            "created_at": wo.get("created_at", ""),
+        })
+    return {"nama": nama, "items": items, "total": len(items)}
+
+
+@api.get("/kpi/teknisi/export/xlsx")
+async def kpi_teknisi_export(date_from: Optional[str] = None, date_to: Optional[str] = None,
+                             tim: Optional[str] = None, user: dict = Depends(get_current_user)):
+    """Unduh rekap KPI per teknisi ke Excel (untuk laporan bulanan)."""
+    data = await _compute_kpi_teknisi(date_from, date_to, tim)
+    rows = [{
+        "NAMA TEKNISI": t["nama"],
+        "TIM": t["tim"],
+        "TOTAL WO": t["total"],
+        "SELESAI - OK": t["ok"],
+        "SELESAI - BATAL": t["batal"],
+        "PENDING": t["pending"],
+    } for t in data["technicians"]]
+    df = pd.DataFrame(rows, columns=["NAMA TEKNISI", "TIM", "TOTAL WO", "SELESAI - OK", "SELESAI - BATAL", "PENDING"])
+
+    s = data["summary"]
+    srows = [
+        {"TIM": "INTERNAL", "JUMLAH TEKNISI": s["internal"]["teknisi_count"], "TOTAL WO": s["internal"]["total"],
+         "SELESAI - OK": s["internal"]["ok"], "SELESAI - BATAL": s["internal"]["batal"]},
+        {"TIM": "MITRA", "JUMLAH TEKNISI": s["mitra"]["teknisi_count"], "TOTAL WO": s["mitra"]["total"],
+         "SELESAI - OK": s["mitra"]["ok"], "SELESAI - BATAL": s["mitra"]["batal"]},
+        {"TIM": "SEMUA", "JUMLAH TEKNISI": s["all"]["teknisi_count"], "TOTAL WO": s["all"]["total"],
+         "SELESAI - OK": s["all"]["ok"], "SELESAI - BATAL": s["all"]["batal"]},
+    ]
+    df_sum = pd.DataFrame(srows, columns=["TIM", "JUMLAH TEKNISI", "TOTAL WO", "SELESAI - OK", "SELESAI - BATAL"])
+
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="xlsxwriter") as writer:
+        df_sum.to_excel(writer, index=False, sheet_name="Ringkasan")
+        df.to_excel(writer, index=False, sheet_name="Per Teknisi")
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=kpi-teknisi.xlsx"},
+    )
 
 
 # ------------------------------------------------------------------
