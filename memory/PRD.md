@@ -297,13 +297,14 @@ tracking, SLA (durasi vs target), Bill of Quantity (BoQ), and Invoice lifecycle.
   MAINTENANCE keeps BoQ, PSB shows everything, save persists jenis_order.
 
 ## SPK Lampiran Invoice: Halaman Pertama & Terakhir (Jun 2026 — implemented)
-- Saat membuat PDF invoice, lampiran SPK (attachment `kind="spk"`) kini **hanya
-  mengambil halaman pertama (Surat Perintah Kerja) & halaman terakhir (Berita
-  Acara)**, bukan seluruh halaman. Attachment non-SPK tetap utuh.
-- Helper `_first_last_pdf` di `invoice_pdf` (server.py): jika SPK >2 halaman →
-  ambil halaman[0] + halaman[terakhir]; ≤2 halaman → apa adanya.
-- **Diuji end-to-end**: SPK 9 halaman → invoice PDF jadi 3 halaman (invoice +
-  SPK hal.1 + Berita Acara). Data uji dibersihkan.
+- Saat membuat PDF invoice, lampiran SPK (attachment `kind="spk"`):
+  - WO **MAINTENANCE** → **hanya halaman pertama** (sesuai file SPK, `_first_pdf`).
+  - WO lainnya → **halaman pertama (Surat Perintah Kerja) & terakhir (Berita
+    Acara)** (`_first_last_pdf`). ≤2/≤1 halaman → apa adanya.
+  - Jenis WO dipetakan dari `jenis_order` (map wo_id→jenis di `invoice_pdf`).
+  Attachment non-SPK tetap utuh.
+- **Diuji end-to-end**: SPK 9 halaman → non-maintenance = 3 hal (invoice+2);
+  MAINTENANCE = 2 hal (invoice+1). Data uji dibersihkan.
 
 ## Detail WO per Teknisi + Export KPI Excel (Jun 2026 — implemented)
 - **Detail WO per Teknisi**: di halaman KPI Teknisi, klik nama teknisi

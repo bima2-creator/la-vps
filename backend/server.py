@@ -2651,6 +2651,23 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
             log.warning("first/last SPK extract failed: %s", e)
             return pdf_bytes
 
+    def _first_pdf(pdf_bytes: bytes) -> bytes:
+        """Ambil HANYA halaman pertama (untuk SPK Maintenance)."""
+        if not _HAS_PYPDF:
+            return pdf_bytes
+        try:
+            reader = PdfReader(io.BytesIO(pdf_bytes))
+            if len(reader.pages) <= 1:
+                return pdf_bytes
+            writer = PdfWriter()
+            writer.add_page(reader.pages[0])
+            out = io.BytesIO()
+            writer.write(out)
+            return out.getvalue()
+        except Exception as e:
+            log.warning("first-page SPK extract failed: %s", e)
+            return pdf_bytes
+
     # 1) Faktur Pajak
     fp = inv.get("faktur_pajak_attachment") or {}
     if fp.get("storage_path"):
@@ -2677,6 +2694,12 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
     wo_ids = inv.get("work_order_ids") or []
     if wo_ids:
         try:
+            # Peta jenis order per WO (Maintenance -> lampiran SPK cukup 1 halaman)
+            wo_jenis: Dict[str, str] = {}
+            async for w in db.workorders.find(
+                {"_id": {"$in": [ObjectId(x) for x in wo_ids if ObjectId.is_valid(str(x))]}}
+            ):
+                wo_jenis[str(w["_id"])] = (w.get("jenis_order") or "").strip().upper()
             atts = await db.attachments.find(
                 {"workorder_id": {"$in": [str(w) for w in wo_ids]}, "is_deleted": False}
             ).sort("created_at", 1).to_list(500)
@@ -2689,9 +2712,14 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
                         raw, ext_a, ctype_a or att.get("content_type") or "",
                     )
                     if pdf_bytes:
-                        # SPK: cukup lampirkan halaman pertama (SPK) & terakhir (Berita Acara)
                         if (att.get("kind") or "").lower() == "spk":
-                            pdf_bytes = _first_last_pdf(pdf_bytes)
+                            jenis = wo_jenis.get(str(att.get("workorder_id")), "")
+                            if jenis == "MAINTENANCE":
+                                # Maintenance: cukup halaman pertama sesuai file SPK
+                                pdf_bytes = _first_pdf(pdf_bytes)
+                            else:
+                                # Lainnya: halaman pertama (SPK) & terakhir (Berita Acara)
+                                pdf_bytes = _first_last_pdf(pdf_bytes)
                         lampiran_pdfs.append(pdf_bytes)
                 except Exception as e:
                     log.warning(
