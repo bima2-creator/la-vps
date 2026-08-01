@@ -294,8 +294,12 @@ class WorkOrderBase(BaseModel):
 
     # Contact Persons
     cp_la: Optional[str] = ""
-    cp_mitra: Optional[str] = ""
+    cp_mitra: Optional[str] = ""  # label diubah jadi "CP Pelaksana" di UI
     cp_pelanggan: Optional[str] = ""
+
+    # Tim Pelaksana (dasar penilaian KPI & target)
+    tim_pelaksana: Optional[str] = ""            # "INTERNAL" | "MITRA"
+    teknisi_pelaksana: Optional[List[Any]] = []  # daftar nama teknisi (4 utk INTERNAL, 1 utk MITRA)
 
     # Hasil Pekerjaan
     hasil_survey_status: Optional[str] = ""

@@ -213,6 +213,14 @@ export default function WorkOrderFormPage() {
         const modes = new Set((v || []).map((it) => it.mode));
         next.boq_mode = modes.size === 1 ? [...modes][0] : "both";
       }
+      // When Tim Pelaksana changes, resize the technician list (4 for INTERNAL, 1 for MITRA)
+      if (k === "tim_pelaksana") {
+        const cnt = String(v).toUpperCase() === "INTERNAL" ? 4 : String(v).toUpperCase() === "MITRA" ? 1 : 0;
+        const cur = Array.isArray(f.teknisi_pelaksana) ? f.teknisi_pelaksana : [];
+        const resized = [];
+        for (let i = 0; i < cnt; i++) resized.push(cur[i] || "");
+        next.teknisi_pelaksana = resized;
+      }
       return next;
     });
   };
@@ -934,6 +942,59 @@ export default function WorkOrderFormPage() {
                     <div className="mt-1.5 text-[11px] text-muted-foreground">
                       Field ini legacy / referensi. Untuk invoice sebenarnya, gunakan modul
                       Invoices.
+                    </div>
+                  </div>
+                );
+              }
+              // Tim Pelaksana — daftar nama teknisi (4 utk INTERNAL, 1 utk MITRA)
+              if (f.type === "teknisi-list") {
+                const tim = String(form.tim_pelaksana || "").toUpperCase();
+                const count = tim === "INTERNAL" ? 4 : tim === "MITRA" ? 1 : 0;
+                const list = Array.isArray(form.teknisi_pelaksana) ? form.teknisi_pelaksana : [];
+                const setTeknisi = (idx, val) => {
+                  const next = [];
+                  for (let i = 0; i < count; i++) next.push(list[i] || "");
+                  next[idx] = val.toUpperCase();
+                  onChange("teknisi_pelaksana", next);
+                };
+                return (
+                  <div key={f.name} className="md:col-span-2">
+                    <span className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
+                      {f.label}
+                      {count > 0 && (
+                        <span className="ml-2 normal-case tracking-normal text-blue-600">
+                          ({tim === "INTERNAL" ? "Internal — 4 teknisi" : "Mitra — 1 teknisi"})
+                        </span>
+                      )}
+                    </span>
+                    {count === 0 ? (
+                      <div
+                        data-testid="teknisi-list-empty"
+                        className="text-sm text-muted-foreground border border-dashed border-border rounded-sm p-3"
+                      >
+                        Pilih <b>Tim Pelaksana</b> (Internal / Mitra) terlebih dahulu untuk
+                        mengisi nama teknisi.
+                      </div>
+                    ) : (
+                      <div
+                        data-testid="teknisi-list"
+                        className="grid grid-cols-1 md:grid-cols-2 gap-2"
+                      >
+                        {Array.from({ length: count }).map((_, idx) => (
+                          <input
+                            key={idx}
+                            data-testid={`teknisi-${idx}`}
+                            value={list[idx] || ""}
+                            disabled={!canEdit}
+                            onChange={(e) => setTeknisi(idx, e.target.value)}
+                            placeholder={count > 1 ? `Nama Teknisi ${idx + 1}` : "Nama Teknisi"}
+                            className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-1.5 text-[11px] text-muted-foreground">
+                      Data tim pelaksana ini dipakai untuk penilaian pencapaian KPI &amp; target.
                     </div>
                   </div>
                 );

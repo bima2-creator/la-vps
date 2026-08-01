@@ -77,8 +77,15 @@ export const SECTIONS = [
       },
       { name: "media_perangkat", label: "Perangkat", type: "text" },
       { name: "cp_la", label: "CP LA", type: "text" },
-      { name: "cp_mitra", label: "CP Mitra", type: "text" },
+      { name: "cp_mitra", label: "CP Pelaksana", type: "text" },
       { name: "cp_pelanggan", label: "CP Pelanggan", type: "text" },
+      {
+        name: "tim_pelaksana",
+        label: "Tim Pelaksana",
+        type: "select",
+        options: ["", "INTERNAL", "MITRA"],
+      },
+      { name: "teknisi_pelaksana", label: "Nama Teknisi", type: "teknisi-list" },
     ],
   },
   {
@@ -328,9 +335,11 @@ export function emptyWorkOrder() {
       f.type === "invoice-summary" ||
       f.type === "invoice-activity-type" ||
       f.type === "boq-items" ||
-      f.type === "perangkat-items"
+      f.type === "perangkat-items" ||
+      f.type === "teknisi-list"
     ) {
-      if (f.type === "boq-items" || f.type === "perangkat-items") obj[f.name] = [];
+      if (f.type === "boq-items" || f.type === "perangkat-items" || f.type === "teknisi-list")
+        obj[f.name] = [];
       return;
     }
     obj[f.name] = f.type === "number" ? 0 : "";

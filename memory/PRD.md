@@ -296,6 +296,19 @@ tracking, SLA (durasi vs target), Bill of Quantity (BoQ), and Invoice lifecycle.
 - Verified end-to-end via Playwright: picker renders, DISMANTLE hides aktivasi,
   MAINTENANCE keeps BoQ, PSB shows everything, save persists jenis_order.
 
+## Tim Pelaksana + CP Pelaksana (Jun 2026 — implemented)
+- Section **Media & Kontak** di semua Work Order:
+  - Label **"CP Mitra" → "CP Pelaksana"** (field `cp_mitra`, label saja).
+  - Field baru **Tim Pelaksana** (`tim_pelaksana`: INTERNAL | MITRA).
+  - Field baru **Nama Teknisi** (`teknisi_pelaksana`: List) dengan tipe kustom
+    `teknisi-list`: **INTERNAL → 4 input**, **MITRA → 1 input**. Ganti pilihan
+    otomatis menyesuaikan jumlah entri (`onChange` me-resize array).
+- Backend `WorkOrderBase`: `tim_pelaksana: str`, `teknisi_pelaksana: List[Any]`.
+- Tujuan: data tim pelaksana menjadi dasar penilaian pencapaian **KPI & target**
+  (implementasi KPI menyusul).
+- **Status**: Diverifikasi — backend persist (curl create/update INTERNAL↔MITRA),
+  frontend (4 vs 1 input, label CP Pelaksana) via screenshot.
+
 ## Fix Docker Build: yarn.lock not found (Jun 2026)
 - **Gejala**: `docker build` frontend gagal — `"/yarn.lock": not found` /
   `failed to compute cache key`.
