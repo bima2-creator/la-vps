@@ -1870,8 +1870,38 @@ async def import_workorders(file: UploadFile = File(...), user: dict = Depends(r
 
     if not docs:
         return {"inserted": 0, "message": "No data rows found."}
-    result = await db.workorders.insert_many(docs)
-    return {"inserted": len(result.inserted_ids)}
+
+    # Dedup by SPK number per section. Each SPK number identifies one work
+    # section (survey/instalasi/aktivasi/dismantle/maintenance). If any SPK
+    # number on an imported row already exists in the database, skip that row.
+    spk_fields = ("spk_survey_nomor", "spk_instalasi_nomor", "spk_aktivasi_nomor")
+
+    def _spk_key(v: Any) -> str:
+        return _val(v).strip().upper()
+
+    existing_spk: set = set()
+    proj = {f: 1 for f in spk_fields}
+    async for d in db.workorders.find({}, proj):
+        for f in spk_fields:
+            k = _spk_key(d.get(f))
+            if k:
+                existing_spk.add(k)
+
+    kept = []
+    skipped = 0
+    for doc in docs:
+        nums = {_spk_key(doc.get(f)) for f in spk_fields}
+        nums.discard("")
+        if nums and (nums & existing_spk):
+            skipped += 1
+            continue
+        kept.append(doc)
+        existing_spk |= nums
+
+    if not kept:
+        return {"inserted": 0, "skipped": skipped, "message": f"Semua {skipped} baris dilewati karena nomor SPK sudah ada."}
+    result = await db.workorders.insert_many(kept)
+    return {"inserted": len(result.inserted_ids), "skipped": skipped}
 
 
 @api.get("/workorders/import/template.xlsx")

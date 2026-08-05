@@ -127,7 +127,11 @@ export default function WorkOrdersPage() {
       const { data } = await api.post("/workorders/import/xlsx", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      toast.success(`Imported ${data.inserted} rows`);
+      const skipped = data.skipped || 0;
+      toast.success(
+        `Berhasil impor ${data.inserted} baris` +
+          (skipped ? ` — ${skipped} baris dilewati (nomor SPK sudah ada)` : "")
+      );
       setPage(1);
       load();
     } catch (err) {
