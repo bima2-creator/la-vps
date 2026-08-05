@@ -1168,6 +1168,63 @@ async def perangkat_bank_lookup(nomor: str, user: dict = Depends(get_current_use
     return {"matched": False, "options": []}
 
 
+@api.get("/perangkat/history")
+async def perangkat_history(nomor: str, exclude_wo_id: Optional[str] = None, user: dict = Depends(get_current_user)):
+    """Trace a registration number across all work orders and derive its status.
+
+    status:
+      - "retired"   : ada occurrence role=dicabut (Dicabut/Rusak di WO maintenance) -> tak boleh dipakai
+      - "in_use"    : terpasang aktif di WO non-dismantle (dimiliki SA/SI tsb.)
+      - "available" : hanya muncul di WO DISMANTLE -> lepas, boleh dipakai kembali
+      - "new"       : belum pernah tercatat
+    """
+    nr = (nomor or "").strip()
+    if not nr:
+        return {"nomor_registrasi": "", "status": "new", "occurrences": []}
+    query: Dict[str, Any] = {"perangkat_items.nomor_registrasi": nr}
+    if exclude_wo_id:
+        try:
+            query["_id"] = {"$ne": ObjectId(exclude_wo_id)}
+        except Exception:
+            pass
+    occurrences: List[Dict[str, Any]] = []
+    has_retired = has_active = has_dismantle = False
+    async for wo in db.workorders.find(query):
+        jenis = (wo.get("jenis_order") or "").strip().upper()
+        for it in (wo.get("perangkat_items") or []):
+            if (it or {}).get("nomor_registrasi", "").strip() != nr:
+                continue
+            role = ((it or {}).get("role") or "").strip().lower()
+            occurrences.append({
+                "workorder_id": str(wo.get("_id")),
+                "pelanggan": wo.get("pelanggan") or "",
+                "sa_id": wo.get("sa_id") or "",
+                "si_id": wo.get("si_id") or "",
+                "jenis_order": jenis,
+                "role": role,
+                "nama_perangkat": (it or {}).get("nama_perangkat") or "",
+                "created_at": wo.get("created_at") or "",
+            })
+            if role == "dicabut":
+                has_retired = True
+            elif jenis == "DISMANTLE":
+                has_dismantle = True
+            else:
+                has_active = True
+    if not occurrences:
+        status = "new"
+    elif has_retired:
+        status = "retired"
+    elif has_active:
+        status = "in_use"
+    elif has_dismantle:
+        status = "available"
+    else:
+        status = "in_use"
+    occurrences.sort(key=lambda o: o.get("created_at") or "", reverse=True)
+    return {"nomor_registrasi": nr, "status": status, "occurrences": occurrences}
+
+
 # --- Bank Data management (admin) ---------------------------------
 class BankEntryIn(BaseModel):
     prefix: str

@@ -52,12 +52,13 @@ function RoleBadge({ role }) {
   );
 }
 
-export default function PerangkatEditor({ items, onChange, disabled, jenis, hideAdd }) {
+export default function PerangkatEditor({ items, onChange, disabled, jenis, hideAdd, excludeWoId }) {
   const list = items || [];
   const isMaint = jenis === "MAINTENANCE";
   const [addRole, setAddRole] = useState(null); // null | "existing" | "dicabut" | "pengganti" | "any"
   const [draft, setDraft] = useState({ nama_perangkat: "", nomor_registrasi: "" });
   const [bank, setBank] = useState(null); // { matched, ambiguous, suggested, options }
+  const [draftHist, setDraftHist] = useState(null); // { status, occurrences } cross-WO lookup
   const autoFilledRef = useRef(""); // last value we auto-filled, so we don't clobber manual edits
   const [draftFlash, setDraftFlash] = useState(0); // bump to trigger green flash on nama
   const flashDraft = () => setDraftFlash((n) => n + 1);
@@ -104,6 +105,30 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
     flashDraft();
   };
 
+  // Cross-WO status lookup (Riwayat) for early warning / availability badge.
+  useEffect(() => {
+    const nomor = (draft.nomor_registrasi || "").trim();
+    if (nomor.length < 6) {
+      setDraftHist(null);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const params = { nomor };
+        if (excludeWoId) params.exclude_wo_id = excludeWoId;
+        const { data } = await api.get("/perangkat/history", { params });
+        if (!cancelled) setDraftHist(data);
+      } catch {
+        if (!cancelled) setDraftHist(null);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [draft.nomor_registrasi, excludeWoId]);
+
   const suggestions = useMemo(() => {
     const q = draft.nama_perangkat.trim().toLowerCase();
     if (!q) return [];
@@ -116,6 +141,7 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
     setAddRole(null);
     setDraft({ nama_perangkat: "", nomor_registrasi: "" });
     setBank(null);
+    setDraftHist(null);
     autoFilledRef.current = "";
   };
 
@@ -125,6 +151,10 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
     if (!nama || !nr) return;
     if (list.some((x) => (x.nomor_registrasi || "").trim() === nr)) {
       alert(`Nomor registrasi "${nr}" sudah ada di WO ini`);
+      return;
+    }
+    if (draftHist?.status === "retired") {
+      alert(`Perangkat "${nr}" berstatus DICABUT/RUSAK dan tidak dapat dipakai di pekerjaan manapun.`);
       return;
     }
     const entry = { nama_perangkat: nama, nomor_registrasi: nr };
@@ -278,12 +308,46 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
                   </div>
                 </div>
               )}
+              {draftHist && draftHist.status === "retired" && (
+                <div
+                  data-testid="perangkat-hist-retired"
+                  className="mt-2 flex items-start gap-1.5 text-[11px] text-red-700 bg-red-50 border border-red-300 rounded-sm px-2 py-1.5"
+                >
+                  <Wrench size={13} weight="fill" className="mt-0.5 shrink-0" />
+                  <span>
+                    Perangkat ini berstatus <b>DICABUT/RUSAK</b> dan tidak dapat dipakai di
+                    pekerjaan manapun.
+                  </span>
+                </div>
+              )}
+              {draftHist && draftHist.status === "available" && (
+                <div
+                  data-testid="perangkat-hist-available"
+                  className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-300 rounded-sm px-2 py-1"
+                >
+                  <ArrowsCounterClockwise size={13} weight="fill" />
+                  Tersedia (eks-dismantle) — boleh dipakai kembali.
+                </div>
+              )}
+              {draftHist && draftHist.status === "in_use" && (
+                <div
+                  data-testid="perangkat-hist-inuse"
+                  className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-amber-800 bg-amber-50 border border-amber-300 rounded-sm px-2 py-1"
+                >
+                  <CheckCircle size={13} weight="fill" />
+                  Sedang dipakai di WO lain (SA/SI:{" "}
+                  {draftHist.occurrences?.[0]?.sa_id ||
+                    draftHist.occurrences?.[0]?.si_id ||
+                    "-"}
+                  ).
+                </div>
+              )}
               <div className="mt-2 flex items-center gap-2">
                 <button
                   type="button"
                   data-testid="perangkat-add-confirm"
                   onClick={addItem}
-                  disabled={!draft.nama_perangkat || !draft.nomor_registrasi}
+                  disabled={!draft.nama_perangkat || !draft.nomor_registrasi || draftHist?.status === "retired"}
                   className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white text-xs font-medium px-3 py-1.5 rounded-sm"
                 >
                   Tambah

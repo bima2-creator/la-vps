@@ -14,6 +14,7 @@ import {
   Receipt,
   HardDrives,
   Database,
+  MagnifyingGlass,
   CaretLeft,
   CaretRight,
 } from "@phosphor-icons/react";
@@ -23,6 +24,7 @@ const navItems = [
   { to: "/workorders", label: "Work Orders", icon: Table, testid: NAV.workorders, roles: ["admin", "operator", "viewer"], group: "main" },
   { to: "/invoices", label: "Invoices", icon: Receipt, testid: "nav-invoices", roles: ["admin", "operator"], group: "main" },
   { to: "/perangkat", label: "Flow Perangkat", icon: HardDrives, testid: "nav-perangkat", roles: ["admin", "operator", "viewer"], group: "main" },
+  { to: "/perangkat-history", label: "Riwayat Perangkat", icon: MagnifyingGlass, testid: "nav-perangkat-history", roles: ["admin", "operator", "viewer"], group: "main" },
   { to: "/reports", label: "Reports", icon: FileText, testid: NAV.reports, roles: ["admin", "operator", "viewer"], group: "main" },
   { to: "/kpi-teknisi", label: "KPI Teknisi", icon: ChartLineUp, testid: "nav-kpi-teknisi", roles: ["admin", "operator", "viewer"], group: "main" },
   { to: "/audit", label: "Audit Log", icon: FileText, testid: NAV.audit, roles: ["admin"], group: "admin" },

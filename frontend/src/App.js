@@ -14,6 +14,7 @@ import UsersPage from "@/pages/UsersPage";
 import AuditLogPage from "@/pages/AuditLogPage";
 import InvoicesPage from "@/pages/InvoicesPage";
 import MasterPerangkatPage from "@/pages/MasterPerangkatPage";
+import PerangkatHistoryPage from "@/pages/PerangkatHistoryPage";
 import BankDataPage from "@/pages/BankDataPage";
 import KpiTeknisiPage from "@/pages/KpiTeknisiPage";
 
@@ -60,6 +61,7 @@ export default function App() {
               }
             />
             <Route path="/perangkat" element={<MasterPerangkatPage />} />
+            <Route path="/perangkat-history" element={<PerangkatHistoryPage />} />
             <Route
               path="/bank-data"
               element={
