@@ -620,6 +620,7 @@ async def list_workorders(
     q: Optional[str] = None,
     inv_status: Optional[str] = None,
     media_jenis: Optional[str] = None,
+    media_perangkat: Optional[str] = None,
     jenis_order: Optional[str] = None,
     jenis_pekerjaan: Optional[str] = None,
     status: Optional[str] = None,
@@ -643,6 +644,8 @@ async def list_workorders(
         query["inv_status"] = inv_status
     if media_jenis:
         query["media_jenis"] = media_jenis
+    if media_perangkat:
+        query["media_perangkat"] = media_perangkat
     if jenis_order:
         query["jenis_order"] = jenis_order
 
@@ -1862,12 +1865,15 @@ async def dashboard_stats(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     media_jenis: Optional[str] = None,
+    media_perangkat: Optional[str] = None,
     jenis_order: Optional[str] = None,
     user: dict = Depends(get_current_user),
 ):
     query: Dict[str, Any] = {}
     if media_jenis:
         query["media_jenis"] = media_jenis
+    if media_perangkat:
+        query["media_perangkat"] = media_perangkat
     if jenis_order:
         query["jenis_order"] = jenis_order
     if date_from or date_to:
@@ -1909,7 +1915,7 @@ async def dashboard_stats(
         st = status_of(d)
         by_status[st] = by_status.get(st, 0) + 1
 
-        media = (d.get("media_jenis") or "UNSPECIFIED").upper()
+        media = (d.get("media_perangkat") or "UNSPECIFIED").upper()
         by_media[media] = by_media.get(media, 0) + 1
 
         jo = (d.get("jenis_order") or "UNSPECIFIED").upper()

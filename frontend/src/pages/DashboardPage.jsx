@@ -301,7 +301,7 @@ export default function DashboardPage() {
               </div>
             </Section>
 
-            <Section title="Media Akses" right={<span className="text-[10px] text-muted-foreground mono">klik untuk filter</span>}>
+            <Section title="Media Akses (Perangkat)" right={<span className="text-[10px] text-muted-foreground mono">klik untuk filter</span>}>
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
                   <Pie
@@ -312,7 +312,7 @@ export default function DashboardPage() {
                     outerRadius={90}
                     strokeWidth={0}
                     cursor="pointer"
-                    onClick={(d) => d?.name && goToList({ media_jenis: d.name })}
+                    onClick={(d) => d?.name && d.name !== "UNSPECIFIED" && goToList({ media_perangkat: d.name })}
                   >
                     {stats.by_media.map((_, i) => (
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
@@ -326,7 +326,7 @@ export default function DashboardPage() {
                   <button
                     key={m.name}
                     data-testid={`dashboard-media-chip-${m.name}`}
-                    onClick={() => goToList({ media_jenis: m.name })}
+                    onClick={() => m.name !== "UNSPECIFIED" && goToList({ media_perangkat: m.name })}
                     className="flex items-center gap-2 text-xs px-2 py-1 rounded-sm hover:bg-blue-50 hover:text-blue-700 border border-transparent hover:border-blue-200 text-left"
                   >
                     <span className="inline-block w-2 h-2 rounded-full" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
@@ -437,6 +437,55 @@ export default function DashboardPage() {
                 </div>
               </Section>
             </div>
+          )}
+
+          {perangkatStats && (
+            <Section
+              title="Statistik Perangkat"
+              right={
+                <button
+                  onClick={() => nav("/perangkat-history")}
+                  className="text-[10px] text-blue-600 hover:text-blue-800 mono"
+                >
+                  lacak riwayat →
+                </button>
+              }
+            >
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Kpi
+                  label="Total Perangkat"
+                  value={perangkatStats.total}
+                  hint="Nomor registrasi unik terekam"
+                  testid="perangkat-stat-total"
+                  icon={HardDrives}
+                  tone="blue"
+                />
+                <Kpi
+                  label="Tersedia"
+                  value={perangkatStats.tersedia}
+                  hint="Eks-dismantle · siap dipakai"
+                  testid="perangkat-stat-tersedia"
+                  icon={ArrowsCounterClockwise}
+                  tone="green"
+                />
+                <Kpi
+                  label="Terpasang"
+                  value={perangkatStats.terpasang}
+                  hint="Terpasang aktif di pelanggan"
+                  testid="perangkat-stat-terpasang"
+                  icon={CheckCircle}
+                  tone="amber"
+                />
+                <Kpi
+                  label="Dicabut / Rusak"
+                  value={perangkatStats.dicabut}
+                  hint="Pensiun · tidak dapat dipakai"
+                  testid="perangkat-stat-dicabut"
+                  icon={Wrench}
+                  tone="red"
+                />
+              </div>
+            </Section>
           )}
         </>
       )}

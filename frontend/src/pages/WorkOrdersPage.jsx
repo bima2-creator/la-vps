@@ -56,6 +56,7 @@ export default function WorkOrdersPage() {
   const [q, setQ] = useState("");
   const [invStatus, setInvStatus] = useState(searchParams.get("inv_status") || "");
   const [media, setMedia] = useState(searchParams.get("media_jenis") || "");
+  const [mediaPerangkat, setMediaPerangkat] = useState(searchParams.get("media_perangkat") || "");
   const [jenisOrder, setJenisOrder] = useState(searchParams.get("jenis_order") || "");
   const [jenisPekerjaan, setJenisPekerjaan] = useState(searchParams.get("jenis_pekerjaan") || "");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
@@ -70,12 +71,13 @@ export default function WorkOrdersPage() {
     const sp = new URLSearchParams();
     if (invStatus) sp.set("inv_status", invStatus);
     if (media) sp.set("media_jenis", media);
+    if (mediaPerangkat) sp.set("media_perangkat", mediaPerangkat);
     if (jenisOrder) sp.set("jenis_order", jenisOrder);
     if (jenisPekerjaan) sp.set("jenis_pekerjaan", jenisPekerjaan);
     if (statusFilter) sp.set("status", statusFilter);
     setSearchParams(sp, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invStatus, media, jenisOrder, jenisPekerjaan, statusFilter]);
+  }, [invStatus, media, mediaPerangkat, jenisOrder, jenisPekerjaan, statusFilter]);
 
   const activeChips = [];
   if (jenisOrder)
@@ -87,6 +89,8 @@ export default function WorkOrdersPage() {
   if (invStatus)
     activeChips.push({ key: "invStatus", label: `Invoice: ${invStatus}`, clear: () => setInvStatus("") });
   if (media) activeChips.push({ key: "media", label: `Media: ${media}`, clear: () => setMedia("") });
+  if (mediaPerangkat)
+    activeChips.push({ key: "mediaPerangkat", label: `Media Perangkat: ${mediaPerangkat}`, clear: () => setMediaPerangkat("") });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -95,6 +99,7 @@ export default function WorkOrdersPage() {
       if (q) params.q = q;
       if (invStatus) params.inv_status = invStatus;
       if (media) params.media_jenis = media;
+      if (mediaPerangkat) params.media_perangkat = mediaPerangkat;
       if (jenisOrder) params.jenis_order = jenisOrder;
       if (jenisPekerjaan) params.jenis_pekerjaan = jenisPekerjaan;
       if (statusFilter) params.status = statusFilter;
@@ -107,7 +112,7 @@ export default function WorkOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, q, invStatus, media, jenisOrder, jenisPekerjaan, statusFilter]);
+  }, [page, pageSize, q, invStatus, media, mediaPerangkat, jenisOrder, jenisPekerjaan, statusFilter]);
 
   useEffect(() => {
     load();
@@ -403,6 +408,7 @@ export default function WorkOrdersPage() {
               setStatusFilter("");
               setInvStatus("");
               setMedia("");
+              setMediaPerangkat("");
             }}
             className="text-[11px] text-muted-foreground hover:text-red-600 underline underline-offset-2 ml-1"
           >
