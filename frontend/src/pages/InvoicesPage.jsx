@@ -15,6 +15,7 @@ import {
   DownloadSimple,
 } from "@phosphor-icons/react";
 import { useAuth } from "@/context/AuthContext";
+import { Pagination, PAGE_SIZE } from "@/components/Pagination";
 
 // Each invoice covers exactly ONE phase/jenis pekerjaan. Customers can be one
 // or more, but all their WOs must share the same phase.
@@ -107,6 +108,13 @@ export default function InvoicesPage() {
       return true;
     });
   }, [invoices, q, statusFilter, jenisFilter]);
+
+  const [page, setPage] = useState(1);
+  useEffect(() => {
+    setPage(1);
+  }, [q, statusFilter, jenisFilter, invoices.length]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const onCreate = () => {
     setEditingInv(null);
@@ -274,7 +282,7 @@ export default function InvoicesPage() {
                 </td>
               </tr>
             ) : (
-              filtered.map((iv) => (
+              paged.map((iv) => (
                 <tr
                   key={iv.id}
                   data-testid="invoice-row"
@@ -400,6 +408,15 @@ export default function InvoicesPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={page}
+        pageCount={pageCount}
+        total={filtered.length}
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => Math.min(pageCount, p + 1))}
+        testId="invoices-pagination"
+      />
 
       {/* Create / Edit Modal */}
       {formOpen && (

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api, formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { MagnifyingGlass, HardDrives, CheckCircle, Wrench, ArrowsCounterClockwise } from "@phosphor-icons/react";
+import { Pagination, PAGE_SIZE } from "@/components/Pagination";
 
 const STATUS_META = {
   retired: {
@@ -38,6 +39,7 @@ export default function PerangkatHistoryPage() {
   const [nomor, setNomor] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null); // { nomor_registrasi, status, occurrences }
+  const [page, setPage] = useState(1);
 
   const search = async (e) => {
     e?.preventDefault();
@@ -50,6 +52,7 @@ export default function PerangkatHistoryPage() {
     try {
       const { data } = await api.get("/perangkat/history", { params: { nomor: q } });
       setResult(data);
+      setPage(1);
     } catch (err) {
       toast.error(formatApiError(err.response?.data?.detail) || "Gagal memuat riwayat");
     } finally {
@@ -58,6 +61,9 @@ export default function PerangkatHistoryPage() {
   };
 
   const meta = result ? STATUS_META[result.status] || STATUS_META.new : null;
+  const occ = result?.occurrences || [];
+  const pageCount = Math.max(1, Math.ceil(occ.length / PAGE_SIZE));
+  const pagedOcc = occ.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div data-testid="perangkat-history-root" className="p-6 lg:p-8 space-y-5">
@@ -131,7 +137,7 @@ export default function PerangkatHistoryPage() {
                       </td>
                     </tr>
                   )}
-                  {result.occurrences.map((o, i) => (
+                  {pagedOcc.map((o, i) => (
                     <tr key={i} className="border-b border-border/60 hover:bg-slate-100">
                       <td className="font-medium">{o.pelanggan || "—"}</td>
                       <td className="mono text-[13px]">{o.sa_id || "—"}</td>
@@ -172,6 +178,16 @@ export default function PerangkatHistoryPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="px-4 border-t border-border">
+              <Pagination
+                page={page}
+                pageCount={pageCount}
+                total={occ.length}
+                onPrev={() => setPage((p) => Math.max(1, p - 1))}
+                onNext={() => setPage((p) => Math.min(pageCount, p + 1))}
+                testId="perangkat-history-pagination"
+              />
             </div>
           </div>
         </div>

@@ -52,7 +52,7 @@ export default function WorkOrdersPage() {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(50);
+  const [pageSize] = useState(20);
   const [q, setQ] = useState("");
   const [invStatus, setInvStatus] = useState(searchParams.get("inv_status") || "");
   const [media, setMedia] = useState(searchParams.get("media_jenis") || "");

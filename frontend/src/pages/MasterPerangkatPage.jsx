@@ -10,6 +10,7 @@ import {
   ArrowSquareOut,
   Package,
 } from "@phosphor-icons/react";
+import { Pagination, PAGE_SIZE } from "@/components/Pagination";
 
 const STATUS_STYLE = {
   TERPASANG_INSTAL: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -203,6 +204,7 @@ export default function MasterPerangkatPage() {
   const [data, setData] = useState({ kpi: {}, items: [], total: 0 });
   const [loading, setLoading] = useState(true);
   const [drill, setDrill] = useState(null);
+  const [page, setPage] = useState(1);
 
   const load = async (overrides = {}) => {
     setLoading(true);
@@ -214,6 +216,7 @@ export default function MasterPerangkatPage() {
       if (eff.status) params.status = eff.status;
       const { data } = await api.get("/perangkat/registry", { params });
       setData(data);
+      setPage(1);
     } catch (e) {
       toast.error("Gagal memuat registry perangkat");
     } finally {
@@ -261,6 +264,8 @@ export default function MasterPerangkatPage() {
   const dismantled = byStatus.DISMANTLED || 0;
 
   const items = data.items || [];
+  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const pagedItems = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div data-testid="master-perangkat-page" className="p-6 lg:p-8 space-y-4">
@@ -417,7 +422,7 @@ export default function MasterPerangkatPage() {
                 </td>
               </tr>
             ) : (
-              items.map((d, i) => {
+              pagedItems.map((d, i) => {
                 const jClass =
                   JENIS_STYLE[d.latest_jenis_order] ||
                   "bg-slate-50 text-slate-700 border-slate-200";
@@ -462,6 +467,15 @@ export default function MasterPerangkatPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={page}
+        pageCount={pageCount}
+        total={items.length}
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => Math.min(pageCount, p + 1))}
+        testId="perangkat-pagination"
+      />
 
       <DrillPanel device={drill} onClose={() => setDrill(null)} />
     </div>
