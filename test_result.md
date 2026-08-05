@@ -853,7 +853,7 @@ agent_communication:
       
       Test Details:
       - Created comprehensive test suite in /app/backend_test.py
-      - Tested against production URL: https://project-bootstrap-18.preview.emergentagent.com/api
+      - Tested against production URL: https://dev-workspace-319.preview.emergentagent.com/api
       - All HTTP status codes correct (200, 400, 404 as expected)
       - All error messages in Indonesian as specified
       - PDF merge verified with pypdf (4 pages: main + 3 lampiran)
@@ -890,7 +890,7 @@ agent_communication:
       
       Test Details:
       - Updated /app/backend_test.py with two new test functions
-      - All tests run against production URL: https://project-bootstrap-18.preview.emergentagent.com/api
+      - All tests run against production URL: https://dev-workspace-319.preview.emergentagent.com/api
       - Used openpyxl to parse and verify Excel file structure
       - No 500 errors, no route shadowing issues
       - All HTTP status codes correct (200 as expected)
@@ -999,7 +999,7 @@ agent_communication:
          - Screenshots: final_change4_access_denied.png, final_change4_audit_log.png
       
       Test Details:
-      - Tested against production URL: https://project-bootstrap-18.preview.emergentagent.com
+      - Tested against production URL: https://dev-workspace-319.preview.emergentagent.com
       - All 4 changes working correctly with proper role-based access control
       - Login radio buttons provide clear user selection interface
       - Guest (viewer) role has appropriate read-only restrictions
@@ -1069,7 +1069,7 @@ agent_communication:
          - Note: Delete buttons (trash icons) are present in table rows, but review request only specified no create form
       
       Test Details:
-      - Tested against production URL: https://project-bootstrap-18.preview.emergentagent.com
+      - Tested against production URL: https://dev-workspace-319.preview.emergentagent.com
       - All 4 requirements from review request verified and working
       - Login page conditional rendering working correctly (password field shows/hides based on role selection)
       - Guest login flow simplified (no password input required from user)
@@ -1121,7 +1121,7 @@ agent_communication:
       
       Test Details:
       - Created comprehensive test suite in /app/backend_auth_refactor_test.py
-      - Tested against production URL: https://project-bootstrap-18.preview.emergentagent.com/api
+      - Tested against production URL: https://dev-workspace-319.preview.emergentagent.com/api
       - All HTTP status codes correct (200, 401, 403 as expected)
       - No 500 errors encountered
       - Username-based authentication fully functional
@@ -1178,7 +1178,7 @@ agent_communication:
          - Role badges displayed correctly: ADMIN (red), OPERATOR (blue), VIEWER (green)
       
       Test Details:
-      - Tested against production URL: https://project-bootstrap-18.preview.emergentagent.com
+      - Tested against production URL: https://dev-workspace-319.preview.emergentagent.com
       - All 3 role logins working correctly (admin, operator, guest)
       - Role-based navigation working: admin sees all items, operator/guest see only non-admin items
       - Error handling working: wrong password shows error message
@@ -1326,7 +1326,7 @@ backend:
             
             Test Details:
             - Created comprehensive test suite in /app/backend_spk_test.py
-            - Tested against production URL: https://project-bootstrap-18.preview.emergentagent.com/api
+            - Tested against production URL: https://dev-workspace-319.preview.emergentagent.com/api
             - All HTTP status codes correct (200, 400 as expected)
             - No 500 errors encountered
             - All validation rules working correctly:
@@ -1366,7 +1366,7 @@ agent_communication:
       - No 500 errors encountered
       
       Test Details:
-      - Base URL: https://project-bootstrap-18.preview.emergentagent.com/api
+      - Base URL: https://dev-workspace-319.preview.emergentagent.com/api
       - Test script: /app/backend_spk_test.py
       - Credentials: admin/admin123 (from /app/memory/test_credentials.md)
       - Minimal valid PDF used: b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"
@@ -1431,7 +1431,7 @@ agent_communication:
       - DOKUMEN SPK panel is the ONLY attachment UI for Work Orders
       
       Test Details:
-      - Frontend URL: https://project-bootstrap-18.preview.emergentagent.com
+      - Frontend URL: https://dev-workspace-319.preview.emergentagent.com
       - Login: Admin card selected, password "admin123"
       - Test PDF: /tmp/test_files/test_spk.pdf (minimal valid PDF)
       - All data-testid attributes working correctly for automation

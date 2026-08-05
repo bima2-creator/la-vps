@@ -10,7 +10,7 @@ from io import BytesIO
 from datetime import datetime
 
 # Base URL from frontend/.env
-BASE_URL = "https://project-bootstrap-18.preview.emergentagent.com/api"
+BASE_URL = "https://dev-workspace-319.preview.emergentagent.com/api"
 
 # Test credentials from /app/memory/test_credentials.md
 ADMIN_USERNAME = "admin"

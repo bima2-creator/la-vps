@@ -10,7 +10,7 @@ import requests
 from typing import Optional, Dict, Any
 
 # Backend URL from environment
-BASE_URL = "https://project-bootstrap-18.preview.emergentagent.com/api"
+BASE_URL = "https://dev-workspace-319.preview.emergentagent.com/api"
 
 # Test credentials (username-based)
 ADMIN_USERNAME = "admin"
