@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api, formatApiError, API_BASE } from "@/lib/api";
 import { toast } from "sonner";
-import { Upload, Trash, FilePdf, Download } from "@phosphor-icons/react";
+import { Upload, Trash, FilePdf, Download, Eye, EyeSlash } from "@phosphor-icons/react";
 
 /**
  * Dedicated "Upload SPK" widget for the SPK section of a Work Order.
@@ -12,6 +12,7 @@ export default function SpkUpload({ workorderId, canEdit, onEnsureSaved }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
   const inputRef = useRef(null);
 
   const load = async (idArg) => {
@@ -143,34 +144,55 @@ export default function SpkUpload({ workorderId, canEdit, onEnsureSaved }) {
             <div
               key={a.id}
               data-testid="spk-item"
-              className="flex items-center gap-3 bg-white border border-border rounded-sm px-3 py-2"
+              className="bg-white border border-border rounded-sm overflow-hidden"
             >
-              <FilePdf size={22} weight="duotone" className="text-red-500 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm truncate" title={a.original_filename}>
-                  {a.original_filename}
+              <div className="flex items-center gap-3 px-3 py-2">
+                <FilePdf size={22} weight="duotone" className="text-red-500 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm truncate" title={a.original_filename}>
+                    {a.original_filename}
+                  </div>
+                  <div className="text-[10px] mono text-muted-foreground">
+                    {(a.size / 1024).toFixed(1)} KB
+                  </div>
                 </div>
-                <div className="text-[10px] mono text-muted-foreground">
-                  {(a.size / 1024).toFixed(1)} KB
-                </div>
-              </div>
-              <a
-                href={downloadUrl(a.id)}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs inline-flex items-center gap-1 border border-border px-2 py-1 rounded-sm hover:bg-slate-100"
-              >
-                <Download size={12} /> Lihat
-              </a>
-              {canEdit && (
                 <button
                   type="button"
-                  data-testid="spk-delete-btn"
-                  onClick={() => del(a.id)}
-                  className="p-1.5 rounded-sm hover:bg-red-500/10 hover:text-red-500 border border-border"
+                  data-testid="spk-preview-toggle"
+                  onClick={() => setShowPreview((v) => !v)}
+                  title={showPreview ? "Sembunyikan pratinjau" : "Tampilkan pratinjau"}
+                  className="text-xs inline-flex items-center gap-1 border border-border px-2 py-1 rounded-sm hover:bg-slate-100"
                 >
-                  <Trash size={12} />
+                  {showPreview ? <EyeSlash size={12} /> : <Eye size={12} />}
+                  {showPreview ? "Sembunyikan" : "Pratinjau"}
                 </button>
+                <a
+                  href={downloadUrl(a.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs inline-flex items-center gap-1 border border-border px-2 py-1 rounded-sm hover:bg-slate-100"
+                >
+                  <Download size={12} /> Unduh
+                </a>
+                {canEdit && (
+                  <button
+                    type="button"
+                    data-testid="spk-delete-btn"
+                    onClick={() => del(a.id)}
+                    className="p-1.5 rounded-sm hover:bg-red-500/10 hover:text-red-500 border border-border"
+                  >
+                    <Trash size={12} />
+                  </button>
+                )}
+              </div>
+              {showPreview && (
+                <div className="border-t border-border bg-slate-100" data-testid="spk-preview">
+                  <iframe
+                    title={`Pratinjau ${a.original_filename || "SPK"}`}
+                    src={`${downloadUrl(a.id)}#toolbar=1&view=FitH`}
+                    className="w-full h-[520px] bg-white"
+                  />
+                </div>
               )}
             </div>
           ))}
