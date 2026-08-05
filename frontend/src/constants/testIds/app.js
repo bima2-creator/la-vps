@@ -56,6 +56,7 @@ export const WOFORM = {
   sectionTab: "workorder-form-section-tab",
   saveButton: "workorder-form-save-button",
   cancelButton: "workorder-form-cancel-button",
+  deleteButton: "workorder-form-delete-button",
   input: "workorder-form-input",
 };
 

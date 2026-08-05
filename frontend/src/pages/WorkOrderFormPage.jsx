@@ -20,7 +20,7 @@ import {
 } from "@/lib/workorder-schema";
 import { WOFORM } from "@/constants/testIds";
 import { toast } from "sonner";
-import { CaretLeft, FloppyDisk, FilePdf, Lightning, ArrowsClockwise, ShareNetwork, Wrench, HardDrives, LockKey, MapPin } from "@phosphor-icons/react";
+import { CaretLeft, FloppyDisk, FilePdf, Lightning, ArrowsClockwise, ShareNetwork, Wrench, HardDrives, LockKey, MapPin, Trash } from "@phosphor-icons/react";
 import SpkUpload from "@/components/SpkUpload";
 import BoqItemsEditor, { computeBoqTotals } from "@/components/BoqItemsEditor";
 import PerangkatEditor from "@/components/PerangkatEditor";
@@ -169,6 +169,7 @@ export default function WorkOrderFormPage() {
   const { id } = useParams();
   const { user } = useAuth();
   const canEdit = user && (user.role === "admin" || user.role === "operator");
+  const canDelete = user && user.role === "admin";
   const isEdit = Boolean(id);
   // Once a brand-new WO is saved (e.g. to allow SPK upload) we keep its id here
   // without remounting the route, so `effectiveId` becomes the working id.
@@ -177,6 +178,7 @@ export default function WorkOrderFormPage() {
   const [form, setForm] = useState(emptyWorkOrder());
   const [active, setActive] = useState(SECTIONS[0].id);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   // Jenis picker gating: when creating new, user MUST choose Jenis Order first.
   const [jenisPicked, setJenisPicked] = useState(isEdit);
@@ -340,7 +342,27 @@ export default function WorkOrderFormPage() {
     }
   };
 
-  // Creates the WO on-the-fly (without leaving the page) so the SPK document can
+  const onDelete = async () => {
+    const targetId = effectiveId;
+    if (!targetId) return;
+    const label = String(form.pelanggan || "").trim();
+    if (
+      !window.confirm(
+        `Hapus Work Order ini${label ? ` (${label})` : ""}? Tindakan ini tidak dapat dibatalkan.`
+      )
+    )
+      return;
+    setDeleting(true);
+    try {
+      await api.delete(`/workorders/${targetId}`);
+      toast.success("Work Order dihapus");
+      nav("/workorders");
+    } catch (e) {
+      toast.error(formatApiError(e.response?.data?.detail) || "Gagal menghapus");
+    } finally {
+      setDeleting(false);
+    }
+  };
   // be uploaded even before the user explicitly clicks Save. Returns the WO id.
   const ensureSaved = async () => {
     if (effectiveId) return effectiveId;
@@ -672,6 +694,17 @@ export default function WorkOrderFormPage() {
               className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded-sm disabled:opacity-60"
             >
               <FloppyDisk size={16} weight="bold" /> {saving ? "Saving…" : "Save"}
+            </button>
+          )}
+          {canDelete && effectiveId && (
+            <button
+              data-testid={WOFORM.deleteButton}
+              onClick={onDelete}
+              disabled={deleting || saving}
+              title="Hapus Work Order ini"
+              className="inline-flex items-center gap-2 border border-red-500/40 bg-red-500/10 text-red-600 hover:bg-red-500/20 text-sm px-4 py-2 rounded-sm disabled:opacity-60"
+            >
+              <Trash size={16} weight="bold" /> {deleting ? "Deleting…" : "Delete"}
             </button>
           )}
         </div>
