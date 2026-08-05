@@ -721,7 +721,13 @@ async def _validate_perangkat_uniqueness(doc: dict, exclude_wo_id: Optional[str]
     Rule: 1 perangkat (nomor registrasi) hanya boleh milik 1 SA ID atau SI ID.
     The same nomor_registrasi may appear in multiple work orders as long as
     they share the same SA_ID or SI_ID (e.g. PSB then later MAINTENANCE for
-    the same customer/service)."""
+    the same customer/service).
+
+    Exceptions:
+    - Perangkat pada WO DISMANTLE dianggap "lepas"/tersedia sehingga boleh
+      dipakai kembali di WO lain, termasuk untuk SA/SI yang berbeda.
+    - Perangkat ber-role "dicabut" (Dicabut/Rusak) pada WO MAINTENANCE dianggap
+      pensiun permanen dan tidak boleh dipakai di WO manapun."""
     items = doc.get("perangkat_items") or []
     seen: Dict[str, int] = {}
     for i, it in enumerate(items):
@@ -749,21 +755,36 @@ async def _validate_perangkat_uniqueness(doc: dict, exclude_wo_id: Optional[str]
         other_items = other.get("perangkat_items") or []
         other_sa = (other.get("sa_id") or "").strip()
         other_si = (other.get("si_id") or "").strip()
+        other_jenis = (other.get("jenis_order") or "").strip().upper()
         # Allow reuse if they share SA_ID or SI_ID (same customer/service).
         shares_owner = (
             (my_sa and other_sa and my_sa == other_sa)
             or (my_si and other_si and my_si == other_si)
         )
-        if shares_owner:
-            continue
         for oi in other_items:
             onr = (oi or {}).get("nomor_registrasi", "").strip()
-            if onr and onr in seen:
-                who = other_sa or other_si or str(other.get("_id"))
+            if not (onr and onr in seen):
+                continue
+            orole = ((oi or {}).get("role") or "").strip().lower()
+            who = other_sa or other_si or str(other.get("_id"))
+            # Rule: a device marked DICABUT/RUSAK on a MAINTENANCE work order is
+            # permanently retired and may NOT be reused on ANY work order.
+            if orole == "dicabut":
                 raise HTTPException(
                     400,
-                    f"Nomor registrasi '{onr}' sudah terdaftar di WO lain (SA/SI: {who}). 1 perangkat hanya boleh milik 1 SA/SI.",
+                    f"Perangkat '{onr}' berstatus DICABUT/RUSAK pada WO maintenance (SA/SI: {who}) sehingga tidak dapat dipakai di pekerjaan manapun.",
                 )
+            # Rule: a device on a DISMANTLE work order is released (dismantled) and
+            # may be reused on other work orders, even for a different SA/SI.
+            if other_jenis == "DISMANTLE":
+                continue
+            # Default rule: 1 perangkat hanya boleh milik 1 SA/SI (kecuali berbagi owner).
+            if shares_owner:
+                continue
+            raise HTTPException(
+                400,
+                f"Nomor registrasi '{onr}' sudah terdaftar di WO lain (SA/SI: {who}). 1 perangkat hanya boleh milik 1 SA/SI.",
+            )
 
 
 def _validate_sa_or_si_required(doc: dict) -> None:
