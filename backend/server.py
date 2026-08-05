@@ -2704,6 +2704,20 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
     small_bold = ParagraphStyle(
         "small_bold", parent=small_style, fontName="Helvetica-Bold",
     )
+    # Wrapping cell styles for line-item table (prevent text overflow)
+    cell_desc_style = ParagraphStyle(
+        "cell_desc", parent=small_style, fontSize=6.5, leading=8,
+        alignment=TA_LEFT, wordWrap="CJK",
+    )
+    cell_spk_style = ParagraphStyle(
+        "cell_spk", parent=small_style, fontSize=6.5, leading=8,
+        alignment=TA_CENTER, wordWrap="CJK",
+    )
+
+    def _cell(text, style):
+        s = str(text) if text is not None else ""
+        s = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return Paragraph(s or "-", style)
     story: list = []
 
     # Brand color from sample invoice
@@ -2820,8 +2834,12 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
     story.append(Spacer(1, 3 * mm))
 
     # Line items table
+    wrapped_rows = [
+        [r[0], _cell(r[1], cell_desc_style), _cell(r[2], cell_spk_style), r[3], r[4], r[5]]
+        for r in rows_data
+    ]
     table_data = [["No", "Description", "SPK", "QTY", "Unit Price (Rp)", "Total Amount (Rp)"]] + (
-        rows_data or [["-", "(Tidak ada work order)", "-", "-", "-", "-"]]
+        wrapped_rows or [["-", "(Tidak ada work order)", "-", "-", "-", "-"]]
     )
     tbl = Table(
         table_data,
