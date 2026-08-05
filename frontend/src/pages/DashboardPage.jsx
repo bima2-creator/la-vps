@@ -15,7 +15,7 @@ import {
   Cell,
   CartesianGrid,
 } from "recharts";
-import { TrendUp, TrendDown, ClockClockwise, CheckCircle, Money, Waveform, ArrowUpRight } from "@phosphor-icons/react";
+import { TrendUp, TrendDown, ClockClockwise, CheckCircle, Money, Waveform, ArrowUpRight, HardDrives, ArrowsCounterClockwise, Wrench } from "@phosphor-icons/react";
 
 const CHART_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#0EA5E9", "#A855F7"];
 
@@ -83,6 +83,7 @@ export default function DashboardPage() {
   const isViewer = user?.role === "viewer";
   const [stats, setStats] = useState(null);
   const [kpi, setKpi] = useState(null);
+  const [perangkatStats, setPerangkatStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -121,6 +122,17 @@ export default function DashboardPage() {
       }
     })();
   }, [dateFrom, dateTo]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get("/perangkat/stats");
+        setPerangkatStats(data);
+      } catch {
+        /* non-blocking */
+      }
+    })();
+  }, []);
 
   const fmtIDR = (n) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n || 0);

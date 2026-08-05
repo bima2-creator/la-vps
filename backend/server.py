@@ -1097,9 +1097,10 @@ async def kpi_teknisi_export(date_from: Optional[str] = None, date_to: Optional[
 # ------------------------------------------------------------------
 # Perangkat "Bank Data": prefix -> nama learning + lookup
 # Setiap perangkat yang ditambahkan menjadi bank data. Nomor registrasi
-# dikenali lewat prefix 11-13 karakter (longest-prefix match).
+# dikenali lewat prefix 13 karakter.
 # ------------------------------------------------------------------
-PREFIX_LENGTHS = (13, 12, 11)
+PREFIX_LEN = 13
+PREFIX_LENGTHS = (PREFIX_LEN,)
 
 
 def _clean_nomor(nomor: Optional[str]) -> str:
@@ -1113,7 +1114,7 @@ async def _learn_perangkat(items) -> None:
             continue
         nama = (it.get("nama_perangkat") or "").strip()
         nomor = _clean_nomor(it.get("nomor_registrasi"))
-        if not nama or len(nomor) < 11:
+        if not nama or len(nomor) < PREFIX_LEN:
             continue
         for L in PREFIX_LENGTHS:
             if len(nomor) < L:
@@ -1143,7 +1144,7 @@ async def _seed_perangkat_bank() -> None:
 async def perangkat_bank_lookup(nomor: str, user: dict = Depends(get_current_user)):
     """Return device name(s) matching a registration number by longest prefix."""
     n = _clean_nomor(nomor)
-    if len(n) < 11:
+    if len(n) < PREFIX_LEN:
         return {"matched": False, "options": []}
     for L in PREFIX_LENGTHS:
         if len(n) < L:
@@ -1168,14 +1169,32 @@ async def perangkat_bank_lookup(nomor: str, user: dict = Depends(get_current_use
     return {"matched": False, "options": []}
 
 
+def _derive_perangkat_status(occurrences: List[Dict[str, Any]]) -> str:
+    """Derive a device's current status from its occurrences across work orders.
+    Rules (retired wins; otherwise the latest occurrence decides):
+      - "retired"   : pernah role=dicabut (Dicabut/Rusak) -> pensiun permanen
+      - "available" : occurrence terbaru = DISMANTLE -> lepas, boleh dipakai kembali
+      - "in_use"    : occurrence terbaru non-dismantle -> terpasang aktif
+      - "new"       : belum pernah tercatat
+    """
+    if not occurrences:
+        return "new"
+    if any((o.get("role") or "").strip().lower() == "dicabut" for o in occurrences):
+        return "retired"
+    latest = max(occurrences, key=lambda o: o.get("created_at") or "")
+    if (latest.get("jenis_order") or "").strip().upper() == "DISMANTLE":
+        return "available"
+    return "in_use"
+
+
 @api.get("/perangkat/history")
 async def perangkat_history(nomor: str, exclude_wo_id: Optional[str] = None, user: dict = Depends(get_current_user)):
     """Trace a registration number across all work orders and derive its status.
 
     status:
-      - "retired"   : ada occurrence role=dicabut (Dicabut/Rusak di WO maintenance) -> tak boleh dipakai
-      - "in_use"    : terpasang aktif di WO non-dismantle (dimiliki SA/SI tsb.)
-      - "available" : hanya muncul di WO DISMANTLE -> lepas, boleh dipakai kembali
+      - "retired"   : pernah Dicabut/Rusak -> tak boleh dipakai di WO manapun
+      - "available" : occurrence terbaru = DISMANTLE -> lepas, boleh dipakai kembali
+      - "in_use"    : occurrence terbaru non-dismantle -> terpasang aktif
       - "new"       : belum pernah tercatat
     """
     nr = (nomor or "").strip()
@@ -1188,39 +1207,22 @@ async def perangkat_history(nomor: str, exclude_wo_id: Optional[str] = None, use
         except Exception:
             pass
     occurrences: List[Dict[str, Any]] = []
-    has_retired = has_active = has_dismantle = False
     async for wo in db.workorders.find(query):
         jenis = (wo.get("jenis_order") or "").strip().upper()
         for it in (wo.get("perangkat_items") or []):
             if (it or {}).get("nomor_registrasi", "").strip() != nr:
                 continue
-            role = ((it or {}).get("role") or "").strip().lower()
             occurrences.append({
                 "workorder_id": str(wo.get("_id")),
                 "pelanggan": wo.get("pelanggan") or "",
                 "sa_id": wo.get("sa_id") or "",
                 "si_id": wo.get("si_id") or "",
                 "jenis_order": jenis,
-                "role": role,
+                "role": ((it or {}).get("role") or "").strip().lower(),
                 "nama_perangkat": (it or {}).get("nama_perangkat") or "",
                 "created_at": wo.get("created_at") or "",
             })
-            if role == "dicabut":
-                has_retired = True
-            elif jenis == "DISMANTLE":
-                has_dismantle = True
-            else:
-                has_active = True
-    if not occurrences:
-        status = "new"
-    elif has_retired:
-        status = "retired"
-    elif has_active:
-        status = "in_use"
-    elif has_dismantle:
-        status = "available"
-    else:
-        status = "in_use"
+    status = _derive_perangkat_status(occurrences)
     occurrences.sort(key=lambda o: o.get("created_at") or "", reverse=True)
     return {"nomor_registrasi": nr, "status": status, "occurrences": occurrences}
 
@@ -1236,6 +1238,112 @@ async def perangkat_names(q: Optional[str] = None, user: dict = Depends(get_curr
         names = [n for n in names if ql in n.lower()]
     names.sort()
     return {"names": names[:1000]}
+
+
+@api.get("/perangkat/stats")
+async def perangkat_stats(user: dict = Depends(get_current_user)):
+    """Ringkasan jumlah perangkat unik menurut status (untuk dashboard)."""
+    by_nomor: Dict[str, List[Dict[str, Any]]] = {}
+    cursor = db.workorders.find({}, {"perangkat_items": 1, "jenis_order": 1, "created_at": 1})
+    async for wo in cursor:
+        jenis = (wo.get("jenis_order") or "").strip().upper()
+        created = wo.get("created_at") or ""
+        for it in (wo.get("perangkat_items") or []):
+            nr = ((it or {}).get("nomor_registrasi") or "").strip()
+            if not nr:
+                continue
+            by_nomor.setdefault(nr, []).append({
+                "jenis_order": jenis,
+                "role": ((it or {}).get("role") or "").strip().lower(),
+                "created_at": created,
+            })
+    counts = {"total": len(by_nomor), "tersedia": 0, "terpasang": 0, "dicabut": 0}
+    for occ in by_nomor.values():
+        st = _derive_perangkat_status(occ)
+        if st == "available":
+            counts["tersedia"] += 1
+        elif st == "in_use":
+            counts["terpasang"] += 1
+        elif st == "retired":
+            counts["dicabut"] += 1
+    return counts
+
+
+class NameMergeIn(BaseModel):
+    from_names: List[str] = Field(default_factory=list)
+    into: str
+
+
+class NameDeleteIn(BaseModel):
+    names: List[str] = Field(default_factory=list)
+
+
+@api.get("/perangkat/names/summary")
+async def perangkat_names_summary(q: Optional[str] = None, user: dict = Depends(require_roles("admin"))):
+    """Daftar nama perangkat unik + total pemakaian (count) untuk halaman kelola."""
+    pipeline = [
+        {"$group": {"_id": "$nama", "count": {"$sum": "$count"}, "entries": {"$sum": 1}}},
+        {"$sort": {"_id": 1}},
+    ]
+    rows = await db.perangkat_bank.aggregate(pipeline).to_list(100000)
+    items = [
+        {"nama": r["_id"], "count": int(r.get("count", 0)), "entries": int(r.get("entries", 0))}
+        for r in rows
+        if r.get("_id")
+    ]
+    if q:
+        ql = q.strip().lower()
+        items = [i for i in items if ql in i["nama"].lower()]
+    return {"total": len(items), "items": items}
+
+
+@api.post("/perangkat/names/merge")
+async def perangkat_names_merge(payload: NameMergeIn, user: dict = Depends(require_roles("admin"))):
+    """Gabungkan / ganti nama: pindahkan semua entri bank & item WO dari
+    `from_names` ke nama `into`. Berlaku juga sebagai rename (1 sumber)."""
+    into = (payload.into or "").strip().upper()
+    sources = [(s or "").strip().upper() for s in (payload.from_names or []) if (s or "").strip()]
+    sources = [s for s in dict.fromkeys(sources) if s and s != into]  # unik, buang target
+    if not into or not sources:
+        raise HTTPException(400, "from_names dan into wajib diisi")
+    bank_moved = 0
+    for src in sources:
+        async for d in db.perangkat_bank.find({"nama": src}):
+            await db.perangkat_bank.update_one(
+                {"prefix": d["prefix"], "plen": d["plen"], "nama": into},
+                {"$inc": {"count": int(d.get("count", 1))}, "$set": {"updated_at": now_iso()}},
+                upsert=True,
+            )
+            await db.perangkat_bank.delete_one({"_id": d["_id"]})
+            bank_moved += 1
+    wo_updated = 0
+    async for wo in db.workorders.find({"perangkat_items.nama_perangkat": {"$in": sources}}):
+        items = wo.get("perangkat_items") or []
+        changed = False
+        for it in items:
+            if isinstance(it, dict) and ((it.get("nama_perangkat") or "").strip().upper() in sources):
+                it["nama_perangkat"] = into
+                changed = True
+        if changed:
+            await db.workorders.update_one(
+                {"_id": wo["_id"]},
+                {"$set": {"perangkat_items": items, "updated_at": now_iso()}},
+            )
+            wo_updated += 1
+    await audit("perangkat.names.merge", user, meta={"into": into, "from": sources})
+    return {"ok": True, "into": into, "bank_moved": bank_moved, "workorders_updated": wo_updated}
+
+
+@api.post("/perangkat/names/delete")
+async def perangkat_names_delete(payload: NameDeleteIn, user: dict = Depends(require_roles("admin"))):
+    """Hapus nama perangkat dari registry (bank). Tidak mengubah data WO."""
+    names = [(n or "").strip().upper() for n in (payload.names or []) if (n or "").strip()]
+    names = list(dict.fromkeys(names))
+    if not names:
+        raise HTTPException(400, "names wajib diisi")
+    res = await db.perangkat_bank.delete_many({"nama": {"$in": names}})
+    await audit("perangkat.names.delete", user, meta={"names": names})
+    return {"ok": True, "deleted_entries": res.deleted_count}
 
 
 # --- Bank Data management (admin) ---------------------------------
@@ -1328,8 +1436,8 @@ async def perangkat_bank_create(payload: BankEntryIn, user: dict = Depends(requi
     nama = (payload.nama or "").strip()
     if not nama:
         raise HTTPException(400, "Nama perangkat wajib diisi.")
-    if not (11 <= len(prefix) <= 13):
-        raise HTTPException(400, "Prefix harus 11-13 karakter.")
+    if len(prefix) != PREFIX_LEN:
+        raise HTTPException(400, f"Prefix harus {PREFIX_LEN} karakter.")
     plen = len(prefix)
     existing = await db.perangkat_bank.find_one({"prefix": prefix, "plen": plen, "nama": nama})
     if existing:
@@ -1349,8 +1457,8 @@ async def perangkat_bank_update(entry_id: str, payload: BankEntryUpdate, user: d
     new_nama = payload.nama.strip() if payload.nama is not None else doc["nama"]
     if not new_nama:
         raise HTTPException(400, "Nama perangkat wajib diisi.")
-    if not (11 <= len(new_prefix) <= 13):
-        raise HTTPException(400, "Prefix harus 11-13 karakter.")
+    if len(new_prefix) != PREFIX_LEN:
+        raise HTTPException(400, f"Prefix harus {PREFIX_LEN} karakter.")
     new_plen = len(new_prefix)
     dup = await db.perangkat_bank.find_one(
         {"prefix": new_prefix, "plen": new_plen, "nama": new_nama, "_id": {"$ne": ObjectId(entry_id)}}
@@ -1424,10 +1532,10 @@ async def perangkat_bank_import(file: UploadFile = File(...), user: dict = Depen
             if not prefix or not nama:
                 skipped += 1
                 continue
-            if not (11 <= len(prefix) <= 13):
+            if len(prefix) != PREFIX_LEN:
                 skipped += 1
                 if len(errors) < 20:
-                    errors.append(f"Baris {idx + 2}: prefix '{prefix}' bukan 11-13 karakter")
+                    errors.append(f"Baris {idx + 2}: prefix '{prefix}' bukan {PREFIX_LEN} karakter")
                 continue
             plen = len(prefix)
             existing = await db.perangkat_bank.find_one({"prefix": prefix, "plen": plen, "nama": nama})
@@ -1444,7 +1552,7 @@ async def perangkat_bank_import(file: UploadFile = File(...), user: dict = Depen
         for idx, row in df.iterrows():
             nama = clean_cell(row.get(nama_col, ""))
             nomor = _clean_nomor(clean_cell(row.get(nomor_col, "")))
-            if not nama or len(nomor) < 11:
+            if not nama or len(nomor) < PREFIX_LEN:
                 skipped += 1
                 continue
             items.append({"nama_perangkat": nama, "nomor_registrasi": nomor})

@@ -64,10 +64,10 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
   const [draftFlash, setDraftFlash] = useState(0); // bump to trigger green flash on nama
   const flashDraft = () => setDraftFlash((n) => n + 1);
 
-  // Bank Data lookup: recognise device name from registration prefix (11-13 chars).
+  // Bank Data lookup: recognise device name from registration prefix (13 chars).
   useEffect(() => {
     const nomor = (draft.nomor_registrasi || "").trim();
-    if (nomor.length < 11) {
+    if (nomor.length < 13) {
       setBank(null);
       return;
     }
@@ -206,7 +206,7 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
   const scheduleRowLookup = (idx, nomor) => {
     const n = (nomor || "").trim();
     if (rowTimers.current[idx]) clearTimeout(rowTimers.current[idx]);
-    if (n.length < 11) {
+    if (n.length < 13) {
       setRowBank((m) => ({ ...m, [idx]: null }));
       return;
     }

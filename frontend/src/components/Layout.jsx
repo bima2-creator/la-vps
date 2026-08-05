@@ -15,6 +15,7 @@ import {
   HardDrives,
   Database,
   MagnifyingGlass,
+  Faders,
   CaretLeft,
   CaretRight,
 } from "@phosphor-icons/react";
@@ -29,6 +30,7 @@ const navItems = [
   { to: "/kpi-teknisi", label: "KPI Teknisi", icon: ChartLineUp, testid: "nav-kpi-teknisi", roles: ["admin", "operator", "viewer"], group: "main" },
   { to: "/audit", label: "Audit Log", icon: FileText, testid: NAV.audit, roles: ["admin"], group: "admin" },
   { to: "/bank-data", label: "Kelola Bank Data", icon: Database, testid: "nav-bank-data", roles: ["admin"], group: "admin" },
+  { to: "/perangkat-names", label: "Kelola Nama Perangkat", icon: Faders, testid: "nav-perangkat-names", roles: ["admin"], group: "admin" },
   { to: "/users", label: "Users", icon: Users, testid: NAV.users, roles: ["admin"], group: "admin" },
 ];
 

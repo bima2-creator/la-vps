@@ -152,7 +152,7 @@ export default function BankDataPage() {
           </div>
           <h1 className="font-display text-4xl font-black tracking-tighter">Kelola Bank Data</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Daftar prefix nomor registrasi (11-13 karakter) yang dikenali sistem untuk auto-isi nama
+            Daftar prefix nomor registrasi (13 karakter) yang dikenali sistem untuk auto-isi nama
             perangkat. Perbaiki atau hapus entri yang salah di sini.
           </p>
         </div>
@@ -229,7 +229,8 @@ export default function BankDataPage() {
           <div className="grid grid-cols-1 md:grid-cols-[220px_1fr_auto] gap-2 items-start">
             <input
               data-testid="bank-add-prefix"
-              placeholder="Prefix (11-13 char)"
+              placeholder="Prefix (13 char)"
+              maxLength={13}
               value={draft.prefix}
               onChange={(e) => setDraft({ ...draft, prefix: e.target.value.toUpperCase() })}
               className="border border-border bg-white rounded-sm px-3 py-2 text-sm mono"
@@ -245,7 +246,7 @@ export default function BankDataPage() {
               <button
                 data-testid="bank-add-confirm"
                 onClick={addEntry}
-                disabled={draft.prefix.trim().length < 11 || !draft.nama.trim()}
+                disabled={draft.prefix.trim().length !== 13 || !draft.nama.trim()}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white text-sm px-3 py-2 rounded-sm"
               >
                 Simpan
@@ -280,7 +281,6 @@ export default function BankDataPage() {
           <thead className="bg-slate-50 border-b border-border">
             <tr className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
               <th className="text-left px-3 py-2 w-56">Prefix</th>
-              <th className="text-left px-3 py-2 w-20">Panjang</th>
               <th className="text-left px-3 py-2">Nama Perangkat</th>
               <th className="text-left px-3 py-2 w-24">Jumlah</th>
               <th className="w-28 px-2"></th>
@@ -289,7 +289,7 @@ export default function BankDataPage() {
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-3 py-10 text-center text-muted-foreground">
+                <td colSpan={4} className="px-3 py-10 text-center text-muted-foreground">
                   {loading ? "Memuat…" : "Belum ada bank data."}
                 </td>
               </tr>
@@ -316,7 +316,6 @@ export default function BankDataPage() {
                         row.prefix
                       )}
                     </td>
-                    <td className="px-3 py-2 mono text-muted-foreground">{row.plen}</td>
                     <td className="px-3 py-2">
                       {isEdit ? (
                         <input

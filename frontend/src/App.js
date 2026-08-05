@@ -16,6 +16,7 @@ import InvoicesPage from "@/pages/InvoicesPage";
 import MasterPerangkatPage from "@/pages/MasterPerangkatPage";
 import PerangkatHistoryPage from "@/pages/PerangkatHistoryPage";
 import BankDataPage from "@/pages/BankDataPage";
+import PerangkatNamesPage from "@/pages/PerangkatNamesPage";
 import KpiTeknisiPage from "@/pages/KpiTeknisiPage";
 
 export default function App() {
@@ -67,6 +68,14 @@ export default function App() {
               element={
                 <ProtectedRoute roles={["admin"]}>
                   <BankDataPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/perangkat-names"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <PerangkatNamesPage />
                 </ProtectedRoute>
               }
             />
