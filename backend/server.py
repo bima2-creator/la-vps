@@ -3388,9 +3388,17 @@ async def invoice_customers(
 
         docs = await db.workorders.find(
             {},
-            {"pelanggan": 1, "sa_id": 1, "jenis_order": 1,
+            {"pelanggan": 1, "sa_id": 1, "si_id": 1, "jenis_order": 1,
+             "spk_survey_nomor": 1, "spk_instalasi_nomor": 1, "spk_aktivasi_nomor": 1,
              "hasil_survey_status": 1, "hasil_instalasi_status": 1, "hasil_aktivasi_status": 1},
         ).to_list(10000)
+        # SPK number field relevant to this jenis pekerjaan (per work section).
+        _spk_field_map = {
+            "SURVEY": "spk_survey_nomor",
+            "INSTALASI": "spk_instalasi_nomor",
+            "AKTIVASI": "spk_aktivasi_nomor",
+        }
+        spk_field = _spk_field_map.get(jp, "spk_survey_nomor")
         by_pel: Dict[str, Dict[str, Any]] = {}
         # Diagnostics for empty-state UX
         missing_pelanggan = 0
@@ -3423,13 +3431,25 @@ async def invoice_customers(
             if not p:
                 missing_pelanggan += 1
                 continue
-            entry = by_pel.setdefault(p, {"pelanggan": p, "wo_count": 0, "sa_ids": set()})
+            entry = by_pel.setdefault(p, {"pelanggan": p, "wo_count": 0, "sa_ids": set(), "si_ids": set(), "spk_nos": set()})
             entry["wo_count"] += 1
             sa = (d.get("sa_id") or "").strip()
             if sa:
                 entry["sa_ids"].add(sa)
+            si = (d.get("si_id") or "").strip()
+            if si:
+                entry["si_ids"].add(si)
+            spk = (d.get(spk_field) or "").strip()
+            if spk:
+                entry["spk_nos"].add(spk)
         items = [
-            {"pelanggan": r["pelanggan"], "wo_count": r["wo_count"], "sa_ids": sorted(r["sa_ids"])}
+            {
+                "pelanggan": r["pelanggan"],
+                "wo_count": r["wo_count"],
+                "sa_ids": sorted(r["sa_ids"]),
+                "si_ids": sorted(r["si_ids"]),
+                "spk_nos": sorted(r["spk_nos"]),
+            }
             for r in sorted(by_pel.values(), key=lambda x: x["pelanggan"].lower())
         ]
         return {

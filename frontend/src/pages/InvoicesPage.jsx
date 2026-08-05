@@ -979,12 +979,23 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                           type="button"
                           data-testid={`invoice-add-pelanggan-opt-${c.pelanggan}`}
                           onClick={() => addPelanggan(c.pelanggan)}
-                          className="w-full text-left px-3 py-2 border-b border-border/60 last:border-0 hover:bg-blue-50 transition-colors flex items-center justify-between"
+                          className="w-full text-left px-3 py-2 border-b border-border/60 last:border-0 hover:bg-blue-50 transition-colors"
                         >
-                          <span className="text-sm truncate">{c.pelanggan}</span>
-                          <span className="text-[10px] mono text-muted-foreground shrink-0 ml-2">
-                            {c.wo_count} WO
-                          </span>
+                          <div className="text-sm font-medium truncate">{c.pelanggan}</div>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] mono text-muted-foreground">
+                            <span>
+                              SI ID:{" "}
+                              <span className="text-foreground">
+                                {(c.si_ids && c.si_ids.length) ? c.si_ids.join(", ") : "—"}
+                              </span>
+                            </span>
+                            <span>
+                              No SPK:{" "}
+                              <span className="text-foreground">
+                                {(c.spk_nos && c.spk_nos.length) ? c.spk_nos.join(", ") : "—"}
+                              </span>
+                            </span>
+                          </div>
                         </button>
                       ))
                     )}

@@ -453,7 +453,7 @@ export default function WorkOrdersPage() {
       )}
 
       <div className="border border-border rounded-sm overflow-hidden bg-card">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[70vh]">
           <table className="w-full min-w-[1200px] data-table text-sm">
             <thead className="bg-slate-50 sticky top-0 border-b border-border">
               <tr className="text-left text-[10px] uppercase tracking-[0.15em] text-muted-foreground whitespace-nowrap">
