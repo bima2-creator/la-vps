@@ -59,6 +59,7 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
   const [draft, setDraft] = useState({ nama_perangkat: "", nomor_registrasi: "" });
   const [bank, setBank] = useState(null); // { matched, ambiguous, suggested, options }
   const [draftHist, setDraftHist] = useState(null); // { status, occurrences } cross-WO lookup
+  const [dbNames, setDbNames] = useState([]); // device names learned from DB (auto-grows)
   const autoFilledRef = useRef(""); // last value we auto-filled, so we don't clobber manual edits
   const [draftFlash, setDraftFlash] = useState(0); // bump to trigger green flash on nama
   const flashDraft = () => setDraftFlash((n) => n + 1);
@@ -132,10 +133,26 @@ export default function PerangkatEditor({ items, onChange, disabled, jenis, hide
   const suggestions = useMemo(() => {
     const q = draft.nama_perangkat.trim().toLowerCase();
     if (!q) return [];
-    return PERANGKAT_MASTER.filter(
-      (n) => n.toLowerCase().includes(q) && n.toLowerCase() !== q
-    ).slice(0, 8);
-  }, [draft.nama_perangkat]);
+    const all = Array.from(new Set([...(dbNames || []), ...PERANGKAT_MASTER]));
+    return all
+      .filter((n) => n.toLowerCase().includes(q) && n.toLowerCase() !== q)
+      .slice(0, 8);
+  }, [draft.nama_perangkat, dbNames]);
+
+  // Load device names learned so far (grows automatically as new perangkat are
+  // recorded) so the autocomplete always includes newly-registered devices.
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/perangkat/names")
+      .then(({ data }) => {
+        if (!cancelled) setDbNames(data?.names || []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const closeAdd = () => {
     setAddRole(null);

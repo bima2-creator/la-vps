@@ -1225,6 +1225,19 @@ async def perangkat_history(nomor: str, exclude_wo_id: Optional[str] = None, use
     return {"nomor_registrasi": nr, "status": status, "occurrences": occurrences}
 
 
+@api.get("/perangkat/names")
+async def perangkat_names(q: Optional[str] = None, user: dict = Depends(get_current_user)):
+    """Semua nama perangkat yang pernah tercatat (dipelajari dari work order / bank).
+    Daftar ini bertambah otomatis begitu perangkat baru direkam, sehingga
+    autocomplete pada 'Tambah Perangkat' selalu memuat perangkat yang baru terdaftar."""
+    names = [n for n in await db.perangkat_bank.distinct("nama") if n]
+    if q:
+        ql = q.strip().lower()
+        names = [n for n in names if ql in n.lower()]
+    names.sort()
+    return {"names": names[:1000]}
+
+
 # --- Bank Data management (admin) ---------------------------------
 class BankEntryIn(BaseModel):
     prefix: str
