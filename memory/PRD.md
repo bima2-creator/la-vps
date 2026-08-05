@@ -27,6 +27,10 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 - **Excel Export** (`GET /api/workorders/export/xlsx`): sheet "Workorders" (+ kolom PERANGKAT DETAIL) & sheet "Perangkat".
 - **Excel Import dedup** (`POST /api/workorders/import/xlsx`): dedup berdasarkan **nomor SPK per section** (survey/instalasi/aktivasi). Jika salah satu nomor SPK di baris impor sudah ada di DB → baris dilewati (skip). Response `{inserted, skipped}`. Frontend menampilkan jumlah baris yang dilewati. *Catatan: baris tanpa nomor SPK tidak bisa didedup dan akan selalu di-insert.* ✅ Diverifikasi via curl (35 skip saat re-import).
 
+## Deployment & Docs (June 2026)
+- Panduan instalasi Windows dibuat: `/app/PANDUAN_INSTALASI_WINDOWS.md` (Bahasa Indonesia, lengkap: prasyarat, .env lokal STORAGE_MODE=local, jalankan backend/frontend, akses LAN, troubleshooting).
+- Deployment: blocker CORS diperbaiki (`backend/.env` CORS_ORIGINS="*"). deployment_agent status READY. App tinggal di-deploy lewat tombol Deploy platform.
+
 ## Backlog / Future
 - **P1**: Ekspor Riwayat Perangkat — tombol download riwayat tracking 1 nomor registrasi ke Excel.
 - **P2**: Isi otomatis `media_jenis` dari mapping (GPON→FIBER, IDIRECT→SATELLITE) untuk data lama (butuh konfirmasi user).
