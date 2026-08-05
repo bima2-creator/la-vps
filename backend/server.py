@@ -166,14 +166,7 @@ def clear_auth_cookies(response: Response) -> None:
     response.delete_cookie("refresh_token", path="/")
 
 
-async def get_current_user(request: Request) -> dict:
-    token = request.cookies.get("access_token")
-    if not token:
-        auth = request.headers.get("Authorization", "")
-        if auth.startswith("Bearer "):
-            token = auth[7:]
-    if not token:
-        raise HTTPException(401, "Not authenticated")
+async def _resolve_user_from_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
         if payload.get("type") != "access":
@@ -193,6 +186,17 @@ async def get_current_user(request: Request) -> dict:
         raise HTTPException(401, "Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(401, "Invalid token")
+
+
+async def get_current_user(request: Request) -> dict:
+    token = request.cookies.get("access_token")
+    if not token:
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            token = auth[7:]
+    if not token:
+        raise HTTPException(401, "Not authenticated")
+    return await _resolve_user_from_token(token)
 
 
 def require_roles(*roles: str):
@@ -810,11 +814,65 @@ async def update_workorder(wo_id: str, payload: WorkOrderIn, user: dict = Depend
 
 @api.delete("/workorders/{wo_id}")
 async def delete_workorder(wo_id: str, user: dict = Depends(require_roles("admin"))):
-    res = await db.workorders.delete_one({"_id": ObjectId(wo_id)})
-    if res.deleted_count == 0:
+    doc = await db.workorders.find_one({"_id": ObjectId(wo_id)})
+    if not doc:
         raise HTTPException(404, "Not found")
-    await audit("workorder.delete", user, workorder_id=wo_id)
-    return {"ok": True}
+    await db.workorders.delete_one({"_id": ObjectId(wo_id)})
+    await audit("workorder.delete", user, workorder_id=wo_id, meta={"pelanggan": doc.get("pelanggan")})
+    # Return the deleted document so the client can offer an "Undo" (restore).
+    return {"ok": True, "deleted": workorder_to_out(doc)}
+
+
+class BulkDeleteIn(BaseModel):
+    ids: List[str] = Field(default_factory=list)
+
+
+class RestoreIn(BaseModel):
+    items: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+@api.post("/workorders/bulk-delete")
+async def bulk_delete_workorders(payload: BulkDeleteIn, user: dict = Depends(require_roles("admin"))):
+    ids = [i for i in (payload.ids or []) if i]
+    if not ids:
+        raise HTTPException(400, "No ids provided")
+    try:
+        oids = [ObjectId(i) for i in ids]
+    except Exception:
+        raise HTTPException(400, "Invalid id in list")
+    docs = await db.workorders.find({"_id": {"$in": oids}}).to_list(length=len(oids))
+    if not docs:
+        raise HTTPException(404, "No matching work orders")
+    res = await db.workorders.delete_many({"_id": {"$in": oids}})
+    for d in docs:
+        await audit("workorder.delete", user, workorder_id=str(d["_id"]), meta={"pelanggan": d.get("pelanggan"), "bulk": True})
+    return {"ok": True, "deleted_count": res.deleted_count, "deleted": [workorder_to_out(d) for d in docs]}
+
+
+@api.post("/workorders/restore")
+async def restore_workorders(payload: RestoreIn, user: dict = Depends(require_roles("admin"))):
+    items = payload.items or []
+    if not items:
+        raise HTTPException(400, "No items to restore")
+    restored = 0
+    for it in items:
+        doc = dict(it)
+        raw_id = doc.pop("id", None)
+        if not raw_id:
+            continue
+        try:
+            doc["_id"] = ObjectId(raw_id)
+        except Exception:
+            continue
+        # Skip if it already exists (idempotent restore).
+        exists = await db.workorders.find_one({"_id": doc["_id"]})
+        if exists:
+            continue
+        doc["updated_at"] = now_iso()
+        await db.workorders.insert_one(doc)
+        await audit("workorder.restore", user, workorder_id=raw_id, meta={"pelanggan": doc.get("pelanggan")})
+        restored += 1
+    return {"ok": True, "restored": restored}
 
 
 # ------------------------------------------------------------------
@@ -2167,7 +2225,8 @@ async def export_pdf_list(
 
 
 @api.get("/workorders/{wo_id}/pdf")
-async def export_pdf_one(wo_id: str, user: dict = Depends(get_current_user)):
+async def export_pdf_one(wo_id: str, request: Request, auth: Optional[str] = Query(None)):
+    user = (await _resolve_user_from_token(auth)) if auth else (await get_current_user(request))
     d = await db.workorders.find_one({"_id": ObjectId(wo_id)})
     if not d:
         raise HTTPException(404, "Not found")
@@ -2826,10 +2885,7 @@ async def list_attachments(wo_id: str, user: dict = Depends(get_current_user)):
 @api.get("/attachments/{att_id}/download")
 async def download_attachment(att_id: str, request: Request, auth: Optional[str] = Query(None)):
     # Support ?auth= for <img src>; fallback to normal cookie/bearer auth
-    if auth and "Authorization" not in request.headers:
-        request.scope["headers"] = list(request.scope["headers"]) + [(b"authorization", f"Bearer {auth}".encode())]
-    user = await get_current_user(request)  # will raise 401 if not authed
-    _ = user
+    _ = (await _resolve_user_from_token(auth)) if auth else (await get_current_user(request))
     att = await db.attachments.find_one({"_id": ObjectId(att_id), "is_deleted": False})
     if not att:
         raise HTTPException(404, "Attachment not found")
@@ -3527,9 +3583,7 @@ async def upload_faktur_pajak(
 @api.get("/invoices/{inv_id}/faktur-pajak/download")
 async def download_faktur_pajak(inv_id: str, request: Request, auth: Optional[str] = Query(None)):
     # Support ?auth= for inline preview; fallback to normal auth headers
-    if auth and "Authorization" not in request.headers:
-        request.scope["headers"] = list(request.scope["headers"]) + [(b"authorization", f"Bearer {auth}".encode())]
-    _ = await get_current_user(request)
+    _ = (await _resolve_user_from_token(auth)) if auth else (await get_current_user(request))
     try:
         oid = ObjectId(inv_id)
     except Exception:
@@ -3621,9 +3675,7 @@ async def upload_bukti_potong(
 
 @api.get("/invoices/{inv_id}/bukti-potong/download")
 async def download_bukti_potong(inv_id: str, request: Request, auth: Optional[str] = Query(None)):
-    if auth and "Authorization" not in request.headers:
-        request.scope["headers"] = list(request.scope["headers"]) + [(b"authorization", f"Bearer {auth}".encode())]
-    _ = await get_current_user(request)
+    _ = (await _resolve_user_from_token(auth)) if auth else (await get_current_user(request))
     try:
         oid = ObjectId(inv_id)
     except Exception:

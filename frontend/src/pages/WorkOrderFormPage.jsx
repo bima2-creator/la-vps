@@ -20,6 +20,14 @@ import {
 } from "@/lib/workorder-schema";
 import { WOFORM } from "@/constants/testIds";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+} from "@/components/ui/alert-dialog";
 import { CaretLeft, FloppyDisk, FilePdf, Lightning, ArrowsClockwise, ShareNetwork, Wrench, HardDrives, LockKey, MapPin, Trash } from "@phosphor-icons/react";
 import SpkUpload from "@/components/SpkUpload";
 import BoqItemsEditor, { computeBoqTotals } from "@/components/BoqItemsEditor";
@@ -179,6 +187,7 @@ export default function WorkOrderFormPage() {
   const [active, setActive] = useState(SECTIONS[0].id);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   // Jenis picker gating: when creating new, user MUST choose Jenis Order first.
   const [jenisPicked, setJenisPicked] = useState(isEdit);
@@ -342,21 +351,31 @@ export default function WorkOrderFormPage() {
     }
   };
 
-  const onDelete = async () => {
+  const performDelete = async () => {
     const targetId = effectiveId;
     if (!targetId) return;
-    const label = String(form.pelanggan || "").trim();
-    if (
-      !window.confirm(
-        `Hapus Work Order ini${label ? ` (${label})` : ""}? Tindakan ini tidak dapat dibatalkan.`
-      )
-    )
-      return;
     setDeleting(true);
     try {
-      await api.delete(`/workorders/${targetId}`);
-      toast.success("Work Order dihapus");
+      const { data } = await api.delete(`/workorders/${targetId}`);
+      const deletedDoc = data?.deleted;
+      setConfirmDelete(false);
       nav("/workorders");
+      toast.success("Work Order dihapus", {
+        duration: 8000,
+        action: deletedDoc
+          ? {
+              label: "Batalkan",
+              onClick: async () => {
+                try {
+                  await api.post("/workorders/restore", { items: [deletedDoc] });
+                  toast.success("Work Order dipulihkan");
+                } catch (e) {
+                  toast.error(formatApiError(e.response?.data?.detail) || "Gagal memulihkan");
+                }
+              },
+            }
+          : undefined,
+      });
     } catch (e) {
       toast.error(formatApiError(e.response?.data?.detail) || "Gagal menghapus");
     } finally {
@@ -699,7 +718,7 @@ export default function WorkOrderFormPage() {
           {canDelete && effectiveId && (
             <button
               data-testid={WOFORM.deleteButton}
-              onClick={onDelete}
+              onClick={() => setConfirmDelete(true)}
               disabled={deleting || saving}
               title="Hapus Work Order ini"
               className="inline-flex items-center gap-2 border border-red-500/40 bg-red-500/10 text-red-600 hover:bg-red-500/20 text-sm px-4 py-2 rounded-sm disabled:opacity-60"
@@ -1119,6 +1138,51 @@ export default function WorkOrderFormPage() {
           toast.success("Koordinat DMS diterapkan ke form");
         }}
       />
+
+      <AlertDialog open={confirmDelete} onOpenChange={(o) => !deleting && setConfirmDelete(o)}>
+        <AlertDialogContent data-testid="workorder-form-delete-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Work Order ini?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                <p className="mb-2">
+                  Anda akan menghapus Work Order berikut. Setelah dihapus, tombol{" "}
+                  <span className="font-medium">Batalkan</span> akan tersedia beberapa
+                  detik untuk memulihkan.
+                </p>
+                <div className="rounded-sm border border-border bg-secondary/50 p-2 text-sm">
+                  <div className="mono font-medium">
+                    {String(form.pelanggan || "").trim() || "(tanpa nama)"}
+                  </div>
+                  {(form.sa_id || form.si_id) && (
+                    <div className="mono text-xs text-muted-foreground mt-0.5">
+                      {form.sa_id ? `SA: ${form.sa_id}` : ""} {form.si_id ? `SI: ${form.si_id}` : ""}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <button
+              data-testid="workorder-form-delete-cancel"
+              onClick={() => setConfirmDelete(false)}
+              disabled={deleting}
+              className="border border-border bg-secondary hover:bg-slate-100 text-sm px-4 py-2 rounded-sm disabled:opacity-60"
+            >
+              Batal
+            </button>
+            <button
+              data-testid="workorder-form-delete-confirm"
+              onClick={performDelete}
+              disabled={deleting}
+              className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-sm px-4 py-2 rounded-sm disabled:opacity-60"
+            >
+              <Trash size={15} weight="bold" /> {deleting ? "Menghapus…" : "Ya, hapus"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

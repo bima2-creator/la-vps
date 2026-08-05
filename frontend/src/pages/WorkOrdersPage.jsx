@@ -7,6 +7,14 @@ import { formatIDR } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+} from "@/components/ui/alert-dialog";
+import {
   MagnifyingGlass,
   Upload,
   DownloadSimple,
@@ -52,6 +60,9 @@ export default function WorkOrdersPage() {
   const [jenisPekerjaan, setJenisPekerjaan] = useState(searchParams.get("jenis_pekerjaan") || "");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
   const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState([]);
+  const [confirm, setConfirm] = useState({ open: false, ids: [], names: [] });
+  const [deleting, setDeleting] = useState(false);
   const fileInput = useRef(null);
 
   // Sync filters to URL so links can be shared / user can bookmark filter state.
@@ -90,6 +101,7 @@ export default function WorkOrdersPage() {
       const { data } = await api.get("/workorders", { params });
       setItems(data.items);
       setTotal(data.total);
+      setSelected([]);
     } catch (e) {
       toast.error(formatApiError(e.response?.data?.detail) || "Failed to load");
     } finally {
@@ -148,15 +160,60 @@ export default function WorkOrdersPage() {
     }
   };
 
-  const onDelete = async (id) => {
-    if (!window.confirm("Delete this work order?")) return;
+  const restoreDocs = async (docs) => {
+    if (!docs || docs.length === 0) return;
     try {
-      await api.delete(`/workorders/${id}`);
-      toast.success("Deleted");
+      await api.post("/workorders/restore", { items: docs });
+      toast.success(docs.length > 1 ? `${docs.length} work order dipulihkan` : "Work order dipulihkan");
       load();
     } catch (e) {
-      toast.error(formatApiError(e.response?.data?.detail) || "Delete failed");
+      toast.error(formatApiError(e.response?.data?.detail) || "Gagal memulihkan");
     }
+  };
+
+  const askDelete = (ids, names) => setConfirm({ open: true, ids, names });
+
+  const performDelete = async () => {
+    const { ids } = confirm;
+    if (!ids || ids.length === 0) return;
+    setDeleting(true);
+    try {
+      let deletedDocs = [];
+      if (ids.length === 1) {
+        const { data } = await api.delete(`/workorders/${ids[0]}`);
+        if (data?.deleted) deletedDocs = [data.deleted];
+      } else {
+        const { data } = await api.post("/workorders/bulk-delete", { ids });
+        deletedDocs = data?.deleted || [];
+      }
+      setConfirm({ open: false, ids: [], names: [] });
+      setSelected([]);
+      load();
+      const n = deletedDocs.length || ids.length;
+      toast.success(n > 1 ? `${n} work order dihapus` : "Work order dihapus", {
+        duration: 8000,
+        action: deletedDocs.length
+          ? { label: "Batalkan", onClick: () => restoreDocs(deletedDocs) }
+          : undefined,
+      });
+    } catch (e) {
+      toast.error(formatApiError(e.response?.data?.detail) || "Gagal menghapus");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const toggleSelect = (id) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const pageIds = items.map((it) => it.id);
+  const allSelected = pageIds.length > 0 && pageIds.every((id) => selected.includes(id));
+  const toggleSelectAll = () =>
+    setSelected((prev) => (allSelected ? prev.filter((id) => !pageIds.includes(id)) : Array.from(new Set([...prev, ...pageIds]))));
+
+  const nameFor = (id) => {
+    const it = items.find((x) => x.id === id);
+    return (it && it.pelanggan) || id;
   };
 
   const pages = Math.max(1, Math.ceil(total / pageSize));
@@ -354,11 +411,47 @@ export default function WorkOrdersPage() {
         </div>
       )}
 
+      {canDelete && selected.length > 0 && (
+        <div
+          data-testid="workorders-bulk-bar"
+          className="flex items-center gap-3 flex-wrap border border-red-300 bg-red-50 text-red-700 rounded-sm px-3 py-2"
+        >
+          <span className="text-sm font-medium">
+            <span className="mono">{selected.length}</span> dipilih
+          </span>
+          <button
+            data-testid="workorders-bulk-delete-button"
+            onClick={() => askDelete(selected, selected.map(nameFor))}
+            className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-sm px-3 py-1.5 rounded-sm"
+          >
+            <Trash size={14} weight="bold" /> Hapus terpilih
+          </button>
+          <button
+            onClick={() => setSelected([])}
+            className="text-xs text-red-700/80 hover:text-red-900 underline underline-offset-2"
+          >
+            batalkan pilihan
+          </button>
+        </div>
+      )}
+
       <div className="border border-border rounded-sm overflow-hidden bg-card">
         <div className="overflow-x-auto">
           <table className="w-full data-table text-sm">
             <thead className="bg-slate-50 sticky top-0 border-b border-border">
               <tr className="text-left text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                {canDelete && (
+                  <th className="w-10 pl-3">
+                    <input
+                      type="checkbox"
+                      data-testid="workorders-select-all"
+                      checked={allSelected}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 cursor-pointer accent-red-600"
+                      aria-label="Select all"
+                    />
+                  </th>
+                )}
                 {TABLE_COLUMNS.map((c) => (
                   <th key={c.key} className="font-medium">
                     {c.label}
@@ -370,14 +463,14 @@ export default function WorkOrdersPage() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={TABLE_COLUMNS.length + 1} className="text-center py-10 text-muted-foreground mono">
+                  <td colSpan={TABLE_COLUMNS.length + 1 + (canDelete ? 1 : 0)} className="text-center py-10 text-muted-foreground mono">
                     Loading…
                   </td>
                 </tr>
               )}
               {!loading && items.length === 0 && (
                 <tr>
-                  <td colSpan={TABLE_COLUMNS.length + 1} className="text-center py-10 text-muted-foreground">
+                  <td colSpan={TABLE_COLUMNS.length + 1 + (canDelete ? 1 : 0)} className="text-center py-10 text-muted-foreground">
                     No data. Import Excel or create your first Work Order.
                   </td>
                 </tr>
@@ -386,8 +479,20 @@ export default function WorkOrdersPage() {
                 <tr
                   key={it.id}
                   data-testid={WORKORDERS.row}
-                  className={`border-b border-border/60 hover:bg-slate-100 ${i % 2 ? "bg-slate-50/60" : ""}`}
+                  className={`border-b border-border/60 hover:bg-slate-100 ${i % 2 ? "bg-slate-50/60" : ""} ${selected.includes(it.id) ? "bg-red-50/70" : ""}`}
                 >
+                  {canDelete && (
+                    <td className="pl-3">
+                      <input
+                        type="checkbox"
+                        data-testid={`workorders-select-${it.id}`}
+                        checked={selected.includes(it.id)}
+                        onChange={() => toggleSelect(it.id)}
+                        className="h-4 w-4 cursor-pointer accent-red-600"
+                        aria-label="Select row"
+                      />
+                    </td>
+                  )}
                   {TABLE_COLUMNS.map((c) => (
                     <td key={c.key} className={c.mono ? "mono text-[13px]" : ""}>
                       {c.key === "spk_summary" ? (
@@ -496,7 +601,7 @@ export default function WorkOrdersPage() {
                       {canDelete && (
                         <button
                           data-testid={WORKORDERS.deleteRowButton}
-                          onClick={() => onDelete(it.id)}
+                          onClick={() => askDelete([it.id], [it.pelanggan || it.id])}
                           className="p-1.5 rounded-sm hover:bg-red-500/10 hover:text-red-400"
                           title="Delete"
                         >
@@ -532,6 +637,59 @@ export default function WorkOrdersPage() {
           </div>
         </div>
       </div>
+
+      <AlertDialog
+        open={confirm.open}
+        onOpenChange={(o) => !deleting && setConfirm((c) => ({ ...c, open: o }))}
+      >
+        <AlertDialogContent data-testid="workorders-delete-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm.ids.length > 1
+                ? `Hapus ${confirm.ids.length} Work Order?`
+                : "Hapus Work Order ini?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                <p className="mb-2">
+                  Tindakan ini menghapus data berikut. Anda masih bisa membatalkan
+                  lewat tombol <span className="font-medium">Batalkan</span> selama
+                  beberapa detik setelah dihapus.
+                </p>
+                <ul className="max-h-40 overflow-auto rounded-sm border border-border bg-secondary/50 p-2 text-sm space-y-0.5">
+                  {confirm.names.slice(0, 8).map((n, i) => (
+                    <li key={i} className="mono truncate">• {n}</li>
+                  ))}
+                  {confirm.names.length > 8 && (
+                    <li className="text-muted-foreground">
+                      …dan {confirm.names.length - 8} lainnya
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <button
+              data-testid="workorders-delete-cancel"
+              onClick={() => setConfirm({ open: false, ids: [], names: [] })}
+              disabled={deleting}
+              className="border border-border bg-secondary hover:bg-slate-100 text-sm px-4 py-2 rounded-sm disabled:opacity-60"
+            >
+              Batal
+            </button>
+            <button
+              data-testid="workorders-delete-confirm"
+              onClick={performDelete}
+              disabled={deleting}
+              className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white text-sm px-4 py-2 rounded-sm disabled:opacity-60"
+            >
+              <Trash size={15} weight="bold" />
+              {deleting ? "Menghapus…" : "Ya, hapus"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
