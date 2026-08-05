@@ -8,6 +8,7 @@ export const SECTIONS = [
     label: "Pelanggan",
     fields: [
       { name: "pelanggan", label: "Nama Pelanggan *", type: "text" },
+      { name: "si_id", label: "SI ID *", type: "text" },
       {
         name: "jenis_order",
         label: "Jenis Order",
@@ -16,7 +17,6 @@ export const SECTIONS = [
       },
       { name: "alamat", label: "Alamat", type: "textarea", wide: true, rows: 3 },
       { name: "sa_id", label: "SA ID *", type: "text" },
-      { name: "si_id", label: "SI ID *", type: "text" },
       { name: "lat", label: "Latitude", type: "text", mono: true, dms: true, placeholder: `6°12'31.68"S` },
       { name: "lng", label: "Longitude", type: "text", mono: true, dms: true, placeholder: `106°49'01.20"E` },
       { name: "rfs_la", label: "RFS LA", type: "date" },
