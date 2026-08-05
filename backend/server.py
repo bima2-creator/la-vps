@@ -1602,6 +1602,8 @@ EXPORT_COLUMNS: List[tuple] = [
     ("jenis_order", "JENIS ORDER"),
     ("sa_id", "SA ID"),
     ("si_id", "SI ID"),
+    ("task_no", "NO TASK"),
+    ("case_no", "NO CASE"),
     ("lat", "LATITUDE"),
     ("lng", "LONGITUDE"),
     ("bw", "BW"),
