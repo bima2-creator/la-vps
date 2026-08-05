@@ -1675,22 +1675,78 @@ def _val(v: Any) -> str:
     return str(v).strip()
 
 
+_WO_KEY_FIELDS = [
+    "pelanggan", "sa_id", "si_id", "jenis_order",
+    "spk_survey_nomor", "spk_instalasi_nomor", "spk_aktivasi_nomor",
+]
+
+
+def _wo_key_query(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Natural key untuk deduplikasi import: cocokkan pada field pengenal yang
+    terisi. None bila tidak ada pengenal (tidak bisa didedup -> insert biasa)."""
+    q: Dict[str, Any] = {}
+    for f in _WO_KEY_FIELDS:
+        v = (str(doc.get(f) or "")).strip()
+        if v:
+            q[f] = doc.get(f)
+    return q or None
+
+
+def _format_perangkat_items(items) -> str:
+    """Ringkas perangkat_items menjadi satu teks untuk kolom export."""
+    out = []
+    for it in (items or []):
+        if not isinstance(it, dict):
+            continue
+        nama = (it.get("nama_perangkat") or "").strip()
+        nr = (it.get("nomor_registrasi") or "").strip()
+        role = (it.get("role") or "").strip()
+        part = nama
+        if nr:
+            part += f" [NR: {nr}]"
+        if role:
+            part += f" ({role})"
+        part = part.strip()
+        if part:
+            out.append(part)
+    return " ; ".join(out)
+
+
 @api.get("/workorders/export/xlsx")
 async def export_workorders(user: dict = Depends(get_current_user)):
     docs = await db.workorders.find({}).sort("created_at", -1).to_list(10000)
     rows = []
+    perangkat_rows = []
     for d in docs:
-        rows.append({label: d.get(field, "") for field, label in EXPORT_COLUMNS})
-    df = pd.DataFrame(rows, columns=[label for _, label in EXPORT_COLUMNS])
+        row = {label: d.get(field, "") for field, label in EXPORT_COLUMNS}
+        row["PERANGKAT (DETAIL)"] = _format_perangkat_items(d.get("perangkat_items"))
+        rows.append(row)
+        for it in (d.get("perangkat_items") or []):
+            if not isinstance(it, dict):
+                continue
+            perangkat_rows.append({
+                "PELANGGAN": d.get("pelanggan", ""),
+                "SA ID": d.get("sa_id", ""),
+                "SI ID": d.get("si_id", ""),
+                "JENIS ORDER": d.get("jenis_order", ""),
+                "NAMA PERANGKAT": it.get("nama_perangkat", ""),
+                "NOMOR REGISTRASI": it.get("nomor_registrasi", ""),
+                "KATEGORI": it.get("role", ""),
+            })
+    export_labels = [label for _, label in EXPORT_COLUMNS] + ["PERANGKAT (DETAIL)"]
+    df = pd.DataFrame(rows, columns=export_labels)
+    perangkat_cols = ["PELANGGAN", "SA ID", "SI ID", "JENIS ORDER", "NAMA PERANGKAT", "NOMOR REGISTRASI", "KATEGORI"]
+    df_perangkat = pd.DataFrame(perangkat_rows, columns=perangkat_cols)
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="xlsxwriter") as writer:
         df.to_excel(writer, index=False, sheet_name="Workorders")
+        df_perangkat.to_excel(writer, index=False, sheet_name="Perangkat")
         wb = writer.book
         ws = writer.sheets["Workorders"]
         # Rupiah formatting for money columns
         rp_fmt = wb.add_format({"num_format": '"Rp" #,##0'})
         money_labels = {"BOQ JASA", "BOQ MATERIAL", "BOQ JUMLAH"}
-        for i, label in enumerate([lbl for _, lbl in EXPORT_COLUMNS]):
+        for i, label in enumerate(export_labels):
             if label in money_labels:
                 ws.set_column(i, i, 18, rp_fmt)
     buf.seek(0)
