@@ -128,10 +128,17 @@ export default function WorkOrdersPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       const skipped = data.skipped || 0;
+      const noSpk = data.no_spk || 0;
       toast.success(
         `Berhasil impor ${data.inserted} baris` +
           (skipped ? ` — ${skipped} baris dilewati (nomor SPK sudah ada)` : "")
       );
+      if (noSpk) {
+        toast.warning(
+          `${noSpk} baris tidak punya nomor SPK sehingga tidak bisa dicek duplikatnya — baris ini tetap ditambahkan dan berpotensi menjadi duplikat.`,
+          { duration: 8000 }
+        );
+      }
       setPage(1);
       load();
     } catch (err) {

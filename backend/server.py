@@ -1889,19 +1889,24 @@ async def import_workorders(file: UploadFile = File(...), user: dict = Depends(r
 
     kept = []
     skipped = 0
+    no_spk = 0
     for doc in docs:
         nums = {_spk_key(doc.get(f)) for f in spk_fields}
         nums.discard("")
-        if nums and (nums & existing_spk):
+        if not nums:
+            no_spk += 1
+            kept.append(doc)
+            continue
+        if nums & existing_spk:
             skipped += 1
             continue
         kept.append(doc)
         existing_spk |= nums
 
     if not kept:
-        return {"inserted": 0, "skipped": skipped, "message": f"Semua {skipped} baris dilewati karena nomor SPK sudah ada."}
+        return {"inserted": 0, "skipped": skipped, "no_spk": no_spk, "message": f"Semua {skipped} baris dilewati karena nomor SPK sudah ada."}
     result = await db.workorders.insert_many(kept)
-    return {"inserted": len(result.inserted_ids), "skipped": skipped}
+    return {"inserted": len(result.inserted_ids), "skipped": skipped, "no_spk": no_spk}
 
 
 @api.get("/workorders/import/template.xlsx")
