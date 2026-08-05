@@ -5,7 +5,11 @@ export const API_BASE = `${BACKEND_URL}/api`;
 
 export const api = axios.create({
   baseURL: API_BASE,
-  withCredentials: true,
+  // Non-credentialed requests: the edge/ingress injects `Access-Control-Allow-Origin: *`,
+  // which is INVALID together with credentials and gets blocked by browsers on cross-origin
+  // (e.g. embedded preview) requests. Auth uses the Bearer token in localStorage (below),
+  // so cookies are not needed and withCredentials must stay false to keep CORS valid.
+  withCredentials: false,
   headers: { "Content-Type": "application/json" },
 });
 
