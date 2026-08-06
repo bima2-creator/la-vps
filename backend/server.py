@@ -18,6 +18,8 @@ import bcrypt
 import jwt
 import pandas as pd
 from bson import ObjectId
+from bson import json_util
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Response, UploadFile, File, Query, Header, Form
 from fastapi.responses import StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -112,8 +114,30 @@ def get_object(path: str):
     resp.raise_for_status()
     return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
 
+
+def delete_object(path: str) -> None:
+    """Best-effort deletion of a stored object (used for backup retention)."""
+    if not path:
+        return
+    if STORAGE_MODE == "local":
+        try:
+            (_Path(LOCAL_STORAGE_DIR) / path).unlink()
+        except Exception:
+            pass
+        return
+    key = init_storage()
+    if not key:
+        return
+    try:
+        requests.delete(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=30)
+    except Exception:
+        pass
+
+
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
+
+_scheduler: Optional[AsyncIOScheduler] = None
 
 app = FastAPI(title="LA Tracker API")
 api = APIRouter(prefix="/api")
@@ -417,6 +441,19 @@ async def on_startup() -> None:
     if init_storage():
         log.info("Object storage initialized")
 
+    # Automatic daily database backup
+    global _scheduler
+    try:
+        _scheduler = AsyncIOScheduler(timezone="UTC")
+        _scheduler.add_job(
+            _run_auto_backup, "interval", hours=24,
+            id="daily_backup", replace_existing=True,
+        )
+        _scheduler.start()
+        log.info("Backup scheduler started (every 24h)")
+    except Exception as e:
+        log.warning("Backup scheduler failed to start: %s", e)
+
 
 # The application supports exactly three fixed login accounts.
 # Passwords are read from env when provided, otherwise fall back to the defaults.
@@ -495,6 +532,12 @@ async def seed_fixed_users() -> None:
 
 @app.on_event("shutdown")
 async def on_shutdown() -> None:
+    global _scheduler
+    if _scheduler:
+        try:
+            _scheduler.shutdown(wait=False)
+        except Exception:
+            pass
     client.close()
 
 
@@ -4132,6 +4175,137 @@ async def root():
 
 
 # Register router & CORS
+# ------------------------------------------------------------------
+# Database Backup & Restore (JSON snapshots stored in object storage)
+# ------------------------------------------------------------------
+BACKUP_COLLECTIONS = [
+    "workorders", "invoices", "perangkat_bank",
+    "teknisi_master", "users", "audit_logs", "attachments",
+]
+BACKUP_RETENTION = int(os.environ.get("BACKUP_RETENTION", "7"))
+
+
+async def _prune_backups() -> None:
+    """Keep only the newest BACKUP_RETENTION backups; delete the rest."""
+    docs = await db.backups.find({}).sort("created_at", -1).to_list(1000)
+    for old in docs[BACKUP_RETENTION:]:
+        delete_object(old.get("storage_path"))
+        await db.backups.delete_one({"_id": old["_id"]})
+
+
+async def create_backup(created_by: str = "system", kind: str = "manual") -> dict:
+    """Export all business collections to a single JSON snapshot in object storage."""
+    payload: Dict[str, Any] = {}
+    coll_stats: List[dict] = []
+    total = 0
+    for name in BACKUP_COLLECTIONS:
+        rows = await db[name].find({}).to_list(None)
+        payload[name] = rows
+        coll_stats.append({"name": name, "count": len(rows)})
+        total += len(rows)
+    raw = json_util.dumps(
+        {"version": 1, "created_at": now_iso(), "collections": payload}
+    ).encode("utf-8")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    filename = f"backup-{ts}.json"
+    storage_path = f"backups/{filename}"
+    put_object(storage_path, raw, "application/json")
+    meta = {
+        "filename": filename,
+        "storage_path": storage_path,
+        "size": len(raw),
+        "kind": kind,
+        "created_by": created_by,
+        "created_at": now_iso(),
+        "collections": coll_stats,
+        "total_docs": total,
+    }
+    res = await db.backups.insert_one(meta)
+    await _prune_backups()
+    meta["id"] = str(res.inserted_id)
+    meta.pop("_id", None)
+    return meta
+
+
+async def _run_auto_backup() -> None:
+    try:
+        m = await create_backup(created_by="system", kind="auto")
+        log.info("Auto backup completed: %s (%s docs)", m["filename"], m["total_docs"])
+    except Exception as e:
+        log.warning("Auto backup failed: %s", e)
+
+
+@api.get("/backups")
+async def list_backups(user: dict = Depends(require_roles("admin"))):
+    docs = await db.backups.find({}).sort("created_at", -1).to_list(1000)
+    out = []
+    for d in docs:
+        d["id"] = str(d.pop("_id"))
+        out.append(d)
+    return out
+
+
+@api.post("/backups")
+async def create_backup_now(user: dict = Depends(require_roles("admin"))):
+    return await create_backup(created_by=user["actor"], kind="manual")
+
+
+@api.get("/backups/{bid}/download")
+async def download_backup(bid: str, user: dict = Depends(require_roles("admin"))):
+    try:
+        b = await db.backups.find_one({"_id": ObjectId(bid)})
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    if not b:
+        raise HTTPException(404, "Backup tidak ditemukan")
+    raw, _ = get_object(b["storage_path"])
+    return StreamingResponse(
+        io.BytesIO(raw),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{b["filename"]}"'},
+    )
+
+
+@api.post("/backups/{bid}/restore")
+async def restore_backup(bid: str, user: dict = Depends(require_roles("admin"))):
+    try:
+        b = await db.backups.find_one({"_id": ObjectId(bid)})
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    if not b:
+        raise HTTPException(404, "Backup tidak ditemukan")
+    raw, _ = get_object(b["storage_path"])
+    try:
+        data = json_util.loads(raw.decode("utf-8"))
+    except Exception as e:
+        raise HTTPException(400, f"File backup rusak/tidak valid: {e}")
+    colls = data.get("collections", {}) if isinstance(data, dict) else {}
+    restored = []
+    for name, rows in colls.items():
+        if name not in BACKUP_COLLECTIONS:
+            continue
+        await db[name].delete_many({})
+        if rows:
+            await db[name].insert_many(rows)
+        restored.append({"name": name, "count": len(rows)})
+    # Re-sync the three fixed login accounts so admin can always log in.
+    await seed_fixed_users()
+    return {"restored": restored, "message": "Restore selesai. Data telah dipulihkan dari backup."}
+
+
+@api.delete("/backups/{bid}")
+async def delete_backup(bid: str, user: dict = Depends(require_roles("admin"))):
+    try:
+        b = await db.backups.find_one({"_id": ObjectId(bid)})
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    if not b:
+        raise HTTPException(404, "Backup tidak ditemukan")
+    delete_object(b.get("storage_path"))
+    await db.backups.delete_one({"_id": b["_id"]})
+    return {"ok": True}
+
+
 app.include_router(api)
 
 allow_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", FRONTEND_URL).split(",") if o.strip()]

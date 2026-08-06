@@ -27,6 +27,11 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 - **Excel Export** (`GET /api/workorders/export/xlsx`): sheet "Workorders" (+ kolom PERANGKAT DETAIL) & sheet "Perangkat".
 - **Excel Import dedup** (`POST /api/workorders/import/xlsx`): dedup berdasarkan **nomor SPK per section** (survey/instalasi/aktivasi). Jika salah satu nomor SPK di baris impor sudah ada di DB → baris dilewati (skip). Response `{inserted, skipped}`. Frontend menampilkan jumlah baris yang dilewati. *Catatan: baris tanpa nomor SPK tidak bisa didedup dan akan selalu di-insert.* ✅ Diverifikasi via curl (35 skip saat re-import).
 
+## Backup Otomatis (June 2026)
+- Backend: APScheduler `AsyncIOScheduler` menjalankan `_run_auto_backup` tiap 24 jam. `create_backup()` mengekspor koleksi (workorders, invoices, perangkat_bank, teknisi_master, users, audit_logs, attachments) ke JSON (bson.json_util → roundtrip ObjectId/datetime) & simpan ke object storage `backups/`. Metadata di koleksi `backups`. Retensi 7 terakhir (`_prune_backups`, env `BACKUP_RETENTION`).
+- Endpoints (admin): `GET/POST /api/backups`, `GET /api/backups/{id}/download`, `POST /api/backups/{id}/restore` (delete_many+insert_many lalu seed_fixed_users), `DELETE /api/backups/{id}`.
+- Frontend: halaman admin `/backup` (`BackupPage.jsx`, nav "Backup Data") — Backup Sekarang, Unduh JSON, Restore (dengan modal konfirmasi timpa data), Hapus. Terverifikasi curl (create/list/download/restore, data & login intact) + UI.
+
 ## Invoice PDF split (June 2026)
 - `GET /invoices/{id}/pdf?part=invoice` → PDF Invoice saja (gate: ada pelanggan + Nomor Invoice + Nomor EPROC).
 - `GET /invoices/{id}/pdf?part=lampiran` → PDF Lampiran saja: Faktur Pajak + Bukti Potong + SPK & Berita Acara (gate: file Faktur Pajak & Bukti Potong sudah diupload). Dokumen invoice TIDAK ikut.

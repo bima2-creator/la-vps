@@ -18,6 +18,7 @@ import PerangkatHistoryPage from "@/pages/PerangkatHistoryPage";
 import BankDataPage from "@/pages/BankDataPage";
 import PerangkatNamesPage from "@/pages/PerangkatNamesPage";
 import KpiTeknisiPage from "@/pages/KpiTeknisiPage";
+import BackupPage from "@/pages/BackupPage";
 
 export default function App() {
   return (
@@ -92,6 +93,14 @@ export default function App() {
               element={
                 <ProtectedRoute roles={["admin"]}>
                   <AuditLogPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/backup"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <BackupPage />
                 </ProtectedRoute>
               }
             />

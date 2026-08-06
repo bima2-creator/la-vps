@@ -16,6 +16,7 @@ import {
   Database,
   MagnifyingGlass,
   Faders,
+  FloppyDisk,
   CaretLeft,
   CaretRight,
 } from "@phosphor-icons/react";
@@ -32,6 +33,7 @@ const navItems = [
   { to: "/bank-data", label: "Kelola Bank Data", icon: Database, testid: "nav-bank-data", roles: ["admin"], group: "admin" },
   { to: "/perangkat-names", label: "Kelola Nama Perangkat", icon: Faders, testid: "nav-perangkat-names", roles: ["admin"], group: "admin" },
   { to: "/users", label: "Users", icon: Users, testid: NAV.users, roles: ["admin"], group: "admin" },
+  { to: "/backup", label: "Backup Data", icon: FloppyDisk, testid: "nav-backup", roles: ["admin"], group: "admin" },
 ];
 
 function initialsOf(name = "") {
