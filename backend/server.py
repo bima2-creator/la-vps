@@ -3300,6 +3300,13 @@ INV_ACTIVITY_TYPES = {"SURVEY", "INSTALASI", "AKTIVASI", "DISMANTLE", "MAINTENAN
 BILLABLE_STATUS = {"OK", "BATAL", "DONE", "SELESAI", "COMPLETED"}
 
 
+def _norm_pel(s: Any) -> str:
+    """Canonical pelanggan name for matching: strip, collapse internal whitespace,
+    and normalize non-breaking spaces. Prevents invoice picker/candidate mismatch
+    caused by stray/invisible whitespace in copy-pasted names."""
+    return " ".join(str(s or "").replace("\xa0", " ").split())
+
+
 def _wo_status_for_activity(wo: dict, jp: str) -> str:
     """Return the relevant hasil_*_status string for the given activity/jenis."""
     jp = (jp or "").upper()
@@ -3498,7 +3505,7 @@ async def invoice_customers(
             if str(d["_id"]) in already_billed:
                 already_billed_count += 1
                 continue
-            p = (d.get("pelanggan") or "").strip()
+            p = _norm_pel(d.get("pelanggan"))
             if not p:
                 missing_pelanggan += 1
                 continue
@@ -3570,8 +3577,9 @@ async def invoice_candidates(
         p_list = [p.strip() for p in pelanggans.split(",") if p.strip()]
     elif pelanggan:
         p_list = [pelanggan]
-    if p_list:
-        query["pelanggan"] = {"$in": p_list}
+    # Match pelanggan by NORMALIZED name (strip + collapse whitespace) so
+    # invisible/stray whitespace never causes a false "no WO for this customer".
+    p_norm_set = {_norm_pel(p) for p in p_list}
 
     docs = await db.workorders.find(query).sort("created_at", -1).to_list(2000)
 
@@ -3592,6 +3600,10 @@ async def invoice_candidates(
     for d in docs:
         if not _wo_matches_activity(d, jp):
             continue
+        # Filter to the selected pelanggan (normalized comparison).
+        pel = _norm_pel(d.get("pelanggan"))
+        if p_norm_set and pel not in p_norm_set:
+            continue
         wid = str(d["_id"])
         # Hide WOs already in another invoice — the whole point of "only show
         # pelanggan yang belum dibuatkan invoice" per user's request.
@@ -3600,7 +3612,7 @@ async def invoice_candidates(
         eligible_ids.append(wid)
         out.append({
             "id": wid,
-            "pelanggan": d.get("pelanggan", ""),
+            "pelanggan": pel,
             "sa_id": d.get("sa_id", ""),
             "si_id": d.get("si_id", ""),
             "jenis_order": d.get("jenis_order", ""),
