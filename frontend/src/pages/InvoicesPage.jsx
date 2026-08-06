@@ -14,6 +14,8 @@ import {
   FilePdf,
   DownloadSimple,
   Paperclip,
+  CheckCircle,
+  Circle,
 } from "@phosphor-icons/react";
 import { useAuth } from "@/context/AuthContext";
 import { Pagination, PAGE_SIZE } from "@/components/Pagination";
@@ -61,6 +63,32 @@ const STATUS_BADGE = {
 function makeInvoiceNo() {
   // Deprecated. Backend now auto-generates INV/NN/RomanMonth/YYYY on POST /invoices.
   return "";
+}
+
+// Small status badges: shows whether Faktur Pajak & Bukti Potong are uploaded.
+function LampiranBadges({ fakturOk, bpOk, className = "" }) {
+  const Item = ({ ok, label }) => (
+    <span
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm border text-[10px] mono whitespace-nowrap ${
+        ok
+          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+          : "bg-slate-50 text-slate-400 border-slate-200"
+      }`}
+      title={ok ? `${label} sudah diupload` : `${label} belum diupload`}
+    >
+      {ok ? <CheckCircle size={11} weight="fill" /> : <Circle size={11} />}
+      {label}
+    </span>
+  );
+  return (
+    <div
+      data-testid="invoice-lampiran-badges"
+      className={`flex items-center gap-1 flex-wrap ${className}`}
+    >
+      <Item ok={fakturOk} label="Faktur" />
+      <Item ok={bpOk} label="Bukti Potong" />
+    </div>
+  );
 }
 
 // Download an invoice PDF (part = "invoice" | "lampiran") with a clear filename.
@@ -385,6 +413,11 @@ export default function InvoicesPage() {
                     >
                       {iv.status || "-"}
                     </span>
+                    <LampiranBadges
+                      fakturOk={Boolean(iv.faktur_pajak_attachment?.storage_path)}
+                      bpOk={Boolean(iv.bukti_potong_attachment?.storage_path)}
+                      className="mt-1"
+                    />
                   </td>
                   <td className="px-2 py-2 text-right whitespace-nowrap">
                     {(() => {
@@ -1416,6 +1449,11 @@ function InvoiceForm({ initial, onClose, onSaved }) {
             );
             return (
               <div className="mr-auto flex items-center gap-2">
+                <LampiranBadges
+                  fakturOk={Boolean(fpAttachment?.storage_path)}
+                  bpOk={Boolean(bpAttachment?.storage_path)}
+                  className="mr-1"
+                />
                 <button
                   type="button"
                   data-testid="invoice-form-pdf-invoice"
