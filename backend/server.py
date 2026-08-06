@@ -2634,9 +2634,8 @@ async def export_pdf_one(wo_id: str, request: Request, auth: Optional[str] = Que
 ALMAR_COMPANY = {
     "name": "PT. ALMAR MITRA NIAGA",
     "address_lines": [
-        "Jl. Pahlawan Revolusi No.10, RT.2/RW.2,",
-        "Pd. Bambu, Kec. Duren Sawit, Kota Jakarta Timur,",
-        "Daerah Khusus Ibukota Jakarta 13430",
+        "Gedung Pembina Graha Blok 2 R. 227",
+        "Jl. D. I. Panjaitan No. 45, Jakarta 13350",
     ],
 }
 LINTASARTA_BILL = {
