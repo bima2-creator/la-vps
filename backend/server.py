@@ -2620,7 +2620,10 @@ def _fmt_rp(n: float) -> str:
 
 
 @api.get("/invoices/{inv_id}/pdf")
-async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
+async def invoice_pdf(inv_id: str, part: str = Query("invoice"), user: dict = Depends(get_current_user)):
+    part = (part or "invoice").lower()
+    if part not in ("invoice", "lampiran"):
+        raise HTTPException(400, "part harus 'invoice' atau 'lampiran'")
     try:
         oid = ObjectId(inv_id)
     except Exception:
@@ -2628,6 +2631,23 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
     inv = await db.invoices.find_one({"_id": oid})
     if not inv:
         raise HTTPException(404, "Invoice tidak ditemukan")
+
+    # --- Gating rules per part ---
+    if part == "invoice":
+        has_pelanggan = bool(inv.get("pelanggans") or inv.get("pelanggan") or inv.get("work_order_ids"))
+        if not (has_pelanggan and (inv.get("invoice_no") or "").strip() and (inv.get("inv_no_eproc") or "").strip()):
+            raise HTTPException(
+                400,
+                "PDF Invoice hanya dapat dibuat bila sudah ada daftar pelanggan, Nomor Invoice, dan Nomor Invoice EPROC.",
+            )
+    else:  # lampiran
+        _fp = inv.get("faktur_pajak_attachment") or {}
+        _bp = inv.get("bukti_potong_attachment") or {}
+        if not (_fp.get("storage_path") and _bp.get("storage_path")):
+            raise HTTPException(
+                400,
+                "PDF Lampiran hanya dapat dibuat bila file Faktur Pajak dan Bukti Potong sudah diupload.",
+            )
 
     # Build line items from WO snapshots.
     wo_ids = inv.get("work_order_ids", []) or []
@@ -2968,11 +2988,19 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
     buf.seek(0)
     safe_no = (inv_no or "invoice").replace("/", "-").replace(" ", "_")
 
+    # Part 1 — INVOICE ONLY: return the invoice document without lampiran.
+    if part == "invoice":
+        return StreamingResponse(
+            buf,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="{safe_no}.pdf"'},
+        )
+
     # -----------------------------------------------------------
-    # Build lampiran list: Faktur Pajak + all attachments from every
-    # work order that belongs to this invoice. Each item is converted
-    # to PDF bytes (images wrapped into an A4 page) and merged
-    # sequentially after the main invoice.
+    # Part 2 — LAMPIRAN ONLY: Faktur Pajak + Bukti Potong + (per WO)
+    # SPK & Berita Acara. Each item is converted to PDF bytes (images
+    # wrapped into an A4 page) and merged sequentially. The invoice
+    # document itself is NOT included here.
     # -----------------------------------------------------------
     def _to_pdf_bytes(raw: bytes, ext: str, ctype: str) -> Optional[bytes]:
         ext = (ext or "").lower()
@@ -3104,12 +3132,12 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
         except Exception as e:
             log.warning("wo attachments query failed for %s: %s", inv_id, e)
 
-    # 4) Merge everything if we have pypdf and any lampiran
-    if lampiran_pdfs and _HAS_PYPDF:
+    # 4) Merge all lampiran into a single PDF (invoice document NOT included).
+    if not lampiran_pdfs:
+        raise HTTPException(400, "Tidak ada lampiran yang bisa digenerate. Pastikan file sudah terupload.")
+    if _HAS_PYPDF:
         try:
             writer = PdfWriter()
-            for page in PdfReader(io.BytesIO(buf.getvalue())).pages:
-                writer.add_page(page)
             for pdf_b in lampiran_pdfs:
                 try:
                     for page in PdfReader(io.BytesIO(pdf_b)).pages:
@@ -3122,15 +3150,16 @@ async def invoice_pdf(inv_id: str, user: dict = Depends(get_current_user)):
             return StreamingResponse(
                 merged,
                 media_type="application/pdf",
-                headers={"Content-Disposition": f'inline; filename="{safe_no}.pdf"'},
+                headers={"Content-Disposition": f'inline; filename="{safe_no}-lampiran.pdf"'},
             )
         except Exception as e:
-            log.warning("invoice pdf merge failed for %s: %s", inv_id, e)
+            log.warning("invoice lampiran merge failed for %s: %s", inv_id, e)
 
+    # Fallback (pypdf unavailable): return the first lampiran as-is.
     return StreamingResponse(
-        buf,
+        io.BytesIO(lampiran_pdfs[0]),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{safe_no}.pdf"'},
+        headers={"Content-Disposition": f'inline; filename="{safe_no}-lampiran.pdf"'},
     )
 
 

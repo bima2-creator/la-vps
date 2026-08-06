@@ -13,6 +13,7 @@ import {
   Warning,
   FilePdf,
   DownloadSimple,
+  Paperclip,
 } from "@phosphor-icons/react";
 import { useAuth } from "@/context/AuthContext";
 import { Pagination, PAGE_SIZE } from "@/components/Pagination";
@@ -152,6 +153,32 @@ export default function InvoicesPage() {
       load();
     } catch (e) {
       toast.error(formatApiError(e));
+    }
+  };
+
+  const openInvoicePdf = async (iv, part) => {
+    try {
+      const resp = await api.get(`/invoices/${iv.id}/pdf`, {
+        params: { part },
+        responseType: "blob",
+      });
+      const blob = new Blob([resp.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+    } catch (e) {
+      let msg = "Gagal generate PDF";
+      if (e.response?.data instanceof Blob) {
+        try {
+          const j = JSON.parse(await e.response.data.text());
+          msg = j.detail || msg;
+        } catch {
+          /* ignore */
+        }
+      } else {
+        msg = formatApiError(e) || msg;
+      }
+      toast.error(msg);
     }
   };
 
@@ -347,40 +374,66 @@ export default function InvoicesPage() {
                       {iv.status || "-"}
                     </span>
                   </td>
-                  <td className="px-2 py-2 text-right">
-                    <button
-                      data-testid={`invoice-pdf-${iv.id}`}
-                      onClick={async () => {
-                        if (!iv.inv_no_eproc) {
-                          toast.error("Isi No Invoice EPROC dulu untuk mengaktifkan PDF");
-                          return;
-                        }
-                        try {
-                          const resp = await api.get(`/invoices/${iv.id}/pdf`, {
-                            responseType: "blob",
-                          });
-                          const blob = new Blob([resp.data], { type: "application/pdf" });
-                          const url = window.URL.createObjectURL(blob);
-                          window.open(url, "_blank");
-                          setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
-                        } catch (e) {
-                          toast.error(formatApiError(e) || "Gagal generate PDF");
-                        }
-                      }}
-                      disabled={!iv.inv_no_eproc}
-                      className={`p-1 mr-1 ${
-                        iv.inv_no_eproc
-                          ? "text-red-600 hover:text-red-700"
-                          : "text-muted-foreground/40 cursor-not-allowed"
-                      }`}
-                      title={
-                        iv.inv_no_eproc
-                          ? "Print / Download PDF"
-                          : "Isi No Invoice EPROC dulu untuk mengaktifkan PDF"
-                      }
-                    >
-                      <FilePdf size={14} weight="fill" />
-                    </button>
+                  <td className="px-2 py-2 text-right whitespace-nowrap">
+                    {(() => {
+                      const invoiceReady = Boolean(
+                        iv.invoice_no &&
+                          iv.inv_no_eproc &&
+                          ((iv.pelanggans && iv.pelanggans.length) || iv.pelanggan)
+                      );
+                      const lampiranReady = Boolean(
+                        iv.faktur_pajak_attachment?.storage_path &&
+                          iv.bukti_potong_attachment?.storage_path
+                      );
+                      return (
+                        <>
+                          <button
+                            data-testid={`invoice-pdf-${iv.id}`}
+                            onClick={() =>
+                              invoiceReady
+                                ? openInvoicePdf(iv, "invoice")
+                                : toast.error(
+                                    "PDF Invoice butuh daftar pelanggan, Nomor Invoice & Nomor Invoice EPROC"
+                                  )
+                            }
+                            className={`p-1 mr-1 ${
+                              invoiceReady
+                                ? "text-red-600 hover:text-red-700"
+                                : "text-muted-foreground/40 cursor-not-allowed"
+                            }`}
+                            title={
+                              invoiceReady
+                                ? "PDF Invoice"
+                                : "Lengkapi daftar pelanggan, Nomor Invoice & Nomor Invoice EPROC untuk PDF Invoice"
+                            }
+                          >
+                            <FilePdf size={14} weight="fill" />
+                          </button>
+                          <button
+                            data-testid={`invoice-lampiran-pdf-${iv.id}`}
+                            onClick={() =>
+                              lampiranReady
+                                ? openInvoicePdf(iv, "lampiran")
+                                : toast.error(
+                                    "PDF Lampiran butuh file Faktur Pajak & Bukti Potong yang sudah diupload"
+                                  )
+                            }
+                            className={`p-1 mr-1 ${
+                              lampiranReady
+                                ? "text-blue-600 hover:text-blue-700"
+                                : "text-muted-foreground/40 cursor-not-allowed"
+                            }`}
+                            title={
+                              lampiranReady
+                                ? "PDF Lampiran (Faktur, Bukti Potong, SPK & Berita Acara)"
+                                : "Upload Faktur Pajak & Bukti Potong untuk PDF Lampiran"
+                            }
+                          >
+                            <Paperclip size={14} weight="fill" />
+                          </button>
+                        </>
+                      );
+                    })()}
                     {canEdit && (
                       <button
                         data-testid={`invoice-edit-${iv.id}`}
