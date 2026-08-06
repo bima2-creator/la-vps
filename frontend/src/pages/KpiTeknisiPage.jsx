@@ -12,7 +12,35 @@ import {
   ArrowSquareOut,
 } from "@phosphor-icons/react";
 
-function SummaryCard({ label, icon: Icon, accent, data }) {
+const STATUS_LABEL = { ALL: "Total WO", OK: "Selesai - OK", BATAL: "Selesai - Batal", PENDING: "Pending" };
+
+function NumLink({ value, onClick, testId, cls = "" }) {
+  if (!value) return <span className={`mono ${cls}`}>{value}</span>;
+  return (
+    <button
+      data-testid={testId}
+      onClick={onClick}
+      className={`mono hover:underline underline-offset-2 cursor-pointer ${cls}`}
+    >
+      {value}
+    </button>
+  );
+}
+
+
+function SummaryCard({ label, icon: Icon, accent, data, tim, onOpen }) {
+  const Num = ({ value, status, cls = "" }) =>
+    value > 0 ? (
+      <button
+        data-testid={`kpi-card-${label}-${status}`}
+        onClick={() => onOpen({ tim, status, title: `${label} · ${STATUS_LABEL[status]}` })}
+        className={`mono font-semibold hover:underline underline-offset-2 cursor-pointer ${cls}`}
+      >
+        {value}
+      </button>
+    ) : (
+      <span className={`mono ${cls}`}>{value}</span>
+    );
   return (
     <div className="border border-border bg-card rounded-sm p-5">
       <div className="flex items-center gap-2 mb-3">
@@ -23,13 +51,13 @@ function SummaryCard({ label, icon: Icon, accent, data }) {
       </div>
       <div className="grid grid-cols-2 gap-y-2 gap-x-3 text-sm">
         <div className="text-muted-foreground">Teknisi</div>
-        <div className="mono text-right font-semibold">{data?.teknisi_count ?? 0}</div>
+        <div className="text-right mono font-semibold">{data?.teknisi_count ?? 0}</div>
         <div className="text-muted-foreground">Total WO</div>
-        <div className="mono text-right font-semibold">{data?.total ?? 0}</div>
+        <div className="text-right"><Num value={data?.total ?? 0} status="ALL" /></div>
         <div className="text-muted-foreground">Selesai - OK</div>
-        <div className="mono text-right text-emerald-600">{data?.ok ?? 0}</div>
+        <div className="text-right"><Num value={data?.ok ?? 0} status="OK" cls="text-emerald-600" /></div>
         <div className="text-muted-foreground">Selesai - Batal</div>
-        <div className="mono text-right text-red-500">{data?.batal ?? 0}</div>
+        <div className="text-right"><Num value={data?.batal ?? 0} status="BATAL" cls="text-red-500" /></div>
       </div>
     </div>
   );
@@ -43,7 +71,7 @@ export default function KpiTeknisiPage() {
   const [tim, setTim] = useState("");
   const [q, setQ] = useState("");
   const nav = useNavigate();
-  const [detail, setDetail] = useState(null); // { nama, tim }
+  const [detail, setDetail] = useState(null); // { nama, tim, status, title }
   const [detailItems, setDetailItems] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -67,22 +95,32 @@ export default function KpiTeknisiPage() {
     load();
   }, [load]);
 
-  const openDetail = async (row) => {
-    setDetail({ nama: row.nama, tim: row.tim });
+  const openDetail = async ({ nama = "", tim = "", status = "ALL", title }) => {
+    setDetail({ nama, tim, status, title: title || nama || "Semua Teknisi" });
     setDetailLoading(true);
     setDetailItems([]);
     try {
-      const params = { nama: row.nama, tim: row.tim };
+      const params = {};
+      if (nama) params.nama = nama;
+      if (tim) params.tim = tim;
       if (dateFrom) params.date_from = dateFrom;
       if (dateTo) params.date_to = dateTo;
       const { data } = await api.get("/kpi/teknisi/workorders", { params });
       setDetailItems(data.items || []);
     } catch {
-      toast.error("Gagal memuat daftar WO teknisi");
+      toast.error("Gagal memuat daftar WO");
     } finally {
       setDetailLoading(false);
     }
   };
+
+  const shownDetailItems = (detailItems || []).filter((w) => {
+    const s = detail?.status || "ALL";
+    if (s === "OK") return w.status === "OK";
+    if (s === "BATAL") return w.status === "BATAL";
+    if (s === "PENDING") return w.status !== "OK" && w.status !== "BATAL";
+    return true;
+  });
 
   const exportXlsx = async () => {
     try {
@@ -117,7 +155,7 @@ export default function KpiTeknisiPage() {
           <h1 className="font-display text-4xl font-black tracking-tighter">KPI Teknisi</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             Pencapaian per teknisi & tim (Internal vs Mitra). WO dihitung selesai bila status
-            hasil pekerjaan <b>OK</b> atau <b>Batal</b>. Klik nama teknisi untuk melihat daftar WO.
+            hasil pekerjaan <b>OK</b> atau <b>Batal</b>. Klik nama teknisi atau angka untuk melihat daftar WO terkait.
           </p>
         </div>
         <button
@@ -192,18 +230,24 @@ export default function KpiTeknisiPage() {
           icon={UsersThree}
           accent="bg-blue-100 text-blue-700"
           data={data.summary?.internal}
+          tim="INTERNAL"
+          onOpen={openDetail}
         />
         <SummaryCard
           label="Mitra"
           icon={Buildings}
           accent="bg-amber-100 text-amber-700"
           data={data.summary?.mitra}
+          tim="MITRA"
+          onOpen={openDetail}
         />
         <SummaryCard
           label="Semua"
           icon={ChartLineUp}
           accent="bg-emerald-100 text-emerald-700"
           data={data.summary?.all}
+          tim=""
+          onOpen={openDetail}
         />
       </div>
 
@@ -237,7 +281,7 @@ export default function KpiTeknisiPage() {
                   <td className="px-3 py-2 font-medium">
                     <button
                       data-testid={`kpi-open-${r.nama}`}
-                      onClick={() => openDetail(r)}
+                      onClick={() => openDetail({ nama: r.nama, tim: r.tim, status: "ALL", title: r.nama })}
                       className="text-blue-700 hover:underline text-left inline-flex items-center gap-1"
                     >
                       {r.nama}
@@ -255,10 +299,18 @@ export default function KpiTeknisiPage() {
                       {r.tim}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-right mono font-semibold">{r.total}</td>
-                  <td className="px-3 py-2 text-right mono text-emerald-600">{r.ok}</td>
-                  <td className="px-3 py-2 text-right mono text-red-500">{r.batal}</td>
-                  <td className="px-3 py-2 text-right mono text-muted-foreground">{r.pending}</td>
+                  <td className="px-3 py-2 text-right">
+                    <NumLink value={r.total} onClick={() => openDetail({ nama: r.nama, tim: r.tim, status: "ALL", title: `${r.nama} · Total WO` })} testId={`kpi-num-${r.nama}-total`} cls="font-semibold" />
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <NumLink value={r.ok} onClick={() => openDetail({ nama: r.nama, tim: r.tim, status: "OK", title: `${r.nama} · Selesai - OK` })} testId={`kpi-num-${r.nama}-ok`} cls="text-emerald-600" />
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <NumLink value={r.batal} onClick={() => openDetail({ nama: r.nama, tim: r.tim, status: "BATAL", title: `${r.nama} · Selesai - Batal` })} testId={`kpi-num-${r.nama}-batal`} cls="text-red-500" />
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <NumLink value={r.pending} onClick={() => openDetail({ nama: r.nama, tim: r.tim, status: "PENDING", title: `${r.nama} · Pending` })} testId={`kpi-num-${r.nama}-pending`} cls="text-muted-foreground" />
+                  </td>
                 </tr>
               ))
             )}
@@ -283,11 +335,13 @@ export default function KpiTeknisiPage() {
             <div className="flex items-center justify-between px-5 py-3 border-b border-border">
               <div>
                 <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                  Detail WO Teknisi
+                  Detail Work Order
                 </div>
                 <div className="font-display text-lg font-bold">
-                  {detail.nama}{" "}
-                  <span className="text-xs mono text-muted-foreground">({detail.tim})</span>
+                  {detail.title}{" "}
+                  {detail.tim && (
+                    <span className="text-xs mono text-muted-foreground">({detail.tim})</span>
+                  )}
                 </div>
               </div>
               <button
@@ -318,14 +372,14 @@ export default function KpiTeknisiPage() {
                         Memuat…
                       </td>
                     </tr>
-                  ) : detailItems.length === 0 ? (
+                  ) : shownDetailItems.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                         Tidak ada WO.
                       </td>
                     </tr>
                   ) : (
-                    detailItems.map((w) => (
+                    shownDetailItems.map((w) => (
                       <tr
                         key={w.id}
                         data-testid={`kpi-detail-row-${w.id}`}
@@ -365,7 +419,7 @@ export default function KpiTeknisiPage() {
               </table>
             </div>
             <div className="px-5 py-2.5 border-t border-border text-xs text-muted-foreground">
-              Total {detailItems.length} WO
+              Total {shownDetailItems.length} WO
             </div>
           </div>
         </div>

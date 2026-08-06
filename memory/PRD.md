@@ -27,6 +27,11 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 - **Excel Export** (`GET /api/workorders/export/xlsx`): sheet "Workorders" (+ kolom PERANGKAT DETAIL) & sheet "Perangkat".
 - **Excel Import dedup** (`POST /api/workorders/import/xlsx`): dedup berdasarkan **nomor SPK per section** (survey/instalasi/aktivasi). Jika salah satu nomor SPK di baris impor sudah ada di DB → baris dilewati (skip). Response `{inserted, skipped}`. Frontend menampilkan jumlah baris yang dilewati. *Catatan: baris tanpa nomor SPK tidak bisa didedup dan akan selalu di-insert.* ✅ Diverifikasi via curl (35 skip saat re-import).
 
+## KPI angka bisa diklik (June 2026)
+- Halaman KPI Teknisi: semua nilai angka (Total WO, Selesai-OK, Selesai-Batal, Pending) di tabel per-teknisi DAN di kartu ringkasan (Internal/Mitra/Semua) kini dapat diklik → membuka modal daftar WO yang sudah difilter sesuai status.
+- Backend: `/api/kpi/teknisi/workorders` kini `nama` opsional (mendukung query tingkat tim untuk kartu ringkasan). `teknisi_pelaksana` = List (match array membership).
+- Frontend `KpiTeknisiPage.jsx`: komponen `NumLink` + `openDetail({nama,tim,status,title})` + filter client-side. Terverifikasi UI (klik angka tabel & kartu → modal terfilter benar).
+
 ## Backup Otomatis (June 2026)
 - Backend: APScheduler `AsyncIOScheduler` menjalankan `_run_auto_backup` tiap 24 jam. `create_backup()` mengekspor koleksi (workorders, invoices, perangkat_bank, teknisi_master, users, audit_logs, attachments) ke JSON (bson.json_util → roundtrip ObjectId/datetime) & simpan ke object storage `backups/`. Metadata di koleksi `backups`. Retensi 7 terakhir (`_prune_backups`, env `BACKUP_RETENTION`).
 - Endpoints (admin): `GET/POST /api/backups`, `GET /api/backups/{id}/download`, `POST /api/backups/{id}/restore` (delete_many+insert_many lalu seed_fixed_users), `DELETE /api/backups/{id}`.

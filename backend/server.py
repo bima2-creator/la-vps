@@ -1080,12 +1080,15 @@ async def _compute_kpi_teknisi(date_from, date_to, tim) -> dict:
 
 
 @api.get("/kpi/teknisi/workorders")
-async def kpi_teknisi_workorders(nama: str, tim: Optional[str] = None,
+async def kpi_teknisi_workorders(nama: Optional[str] = None, tim: Optional[str] = None,
                                  date_from: Optional[str] = None, date_to: Optional[str] = None,
                                  user: dict = Depends(get_current_user)):
-    """Daftar Work Order yang ditangani seorang teknisi (untuk detail per teknisi)."""
+    """Daftar Work Order untuk detail KPI.
+    - Jika `nama` diisi: WO milik teknisi tsb.
+    - Jika `nama` kosong: seluruh WO pada tim/rentang tanggal (untuk kartu ringkasan)."""
     query = _kpi_query(date_from, date_to, tim)
-    query["teknisi_pelaksana"] = nama.strip()
+    if nama:
+        query["teknisi_pelaksana"] = nama.strip()
     docs = await db.workorders.find(query).sort("created_at", -1).to_list(100000)
     items = []
     for wo in docs:
