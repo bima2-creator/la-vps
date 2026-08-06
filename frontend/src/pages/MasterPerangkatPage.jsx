@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
@@ -198,9 +198,11 @@ function DrillPanel({ device, onClose }) {
 }
 
 export default function MasterPerangkatPage() {
+  const [searchParams] = useSearchParams();
+  const initialStatus = searchParams.get("status") || "";
   const [q, setQ] = useState("");
   const [jenisWO, setJenisWO] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(initialStatus);
   const [data, setData] = useState({ kpi: {}, items: [], total: 0 });
   const [loading, setLoading] = useState(true);
   const [drill, setDrill] = useState(null);
@@ -231,7 +233,7 @@ export default function MasterPerangkatPage() {
   };
 
   useEffect(() => {
-    load();
+    load({ status: initialStatus });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

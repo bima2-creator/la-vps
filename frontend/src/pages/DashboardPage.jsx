@@ -392,7 +392,12 @@ export default function DashboardPage() {
                   ].map((c) => {
                     const d = kpi.summary?.[c.key] || {};
                     return (
-                      <div key={c.key} className={`rounded-lg border border-border p-3 ${c.tone}`}>
+                      <button
+                        key={c.key}
+                        data-testid={`dashboard-kpi-box-${c.key}`}
+                        onClick={() => nav("/kpi-teknisi")}
+                        className={`text-left rounded-lg border border-border p-3 transition-all hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${c.tone}`}
+                      >
                         <div className="text-[10px] uppercase tracking-widest font-semibold">
                           {c.label}
                         </div>
@@ -408,7 +413,7 @@ export default function DashboardPage() {
                             <div className="opacity-80">{d.teknisi_count ?? 0} teknisi</div>
                           </div>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -417,8 +422,13 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-1.5">
                   {(kpi.technicians || []).slice(0, 5).map((r) => (
-                    <div key={`${r.nama}-${r.tim}`} className="flex items-center gap-3 text-sm">
-                      <span className="flex-1 truncate font-medium">{r.nama}</span>
+                    <button
+                      key={`${r.nama}-${r.tim}`}
+                      data-testid={`dashboard-top-teknisi-${r.nama}`}
+                      onClick={() => nav("/kpi-teknisi")}
+                      className="w-full flex items-center gap-3 text-sm px-2 py-1 rounded-sm hover:bg-blue-50 transition-colors text-left"
+                    >
+                      <span className="flex-1 truncate font-medium text-blue-700">{r.nama}</span>
                       <span className="text-[10px] mono uppercase text-muted-foreground w-16">
                         {r.tim}
                       </span>
@@ -429,7 +439,7 @@ export default function DashboardPage() {
                       <span className="mono text-xs w-20 text-right text-red-500">
                         Batal {r.batal}
                       </span>
-                    </div>
+                    </button>
                   ))}
                   {(kpi.technicians || []).length === 0 && (
                     <div className="text-sm text-muted-foreground">Belum ada data teknisi.</div>
@@ -455,34 +465,38 @@ export default function DashboardPage() {
                 <Kpi
                   label="Total Perangkat"
                   value={perangkatStats.total}
-                  hint="Nomor registrasi unik terekam"
+                  hint="Nomor registrasi unik · klik untuk buka daftar"
                   testid="perangkat-stat-total"
                   icon={HardDrives}
                   tone="blue"
+                  onClick={() => nav("/perangkat")}
                 />
                 <Kpi
                   label="Tersedia"
                   value={perangkatStats.tersedia}
-                  hint="Eks-dismantle · siap dipakai"
+                  hint="Eks-dismantle · klik untuk buka daftar"
                   testid="perangkat-stat-tersedia"
                   icon={ArrowsCounterClockwise}
                   tone="green"
+                  onClick={() => nav("/perangkat?status=DISMANTLED")}
                 />
                 <Kpi
                   label="Terpasang"
                   value={perangkatStats.terpasang}
-                  hint="Terpasang aktif di pelanggan"
+                  hint="Terpasang aktif · klik untuk buka daftar"
                   testid="perangkat-stat-terpasang"
                   icon={CheckCircle}
                   tone="amber"
+                  onClick={() => nav("/perangkat?status=TERPASANG")}
                 />
                 <Kpi
                   label="Dicabut / Rusak"
                   value={perangkatStats.dicabut}
-                  hint="Pensiun · tidak dapat dipakai"
+                  hint="Pensiun/rusak · klik untuk buka daftar"
                   testid="perangkat-stat-dicabut"
                   icon={Wrench}
                   tone="red"
+                  onClick={() => nav("/perangkat?status=MAINTENANCE")}
                 />
               </div>
             </Section>

@@ -2387,7 +2387,11 @@ async def perangkat_registry(
     if jenis_wo:
         items = [d for d in items if (d.get("latest_jenis_order") or "").upper() == jenis_wo.upper()]
     if status:
-        items = [d for d in items if (d.get("current_status") or "").upper() == status.upper()]
+        su = status.upper()
+        if su == "TERPASANG":
+            items = [d for d in items if (d.get("current_status") or "").upper().startswith("TERPASANG")]
+        else:
+            items = [d for d in items if (d.get("current_status") or "").upper() == su]
 
     total = len(items)
 
