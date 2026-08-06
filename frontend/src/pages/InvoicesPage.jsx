@@ -63,6 +63,41 @@ function makeInvoiceNo() {
   return "";
 }
 
+// Download an invoice PDF (part = "invoice" | "lampiran") with a clear filename.
+const downloadInvoicePdf = async (invId, part, invoiceNo) => {
+  try {
+    const resp = await api.get(`/invoices/${invId}/pdf`, {
+      params: { part },
+      responseType: "blob",
+    });
+    const safe = String(invoiceNo || "invoice").replace(/[\/\\\s]+/g, "-");
+    const filename = part === "lampiran" ? `${safe}-Lampiran.pdf` : `${safe}.pdf`;
+    const url = window.URL.createObjectURL(
+      new Blob([resp.data], { type: "application/pdf" })
+    );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+  } catch (e) {
+    let msg = "Gagal generate PDF";
+    if (e.response?.data instanceof Blob) {
+      try {
+        const j = JSON.parse(await e.response.data.text());
+        msg = j.detail || msg;
+      } catch {
+        /* ignore */
+      }
+    } else {
+      msg = formatApiError(e) || msg;
+    }
+    toast.error(msg);
+  }
+};
+
 export default function InvoicesPage() {
   const { user } = useAuth();
   const canEdit = user && (user.role === "admin" || user.role === "operator");
@@ -156,31 +191,8 @@ export default function InvoicesPage() {
     }
   };
 
-  const openInvoicePdf = async (iv, part) => {
-    try {
-      const resp = await api.get(`/invoices/${iv.id}/pdf`, {
-        params: { part },
-        responseType: "blob",
-      });
-      const blob = new Blob([resp.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, "_blank");
-      setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
-    } catch (e) {
-      let msg = "Gagal generate PDF";
-      if (e.response?.data instanceof Blob) {
-        try {
-          const j = JSON.parse(await e.response.data.text());
-          msg = j.detail || msg;
-        } catch {
-          /* ignore */
-        }
-      } else {
-        msg = formatApiError(e) || msg;
-      }
-      toast.error(msg);
-    }
-  };
+  const openInvoicePdf = (iv, part) =>
+    downloadInvoicePdf(iv.id, part, iv.invoice_no);
 
   return (
     <div className="p-6 lg:p-8" data-testid="invoices-page">
@@ -1395,6 +1407,64 @@ function InvoiceForm({ initial, onClose, onSaved }) {
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-border flex items-center justify-end gap-2 bg-slate-50">
+          {invId && (() => {
+            const invoiceReady = Boolean(
+              meta.invoice_no && meta.inv_no_eproc && selectedPelanggans.length > 0
+            );
+            const lampiranReady = Boolean(
+              fpAttachment?.storage_path && bpAttachment?.storage_path
+            );
+            return (
+              <div className="mr-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  data-testid="invoice-form-pdf-invoice"
+                  onClick={() =>
+                    invoiceReady
+                      ? downloadInvoicePdf(invId, "invoice", meta.invoice_no)
+                      : toast.error(
+                          "PDF Invoice butuh daftar pelanggan, Nomor Invoice & Nomor Invoice EPROC"
+                        )
+                  }
+                  className={`inline-flex items-center gap-1.5 border rounded-sm px-3 py-2 text-sm transition-colors ${
+                    invoiceReady
+                      ? "border-red-200 text-red-600 hover:bg-red-50"
+                      : "border-border text-muted-foreground/50 cursor-not-allowed"
+                  }`}
+                  title={
+                    invoiceReady
+                      ? "Unduh PDF Invoice"
+                      : "Lengkapi daftar pelanggan, Nomor Invoice & Nomor Invoice EPROC"
+                  }
+                >
+                  <FilePdf size={16} weight="fill" /> PDF Invoice
+                </button>
+                <button
+                  type="button"
+                  data-testid="invoice-form-pdf-lampiran"
+                  onClick={() =>
+                    lampiranReady
+                      ? downloadInvoicePdf(invId, "lampiran", meta.invoice_no)
+                      : toast.error(
+                          "PDF Lampiran butuh file Faktur Pajak & Bukti Potong yang sudah diupload"
+                        )
+                  }
+                  className={`inline-flex items-center gap-1.5 border rounded-sm px-3 py-2 text-sm transition-colors ${
+                    lampiranReady
+                      ? "border-blue-200 text-blue-600 hover:bg-blue-50"
+                      : "border-border text-muted-foreground/50 cursor-not-allowed"
+                  }`}
+                  title={
+                    lampiranReady
+                      ? "Unduh PDF Lampiran (Faktur, Bukti Potong, SPK & Berita Acara)"
+                      : "Upload Faktur Pajak & Bukti Potong dulu"
+                  }
+                >
+                  <Paperclip size={16} weight="fill" /> PDF Lampiran
+                </button>
+              </div>
+            );
+          })()}
           <button
             onClick={onClose}
             className="border border-border bg-white hover:bg-slate-100 rounded-sm px-4 py-2 text-sm"
