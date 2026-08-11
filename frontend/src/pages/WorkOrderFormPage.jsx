@@ -96,14 +96,14 @@ function Field({ f, value, onChange }) {
             step="any"
             value={num}
             onChange={(e) => emit(e.target.value, unitNorm)}
-            className={`${base} flex-1`}
+            className={`${base} flex-1 min-w-[90px]`}
             placeholder={f.placeholder}
           />
           <select
             data-testid={`${WOFORM.input}-${f.name}-unit`}
             value={unitNorm}
             onChange={(e) => emit(num, e.target.value)}
-            className={`${base} w-28`}
+            className={`${base} w-24 shrink-0`}
           >
             <option value="Gbps">Gbps</option>
             <option value="Mbps">Mbps</option>
