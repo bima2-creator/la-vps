@@ -27,6 +27,10 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 - **Excel Export** (`GET /api/workorders/export/xlsx`): sheet "Workorders" (+ kolom PERANGKAT DETAIL) & sheet "Perangkat".
 - **Excel Import dedup** (`POST /api/workorders/import/xlsx`): dedup berdasarkan **nomor SPK per section** (survey/instalasi/aktivasi). Jika salah satu nomor SPK di baris impor sudah ada di DB → baris dilewati (skip). Response `{inserted, skipped}`. Frontend menampilkan jumlah baris yang dilewati. *Catatan: baris tanpa nomor SPK tidak bisa didedup dan akan selalu di-insert.* ✅ Diverifikasi via curl (35 skip saat re-import).
 
+## Badge menu & index MongoDB (June 2026)
+- Sidebar "Work Orders" menampilkan badge amber jumlah WO belum invoice. Endpoint baru `GET /workorders/pending-invoice-count` → {total, belum, sudah}. Layout fetch saat pindah route.
+- Index MongoDB ditambah: workorders(jenis_order, created_at desc), invoices(work_order_ids). Terverifikasi (badge=35, index terpasang).
+
 ## Invoice filter, badge link, query cap (June 2026)
 - Work Orders: filter cepat "Sudah/Belum Invoice" (`GET /workorders?invoiced=sudah|belum`, cocokkan via invoices.work_order_ids + legacy inv_no). Badge No Invoice kini bisa diklik → `/invoices?q=<no>` (InvoicesPage baca `?q=` dari URL). Field `invoice_id` ditambahkan di output list.
 - Optimasi query: dashboard stats & `_compute_kpi_teknisi` pakai projection field + cap `STATS_SCAN_LIMIT` (env, default 50000). Terverifikasi curl + UI.

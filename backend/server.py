@@ -419,6 +419,9 @@ async def on_startup() -> None:
     await db.workorders.create_index("sa_id")
     await db.workorders.create_index("inv_status")
     await db.workorders.create_index("media_jenis")
+    await db.workorders.create_index("jenis_order")
+    await db.workorders.create_index([("created_at", -1)])
+    await db.invoices.create_index("work_order_ids")
     try:
         await db.workorders.create_index("perangkat_items.nomor_registrasi", sparse=True)
     except Exception:
@@ -803,6 +806,26 @@ async def list_workorders(
         it["invoice_id"] = inv_id_map.get(it["id"], "")
 
     return {"total": total, "page": page, "page_size": page_size, "items": items}
+
+
+@api.get("/workorders/pending-invoice-count")
+async def workorders_pending_invoice_count(user: dict = Depends(get_current_user)):
+    """Jumlah Work Order yang belum dibuatkan invoice (untuk badge menu)."""
+    invoiced_ids: set = set()
+    async for iv in db.invoices.find({}, {"work_order_ids": 1}):
+        for wid in iv.get("work_order_ids", []) or []:
+            invoiced_ids.add(str(wid))
+    async for w in db.workorders.find({"inv_no": {"$nin": ["", None]}}, {"_id": 1}):
+        invoiced_ids.add(str(w["_id"]))
+    oids = []
+    for x in invoiced_ids:
+        try:
+            oids.append(ObjectId(x))
+        except Exception:
+            pass
+    total = await db.workorders.count_documents({})
+    belum = await db.workorders.count_documents({"_id": {"$nin": oids}}) if oids else total
+    return {"total": total, "belum": belum, "sudah": total - belum}
 
 
 @api.get("/workorders/{wo_id}")

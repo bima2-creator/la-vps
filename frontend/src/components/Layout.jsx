@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
 import { NAV } from "@/constants/testIds";
 import IdleTimeoutManager from "@/components/IdleTimeoutManager";
 import {
@@ -46,7 +47,25 @@ function initialsOf(name = "") {
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [belumInvoice, setBelumInvoice] = useState(null);
+
+  // Badge count of Work Orders yang belum dibuatkan invoice.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await api.get("/workorders/pending-invoice-count");
+        if (alive) setBelumInvoice(data.belum);
+      } catch {
+        /* non-blocking */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -57,13 +76,15 @@ export default function Layout() {
   const mainItems = visibleItems.filter((i) => i.group === "main");
   const adminItems = visibleItems.filter((i) => i.group === "admin");
 
-  const renderLink = ({ to, label, icon: Icon, testid }) => (
+  const renderLink = ({ to, label, icon: Icon, testid }) => {
+    const badge = to === "/workorders" && belumInvoice ? belumInvoice : null;
+    return (
     <NavLink
       key={to}
       to={to}
       end={to === "/workorders"}
       data-testid={testid}
-      title={collapsed ? label : undefined}
+      title={collapsed ? `${label}${badge ? ` (${badge} belum invoice)` : ""}` : undefined}
       className={({ isActive }) =>
         `group relative flex items-center gap-3 rounded-lg text-sm font-medium transition-all ${
           collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"
@@ -76,8 +97,20 @@ export default function Layout() {
     >
       <Icon size={19} weight={collapsed ? "regular" : "duotone"} className="shrink-0" />
       {!collapsed && <span className="truncate">{label}</span>}
+      {badge != null && (
+        <span
+          data-testid="nav-workorders-belum-badge"
+          className={`ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold mono bg-amber-500 text-white ${
+            collapsed ? "absolute -top-0.5 -right-0.5 ml-0" : ""
+          }`}
+          title={`${badge} WO belum dibuatkan invoice`}
+        >
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
     </NavLink>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
