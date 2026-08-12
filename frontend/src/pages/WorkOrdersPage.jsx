@@ -576,6 +576,22 @@ export default function WorkOrdersPage() {
                             </div>
                           );
                         })()
+                      ) : c.key === "invoice_no_display" ? (
+                        it.invoice_no_display ? (
+                          <span
+                            className="inline-flex items-center px-2 py-0.5 rounded-sm border border-emerald-200 bg-emerald-50 text-emerald-700 text-[11px] mono"
+                            title="Sudah dibuatkan invoice"
+                          >
+                            {it.invoice_no_display}
+                          </span>
+                        ) : (
+                          <span
+                            className="text-[10px] uppercase tracking-wider text-muted-foreground"
+                            title="Belum dibuatkan invoice"
+                          >
+                            Belum
+                          </span>
+                        )
                       ) : c.key === "inv_status" || c.key === "hasil_aktivasi_status" ? (
                         <StatusChip value={it[c.key]} />
                       ) : c.key === "pelanggan" ? (

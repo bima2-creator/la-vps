@@ -751,6 +751,31 @@ async def list_workorders(
     total = await db.workorders.count_documents(query)
     cursor = db.workorders.find(query).sort("created_at", -1).skip((page - 1) * page_size).limit(page_size)
     items = [workorder_to_out(d) for d in await cursor.to_list(page_size)]
+
+    # Enrich each WO with the invoice number(s) that reference it, so the list
+    # can show whether a pelanggan/SPK sudah dibuatkan invoice.
+    wo_ids = [it["id"] for it in items]
+    inv_map: Dict[str, List[str]] = {}
+    if wo_ids:
+        async for iv in db.invoices.find(
+            {"work_order_ids": {"$in": wo_ids}}, {"work_order_ids": 1, "invoice_no": 1}
+        ):
+            no = (iv.get("invoice_no") or "").strip()
+            if not no:
+                continue
+            for wid in iv.get("work_order_ids", []):
+                if wid in inv_map:
+                    if no not in inv_map[wid]:
+                        inv_map[wid].append(no)
+                else:
+                    inv_map[wid] = [no]
+    for it in items:
+        nos = inv_map.get(it["id"], [])
+        if not nos and (it.get("inv_no") or "").strip():
+            nos = [it["inv_no"].strip()]
+        it["invoice_nos"] = nos
+        it["invoice_no_display"] = ", ".join(nos)
+
     return {"total": total, "page": page, "page_size": page_size, "items": items}
 
 

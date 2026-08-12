@@ -433,6 +433,7 @@ export const TABLE_COLUMNS = [
   { key: "bw", label: "BW", mono: true },
   { key: "media_jenis", label: "Media" },
   { key: "spk_summary", label: "No SPK", virtual: true },
+  { key: "invoice_no_display", label: "No Invoice", virtual: true },
   { key: "current_activity", label: "Activity", virtual: true },
   { key: "boq_jumlah", label: "Total", mono: true, numeric: true },
 ];

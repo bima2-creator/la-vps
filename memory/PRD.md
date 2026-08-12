@@ -27,6 +27,10 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 - **Excel Export** (`GET /api/workorders/export/xlsx`): sheet "Workorders" (+ kolom PERANGKAT DETAIL) & sheet "Perangkat".
 - **Excel Import dedup** (`POST /api/workorders/import/xlsx`): dedup berdasarkan **nomor SPK per section** (survey/instalasi/aktivasi). Jika salah satu nomor SPK di baris impor sudah ada di DB → baris dilewati (skip). Response `{inserted, skipped}`. Frontend menampilkan jumlah baris yang dilewati. *Catatan: baris tanpa nomor SPK tidak bisa didedup dan akan selalu di-insert.* ✅ Diverifikasi via curl (35 skip saat re-import).
 
+## No Invoice column di Work Orders (June 2026)
+- Halaman Work Orders: tambah kolom "No Invoice". Backend `GET /workorders` menghitung nomor invoice per WO dari `invoices.work_order_ids` (fallback ke field legacy `inv_no`), field `invoice_no_display`/`invoice_nos`.
+- Frontend: kolom baru badge hijau (nomor invoice) bila sudah dibuatkan invoice, atau "BELUM" abu-abu. Terverifikasi curl + UI.
+
 ## KPI angka bisa diklik (June 2026)
 - Halaman KPI Teknisi: semua nilai angka (Total WO, Selesai-OK, Selesai-Batal, Pending) di tabel per-teknisi DAN di kartu ringkasan (Internal/Mitra/Semua) kini dapat diklik → membuka modal daftar WO yang sudah difilter sesuai status.
 - Backend: `/api/kpi/teknisi/workorders` kini `nama` opsional (mendukung query tingkat tim untuk kartu ringkasan). `teknisi_pelaksana` = List (match array membership).
