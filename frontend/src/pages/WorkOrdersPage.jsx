@@ -60,6 +60,7 @@ export default function WorkOrdersPage() {
   const [jenisOrder, setJenisOrder] = useState(searchParams.get("jenis_order") || "");
   const [jenisPekerjaan, setJenisPekerjaan] = useState(searchParams.get("jenis_pekerjaan") || "");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
+  const [invoiced, setInvoiced] = useState(searchParams.get("invoiced") || "");
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState([]);
   const [confirm, setConfirm] = useState({ open: false, ids: [], names: [] });
@@ -75,9 +76,10 @@ export default function WorkOrdersPage() {
     if (jenisOrder) sp.set("jenis_order", jenisOrder);
     if (jenisPekerjaan) sp.set("jenis_pekerjaan", jenisPekerjaan);
     if (statusFilter) sp.set("status", statusFilter);
+    if (invoiced) sp.set("invoiced", invoiced);
     setSearchParams(sp, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invStatus, media, mediaPerangkat, jenisOrder, jenisPekerjaan, statusFilter]);
+  }, [invStatus, media, mediaPerangkat, jenisOrder, jenisPekerjaan, statusFilter, invoiced]);
 
   const activeChips = [];
   if (jenisOrder)
@@ -91,6 +93,8 @@ export default function WorkOrdersPage() {
   if (media) activeChips.push({ key: "media", label: `Media: ${media}`, clear: () => setMedia("") });
   if (mediaPerangkat)
     activeChips.push({ key: "mediaPerangkat", label: `Media Perangkat: ${mediaPerangkat}`, clear: () => setMediaPerangkat("") });
+  if (invoiced)
+    activeChips.push({ key: "invoiced", label: `Invoice: ${invoiced === "sudah" ? "Sudah dibuat" : "Belum dibuat"}`, clear: () => setInvoiced("") });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,6 +107,7 @@ export default function WorkOrdersPage() {
       if (jenisOrder) params.jenis_order = jenisOrder;
       if (jenisPekerjaan) params.jenis_pekerjaan = jenisPekerjaan;
       if (statusFilter) params.status = statusFilter;
+      if (invoiced) params.invoiced = invoiced;
       const { data } = await api.get("/workorders", { params });
       setItems(data.items);
       setTotal(data.total);
@@ -112,7 +117,7 @@ export default function WorkOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, q, invStatus, media, mediaPerangkat, jenisOrder, jenisPekerjaan, statusFilter]);
+  }, [page, pageSize, q, invStatus, media, mediaPerangkat, jenisOrder, jenisPekerjaan, statusFilter, invoiced]);
 
   useEffect(() => {
     load();
@@ -387,6 +392,19 @@ export default function WorkOrdersPage() {
           <option value="in_progress">In Progress</option>
           <option value="completed">Completed</option>
         </select>
+        <select
+          data-testid="workorders-invoiced-filter"
+          value={invoiced}
+          onChange={(e) => {
+            setPage(1);
+            setInvoiced(e.target.value);
+          }}
+          className="bg-secondary border border-border rounded-sm px-3 py-2 text-sm"
+        >
+          <option value="">Semua (Invoice)</option>
+          <option value="sudah">Sudah Invoice</option>
+          <option value="belum">Belum Invoice</option>
+        </select>
       </div>
 
       {activeChips.length > 0 && (
@@ -578,12 +596,17 @@ export default function WorkOrdersPage() {
                         })()
                       ) : c.key === "invoice_no_display" ? (
                         it.invoice_no_display ? (
-                          <span
-                            className="inline-flex items-center px-2 py-0.5 rounded-sm border border-emerald-200 bg-emerald-50 text-emerald-700 text-[11px] mono"
-                            title="Sudah dibuatkan invoice"
+                          <button
+                            type="button"
+                            data-testid={`workorders-invoice-link-${it.id}`}
+                            onClick={() =>
+                              nav(`/invoices?q=${encodeURIComponent(it.invoice_nos?.[0] || it.invoice_no_display)}`)
+                            }
+                            className="inline-flex items-center px-2 py-0.5 rounded-sm border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-400 text-[11px] mono cursor-pointer"
+                            title="Buka invoice terkait"
                           >
                             {it.invoice_no_display}
-                          </span>
+                          </button>
                         ) : (
                           <span
                             className="text-[10px] uppercase tracking-wider text-muted-foreground"

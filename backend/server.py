@@ -139,6 +139,9 @@ db = client[DB_NAME]
 
 _scheduler: Optional[AsyncIOScheduler] = None
 
+# Safety cap for full-scan aggregation queries (dashboard stats / KPI).
+STATS_SCAN_LIMIT = int(os.environ.get("STATS_SCAN_LIMIT", "50000"))
+
 app = FastAPI(title="LA Tracker API")
 api = APIRouter(prefix="/api")
 
@@ -662,6 +665,7 @@ async def delete_user(user_id: str, user: dict = Depends(require_roles("admin"))
 async def list_workorders(
     q: Optional[str] = None,
     inv_status: Optional[str] = None,
+    invoiced: Optional[str] = None,
     media_jenis: Optional[str] = None,
     media_perangkat: Optional[str] = None,
     jenis_order: Optional[str] = None,
@@ -748,6 +752,24 @@ async def list_workorders(
                 and_clauses.append({"$or": existing})
             query["$and"] = and_clauses
 
+    # Quick filter: WO yang sudah / belum dibuatkan invoice.
+    inv_flag = (invoiced or "").strip().lower()
+    if inv_flag in ("sudah", "belum"):
+        invoiced_ids: set = set()
+        async for iv in db.invoices.find({}, {"work_order_ids": 1}):
+            for wid in iv.get("work_order_ids", []) or []:
+                invoiced_ids.add(str(wid))
+        # include legacy WOs that carry an inv_no from Excel import
+        async for w in db.workorders.find({"inv_no": {"$nin": ["", None]}}, {"_id": 1}):
+            invoiced_ids.add(str(w["_id"]))
+        oids = []
+        for x in invoiced_ids:
+            try:
+                oids.append(ObjectId(x))
+            except Exception:
+                pass
+        query["_id"] = {"$in": oids} if inv_flag == "sudah" else {"$nin": oids}
+
     total = await db.workorders.count_documents(query)
     cursor = db.workorders.find(query).sort("created_at", -1).skip((page - 1) * page_size).limit(page_size)
     items = [workorder_to_out(d) for d in await cursor.to_list(page_size)]
@@ -756,6 +778,7 @@ async def list_workorders(
     # can show whether a pelanggan/SPK sudah dibuatkan invoice.
     wo_ids = [it["id"] for it in items]
     inv_map: Dict[str, List[str]] = {}
+    inv_id_map: Dict[str, str] = {}
     if wo_ids:
         async for iv in db.invoices.find(
             {"work_order_ids": {"$in": wo_ids}}, {"work_order_ids": 1, "invoice_no": 1}
@@ -763,18 +786,21 @@ async def list_workorders(
             no = (iv.get("invoice_no") or "").strip()
             if not no:
                 continue
+            ivid = str(iv["_id"])
             for wid in iv.get("work_order_ids", []):
                 if wid in inv_map:
                     if no not in inv_map[wid]:
                         inv_map[wid].append(no)
                 else:
                     inv_map[wid] = [no]
+                    inv_id_map[wid] = ivid
     for it in items:
         nos = inv_map.get(it["id"], [])
         if not nos and (it.get("inv_no") or "").strip():
             nos = [it["inv_no"].strip()]
         it["invoice_nos"] = nos
         it["invoice_no_display"] = ", ".join(nos)
+        it["invoice_id"] = inv_id_map.get(it["id"], "")
 
     return {"total": total, "page": page, "page_size": page_size, "items": items}
 
@@ -1040,7 +1066,12 @@ def _kpi_query(date_from, date_to, tim) -> Dict[str, Any]:
 
 async def _compute_kpi_teknisi(date_from, date_to, tim) -> dict:
     query = _kpi_query(date_from, date_to, tim)
-    docs = await db.workorders.find(query).to_list(100000)
+    # Only fetch fields needed for KPI aggregation, capped for safety.
+    projection = {
+        "tim_pelaksana": 1, "teknisi_pelaksana": 1,
+        "hasil_aktivasi_status": 1, "hasil_instalasi_status": 1, "hasil_survey_status": 1,
+    }
+    docs = await db.workorders.find(query, projection).to_list(STATS_SCAN_LIMIT)
 
     per: Dict[tuple, dict] = {}
     summary = {
@@ -2064,7 +2095,18 @@ async def dashboard_stats(
                 return "in_progress"
         return "pending"
 
-    docs = await db.workorders.find(query).to_list(10000)
+    # Fetch only the fields the aggregation needs, capped for safety.
+    stats_projection = {
+        "hasil_survey_status": 1, "hasil_instalasi_status": 1, "hasil_aktivasi_status": 1,
+        "activity_survey_start": 1, "activity_survey_end": 1,
+        "activity_instalasi_start": 1, "activity_instalasi_end": 1,
+        "activity_aktivasi_start": 1, "activity_aktivasi_end": 1,
+        "media_perangkat": 1, "jenis_order": 1, "inv_status": 1, "boq_jumlah": 1,
+        "sdt_survey_durasi": 1, "sdt_survey_target": 1,
+        "sdt_instalasi_durasi": 1, "sdt_instalasi_target": 1,
+        "sdt_aktivasi_durasi": 1, "sdt_aktivasi_target": 1,
+    }
+    docs = await db.workorders.find(query, stats_projection).to_list(STATS_SCAN_LIMIT)
 
     by_status = {"completed": 0, "in_progress": 0, "pending": 0}
     by_media: Dict[str, int] = {}

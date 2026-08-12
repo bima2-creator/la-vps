@@ -133,7 +133,7 @@ export default function InvoicesPage() {
 
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(() => new URLSearchParams(window.location.search).get("q") || "");
   const [statusFilter, setStatusFilter] = useState("");
   const [jenisFilter, setJenisFilter] = useState("");
 
