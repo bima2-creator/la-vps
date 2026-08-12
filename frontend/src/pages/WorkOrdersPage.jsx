@@ -96,6 +96,20 @@ export default function WorkOrdersPage() {
   if (invoiced)
     activeChips.push({ key: "invoiced", label: `Invoice: ${invoiced === "sudah" ? "Sudah dibuat" : "Belum dibuat"}`, clear: () => setInvoiced("") });
 
+  // Apply invoiced filter from URL (e.g. clicking the sidebar badge) even if
+  // the page is already mounted.
+  useEffect(() => {
+    const urlInv = searchParams.get("invoiced") || "";
+    setInvoiced((prev) => {
+      if (prev !== urlInv) {
+        setPage(1);
+        return urlInv;
+      }
+      return prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {

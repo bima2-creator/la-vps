@@ -100,10 +100,24 @@ export default function Layout() {
       {badge != null && (
         <span
           data-testid="nav-workorders-belum-badge"
-          className={`ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold mono bg-amber-500 text-white ${
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            navigate("/workorders?invoiced=belum");
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              navigate("/workorders?invoiced=belum");
+            }
+          }}
+          className={`ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold mono bg-amber-500 text-white cursor-pointer hover:bg-amber-600 transition-colors ${
             collapsed ? "absolute -top-0.5 -right-0.5 ml-0" : ""
           }`}
-          title={`${badge} WO belum dibuatkan invoice`}
+          title={`${badge} WO belum dibuatkan invoice — klik untuk lihat`}
         >
           {badge > 99 ? "99+" : badge}
         </span>
