@@ -2139,6 +2139,46 @@ async def import_template(user: dict = Depends(require_roles("admin", "operator"
 # ------------------------------------------------------------------
 # Dashboard
 # ------------------------------------------------------------------
+@api.get("/dashboard/m2m-expiry")
+async def dashboard_m2m_expiry(within: int = 30, user: dict = Depends(get_current_user)):
+    """Kartu M2M yang masa aktifnya sudah/hampir habis (default <= 30 hari)."""
+    from datetime import date as _date
+    today = _date.today()
+    docs = await db.workorders.find(
+        {"media_perangkat": "M2M", "m2m_masa_aktif": {"$nin": ["", None]}},
+        {"pelanggan": 1, "si_id": 1, "m2m_sim_card": 1, "m2m_jenis_kartu": 1,
+         "m2m_kuota_gb": 1, "m2m_masa_aktif": 1},
+    ).to_list(STATS_SCAN_LIMIT)
+    items = []
+    for d in docs:
+        raw = str(d.get("m2m_masa_aktif") or "")[:10]
+        try:
+            exp = _date.fromisoformat(raw)
+        except Exception:
+            continue
+        days_left = (exp - today).days
+        if days_left > within:
+            continue
+        items.append({
+            "id": str(d["_id"]),
+            "pelanggan": d.get("pelanggan", ""),
+            "si_id": d.get("si_id", ""),
+            "sim_card": d.get("m2m_sim_card", ""),
+            "jenis_kartu": d.get("m2m_jenis_kartu", ""),
+            "kuota_gb": d.get("m2m_kuota_gb", ""),
+            "masa_aktif": raw,
+            "days_left": days_left,
+            "status": "expired" if days_left < 0 else "soon",
+        })
+    items.sort(key=lambda x: x["days_left"])
+    return {
+        "within": within,
+        "expired": sum(1 for i in items if i["status"] == "expired"),
+        "soon": sum(1 for i in items if i["status"] == "soon"),
+        "items": items,
+    }
+
+
 @api.get("/dashboard/stats")
 async def dashboard_stats(
     date_from: Optional[str] = None,

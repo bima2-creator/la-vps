@@ -15,7 +15,7 @@ import {
   Cell,
   CartesianGrid,
 } from "recharts";
-import { TrendUp, TrendDown, ClockClockwise, CheckCircle, Money, Waveform, ArrowUpRight, HardDrives, ArrowsCounterClockwise, Wrench } from "@phosphor-icons/react";
+import { TrendUp, TrendDown, ClockClockwise, CheckCircle, Money, Waveform, ArrowUpRight, HardDrives, ArrowsCounterClockwise, Wrench, WarningCircle, SimCard } from "@phosphor-icons/react";
 
 const CHART_COLORS = ["#2563EB", "#10B981", "#F59E0B", "#EF4444", "#0EA5E9", "#A855F7"];
 
@@ -128,6 +128,18 @@ export default function DashboardPage() {
       try {
         const { data } = await api.get("/perangkat/stats");
         setPerangkatStats(data);
+      } catch {
+        /* non-blocking */
+      }
+    })();
+  }, []);
+
+  const [m2mExpiry, setM2mExpiry] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get("/dashboard/m2m-expiry", { params: { within: 30 } });
+        setM2mExpiry(data);
       } catch {
         /* non-blocking */
       }
@@ -498,6 +510,66 @@ export default function DashboardPage() {
                   tone="red"
                   onClick={() => nav("/perangkat?status=MAINTENANCE")}
                 />
+              </div>
+            </Section>
+          )}
+
+          {m2mExpiry && m2mExpiry.items?.length > 0 && (
+            <Section title="Peringatan Masa Aktif Kartu M2M">
+              <div className="border border-border rounded-sm bg-card overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-amber-50">
+                  <WarningCircle size={18} weight="fill" className="text-amber-600" />
+                  <span className="text-sm text-amber-800">
+                    <b className="mono">{m2mExpiry.expired}</b> kartu sudah habis &middot;{" "}
+                    <b className="mono">{m2mExpiry.soon}</b> akan habis dalam {m2mExpiry.within} hari
+                  </span>
+                </div>
+                <div className="overflow-x-auto max-h-72 overflow-y-auto">
+                  <table className="w-full text-sm min-w-[720px]">
+                    <thead className="bg-slate-50 sticky top-0">
+                      <tr className="text-left text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                        <th className="px-3 py-2">Pelanggan</th>
+                        <th className="px-3 py-2">No. SIM</th>
+                        <th className="px-3 py-2">Jenis</th>
+                        <th className="px-3 py-2">Masa Aktif</th>
+                        <th className="px-3 py-2 text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {m2mExpiry.items.map((it, i) => (
+                        <tr
+                          key={it.id}
+                          data-testid={`m2m-expiry-row-${i}`}
+                          onClick={() => nav(`/workorders/${it.id}`)}
+                          className="border-b border-border/60 hover:bg-amber-50/50 cursor-pointer"
+                        >
+                          <td className="px-3 py-2 max-w-[240px] truncate" title={it.pelanggan}>
+                            <SimCard size={13} weight="duotone" className="inline mr-1 text-slate-400" />
+                            {it.pelanggan || "-"}
+                          </td>
+                          <td className="px-3 py-2 mono text-xs">{it.sim_card || "-"}</td>
+                          <td className="px-3 py-2 text-xs">{it.jenis_kartu || "-"}</td>
+                          <td className="px-3 py-2 mono text-xs">{it.masa_aktif}</td>
+                          <td className="px-3 py-2 text-right">
+                            <span
+                              className={`inline-flex px-2 py-0.5 rounded-sm border text-[10px] uppercase tracking-wider mono ${
+                                it.status === "expired"
+                                  ? "bg-red-50 text-red-700 border-red-200"
+                                  : "bg-amber-50 text-amber-700 border-amber-200"
+                              }`}
+                            >
+                              {it.status === "expired"
+                                ? `Habis ${Math.abs(it.days_left)} hr lalu`
+                                : it.days_left === 0
+                                ? "Habis hari ini"
+                                : `${it.days_left} hari lagi`}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </Section>
           )}
