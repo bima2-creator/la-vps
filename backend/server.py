@@ -250,6 +250,10 @@ class LoginIn(BaseModel):
     password: str
 
 
+class RefreshIn(BaseModel):
+    refresh_token: Optional[str] = None
+
+
 class UserOut(BaseModel):
     id: str
     username: str
@@ -582,7 +586,8 @@ async def register(payload: RegisterIn, response: Response):
     access = create_access_token(uid, username, payload.role)
     refresh = create_refresh_token(uid)
     set_auth_cookies(response, access, refresh)
-    return {"id": uid, "username": username, "email": doc["email"], "name": payload.name, "role": payload.role, "token": access}
+    return {"id": uid, "username": username, "email": doc["email"], "name": payload.name, "role": payload.role,
+            "token": access, "access_token": access, "refresh_token": refresh, "token_type": "bearer"}
 
 
 @api.post("/auth/login")
@@ -595,7 +600,8 @@ async def login(payload: LoginIn, response: Response):
     access = create_access_token(uid, username, user["role"])
     refresh = create_refresh_token(uid)
     set_auth_cookies(response, access, refresh)
-    return {"id": uid, "username": username, "email": user.get("email", ""), "name": user["name"], "role": user["role"], "token": access}
+    return {"id": uid, "username": username, "email": user.get("email", ""), "name": user["name"], "role": user["role"],
+            "token": access, "access_token": access, "refresh_token": refresh, "token_type": "bearer"}
 
 
 @api.post("/auth/logout")
@@ -610,21 +616,36 @@ async def me(user: dict = Depends(get_current_user)):
 
 
 @api.post("/auth/refresh")
-async def refresh_token(request: Request, response: Response):
-    token = request.cookies.get("refresh_token")
+async def refresh_token(request: Request, response: Response, payload: Optional[RefreshIn] = None):
+    """Tukar refresh token dengan access token baru.
+    Sumber refresh token (urutan): body JSON `refresh_token` (mobile) →
+    header `Authorization: Bearer <refresh>` (mobile) → cookie `refresh_token` (web)."""
+    token = None
+    if payload and payload.refresh_token:
+        token = payload.refresh_token.strip()
+    if not token:
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            token = auth[7:]
+    if not token:
+        token = request.cookies.get("refresh_token")
     if not token:
         raise HTTPException(401, "Missing refresh token")
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
-        if payload.get("type") != "refresh":
-            raise HTTPException(401, "Invalid token")
-        uid = payload["sub"]
+        claims = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
+        if claims.get("type") != "refresh":
+            raise HTTPException(401, "Invalid token type")
+        uid = claims["sub"]
         user = await db.users.find_one({"_id": ObjectId(uid)})
         if not user:
             raise HTTPException(401, "User not found")
         access = create_access_token(uid, user.get("username", ""), user["role"])
-        response.set_cookie("access_token", access, httponly=True, secure=True, samesite="none", max_age=28800, path="/")
-        return {"token": access}
+        # Rotate refresh token so mobile clients get a fresh 7-day window.
+        new_refresh = create_refresh_token(uid)
+        set_auth_cookies(response, access, new_refresh)
+        return {"token": access, "access_token": access, "refresh_token": new_refresh, "token_type": "bearer"}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(401, "Refresh token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(401, "Invalid refresh token")
 

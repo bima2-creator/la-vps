@@ -87,6 +87,13 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 - **P2**: Isi otomatis `media_jenis` dari mapping (GPON→FIBER, IDIRECT→SATELLITE) untuk data lama (butuh konfirmasi user).
 - **Refactor (opsional)**: pecah `server.py` yang monolitik.
 
+## Mobile-ready Auth (Refresh Token) — Agustus 2026
+- `POST /auth/login` & `/auth/register` kini mengembalikan `access_token` (8 jam) + `refresh_token` (7 hari) + `token` (alias) + `token_type` di body JSON (selain tetap set httpOnly cookies untuk web).
+- `POST /auth/refresh` menerima refresh token dari body `{"refresh_token"}`, header `Authorization: Bearer`, atau cookie. Mengembalikan access + refresh baru (rotasi). Menolak access token (type check) → 401.
+- Frontend web (`lib/api.js`): simpan `la_refresh`, interceptor 401 → auto-refresh access token → retry request sekali. `AuthContext` simpan/hapus `la_refresh` saat login/logout.
+- Panduan integrasi mobile: `/app/MOBILE_API.md` (base URL, alur auth, contoh Axios Expo, endpoint utama). Terverifikasi curl (login 2 token, refresh via body & header, /me, tolak access-as-refresh) + UI web (login OK, token tersimpan, tanpa regresi).
+- **Catatan platform**: UI aplikasi mobile dibuat lewat **Mobile Agent** Emergent (Expo/React Native) di task terpisah, connect ke backend ini via API. Mobile Agent butuh subscription berbayar.
+
 ## Files of Reference
 - `backend/server.py`: semua route & logic. Import/export xlsx ~baris 1715-1874.
 - `frontend/src/pages/WorkOrdersPage.jsx`: onImport/onExport.

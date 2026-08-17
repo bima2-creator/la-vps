@@ -25,6 +25,7 @@ export function AuthProvider({ children }) {
   const login = async (username, password) => {
     const { data } = await api.post("/auth/login", { username, password });
     if (data.token) localStorage.setItem("la_token", data.token);
+    if (data.refresh_token) localStorage.setItem("la_refresh", data.refresh_token);
     setUser(data);
     return data;
   };
@@ -36,6 +37,7 @@ export function AuthProvider({ children }) {
       /* ignore */
     }
     localStorage.removeItem("la_token");
+    localStorage.removeItem("la_refresh");
     setUser(false);
   };
 
