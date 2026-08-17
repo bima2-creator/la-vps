@@ -29,7 +29,7 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 
 ## Media Akses & Perangkat dependent dropdown (June 2026)
 - Hapus jenis media "OTHER" (dropdown + migrasi WO existing media_jenis OTHER → kosong).
-- Jenis Media Akses: WIRELINE, WIRELESS, FIBER, SATELLITE, PIHAK KE 3 (baru).
+- Jenis Media Akses: WIRELINE, WIRELESS, SATELLITE, PIHAK KE 3 (FIBER dihapus, folded ke WIRELINE karena perangkat duplikat; migrasi FIBER→WIRELINE & "Stand Alone"→"Standalone").
 - Perangkat jadi dropdown dependent (`MEDIA_PERANGKAT_OPTIONS` di workorder-schema.js):
   - WIRELINE: M2M, Open Port, AIR Fiber, GPON, Standalone, Back to Back, SDWAN, Router
   - WIRELESS: BWA, Radio Link
