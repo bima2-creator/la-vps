@@ -28,7 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
-import { CaretLeft, FloppyDisk, FilePdf, Lightning, ArrowsClockwise, ShareNetwork, Wrench, HardDrives, LockKey, MapPin, Trash } from "@phosphor-icons/react";
+import { CaretLeft, FloppyDisk, FilePdf, Lightning, ArrowsClockwise, ShareNetwork, Wrench, HardDrives, LockKey, MapPin, Trash, MagnifyingGlass } from "@phosphor-icons/react";
 import SpkUpload from "@/components/SpkUpload";
 import BoqItemsEditor, { computeBoqTotals } from "@/components/BoqItemsEditor";
 import PerangkatEditor from "@/components/PerangkatEditor";
@@ -197,6 +197,9 @@ export default function WorkOrderFormPage() {
   const [mediaPerangkatOpts, setMediaPerangkatOpts] = useState([]);
   const [teknisiInternalOpts, setTeknisiInternalOpts] = useState([]);
   const [teknisiMitraOpts, setTeknisiMitraOpts] = useState([]);
+  // SI ID prefill (existing network lookup)
+  const [siPrefill, setSiPrefill] = useState(null); // { prefill, source }
+  const [siPrefillDismissed, setSiPrefillDismissed] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -228,6 +231,53 @@ export default function WorkOrderFormPage() {
       }
     })();
   }, [id, isEdit]);
+
+  // When creating a WO, look up an existing WO with the same SI ID to offer prefill.
+  useEffect(() => {
+    if (isEdit) return;
+    const sid = String(form.si_id || "").trim();
+    if (sid.length < 4) {
+      setSiPrefill(null);
+      return;
+    }
+    if (siPrefillDismissed === sid) return;
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await api.get("/workorders/lookup-by-si", { params: { si_id: sid } });
+        if (data.found) setSiPrefill(data);
+        else setSiPrefill(null);
+      } catch {
+        setSiPrefill(null);
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [form.si_id, isEdit, siPrefillDismissed]);
+
+  const applySiPrefill = () => {
+    if (!siPrefill?.prefill) return;
+    const p = siPrefill.prefill;
+    setForm((f) => ({
+      ...f,
+      pelanggan: p.pelanggan || f.pelanggan,
+      sa_id: p.sa_id || f.sa_id,
+      alamat: p.alamat || f.alamat,
+      lat: p.lat || f.lat,
+      lng: p.lng || f.lng,
+      bw: p.bw || f.bw,
+      media_jenis: p.media_jenis || f.media_jenis,
+      media_perangkat: p.media_perangkat || f.media_perangkat,
+      cp_la: p.cp_la || f.cp_la,
+      cp_pelanggan: p.cp_pelanggan || f.cp_pelanggan,
+      cp_mitra: p.cp_mitra || f.cp_mitra,
+      perangkat_items:
+        Array.isArray(p.perangkat_items) && p.perangkat_items.length
+          ? p.perangkat_items
+          : f.perangkat_items,
+    }));
+    toast.success("Data otomatis diisi dari SI ID yang sudah terdaftar");
+    setSiPrefillDismissed(String(form.si_id || "").trim());
+    setSiPrefill(null);
+  };
 
   const onChange = (k, v) => {
     setForm((f) => {
@@ -797,6 +847,43 @@ export default function WorkOrderFormPage() {
                 <b>*</b> Nama Pelanggan wajib diisi &middot; SA ID atau SI ID wajib
                 diisi minimal salah satu untuk setiap Work Order.
               </div>
+              {!isEdit && siPrefill?.found && (
+                <div
+                  data-testid="workorder-form-si-prefill"
+                  className="mb-4 px-4 py-3 border border-blue-300 bg-blue-50 rounded-sm flex items-start gap-3"
+                >
+                  <MagnifyingGlass size={18} weight="bold" className="text-blue-600 mt-0.5 shrink-0" />
+                  <div className="flex-1 text-sm text-blue-900">
+                    <div className="font-semibold">SI ID ini sudah pernah terdaftar</div>
+                    <div className="text-xs mt-0.5 text-blue-800">
+                      Pelanggan: <b className="mono">{siPrefill.source?.pelanggan || "-"}</b>. Isi
+                      otomatis data <b>Pelanggan</b> (kecuali RFS), <b>Media &amp; Kontak</b>{" "}
+                      (kecuali Tim Pelaksana), dan <b>perangkat terakhir terpasang</b>?
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        type="button"
+                        data-testid="workorder-form-si-prefill-apply"
+                        onClick={applySiPrefill}
+                        className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition-colors"
+                      >
+                        Isi Otomatis
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="workorder-form-si-prefill-dismiss"
+                        onClick={() => {
+                          setSiPrefillDismissed(String(form.si_id || "").trim());
+                          setSiPrefill(null);
+                        }}
+                        className="text-xs text-blue-700 hover:text-blue-900 px-2 py-1.5"
+                      >
+                        Abaikan
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               {jenisChosen !== "DISMANTLE" && (
                 <div className="mb-4 flex items-center gap-2 flex-wrap">
                   <button

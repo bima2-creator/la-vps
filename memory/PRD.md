@@ -27,6 +27,11 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 - **Excel Export** (`GET /api/workorders/export/xlsx`): sheet "Workorders" (+ kolom PERANGKAT DETAIL) & sheet "Perangkat".
 - **Excel Import dedup** (`POST /api/workorders/import/xlsx`): dedup berdasarkan **nomor SPK per section** (survey/instalasi/aktivasi). Jika salah satu nomor SPK di baris impor sudah ada di DB → baris dilewati (skip). Response `{inserted, skipped}`. Frontend menampilkan jumlah baris yang dilewati. *Catatan: baris tanpa nomor SPK tidak bisa didedup dan akan selalu di-insert.* ✅ Diverifikasi via curl (35 skip saat re-import).
 
+## SI ID prefill saat create WO (June 2026)
+- Saat input SI ID di form WO baru, jika SI ID sudah terdaftar → muncul banner info + tombol "Isi Otomatis".
+- Backend `GET /workorders/lookup-by-si?si_id=` → WO terakhir dgn SI ID sama. Prefill: Pelanggan (kecuali RFS & jenis_order & si_id), Media & Kontak (kecuali tim_pelaksana/teknisi), dan perangkat_items terakhir terpasang.
+- Frontend `WorkOrderFormPage.jsx`: debounce lookup, banner biru, `applySiPrefill()`. Terverifikasi curl + UI.
+
 ## Badge menu & index MongoDB (June 2026)
 - Sidebar "Work Orders" menampilkan badge amber jumlah WO belum invoice. Endpoint baru `GET /workorders/pending-invoice-count` → {total, belum, sudah}. Layout fetch saat pindah route. Badge dapat diklik → `/workorders?invoiced=belum` (WorkOrdersPage sync filter dari URL). Terverifikasi UI.
 - Index MongoDB ditambah: workorders(jenis_order, created_at desc), invoices(work_order_ids). Terverifikasi (badge=35, index terpasang).

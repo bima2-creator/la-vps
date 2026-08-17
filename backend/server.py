@@ -828,6 +828,44 @@ async def workorders_pending_invoice_count(user: dict = Depends(get_current_user
     return {"total": total, "belum": belum, "sudah": total - belum}
 
 
+@api.get("/workorders/lookup-by-si")
+async def workorder_lookup_by_si(si_id: str, user: dict = Depends(get_current_user)):
+    """Cari WO terakhir dengan SI ID sama untuk prefill saat create WO baru.
+    Mengembalikan data section Pelanggan (kecuali RFS), Media & Kontak (kecuali
+    Tim Pelaksana), dan data perangkat terakhir yang terpasang."""
+    sid = (si_id or "").strip()
+    if not sid:
+        return {"found": False}
+    doc = await db.workorders.find_one({"si_id": sid}, sort=[("created_at", -1)])
+    if not doc:
+        return {"found": False}
+    # Pelanggan (tanpa RFS & tanpa jenis_order/si_id) + Media & Kontak (tanpa Tim Pelaksana)
+    prefill_fields = [
+        "pelanggan", "sa_id", "alamat", "lat", "lng", "bw",
+        "media_jenis", "media_perangkat", "cp_la", "cp_pelanggan", "cp_mitra",
+    ]
+    prefill = {k: doc.get(k, "") for k in prefill_fields}
+    # Perangkat terakhir terpasang: WO terbaru yang punya perangkat_items
+    perangkat = doc.get("perangkat_items") or []
+    if not perangkat:
+        alt = await db.workorders.find_one(
+            {"si_id": sid, "perangkat_items": {"$exists": True, "$ne": []}},
+            sort=[("created_at", -1)],
+        )
+        if alt:
+            perangkat = alt.get("perangkat_items") or []
+    prefill["perangkat_items"] = perangkat
+    return {
+        "found": True,
+        "prefill": prefill,
+        "source": {
+            "pelanggan": doc.get("pelanggan", ""),
+            "jenis_order": doc.get("jenis_order", ""),
+            "created_at": doc.get("created_at", ""),
+        },
+    }
+
+
 @api.get("/workorders/{wo_id}")
 async def get_workorder(wo_id: str, user: dict = Depends(get_current_user)):
     doc = await db.workorders.find_one({"_id": ObjectId(wo_id)})
