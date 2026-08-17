@@ -1,0 +1,16 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode gzip
+
+	# Semua request (web + /api) diteruskan ke container frontend (nginx),
+	# yang menyajikan React dan mem-proxy /api ke backend:8001.
+	reverse_proxy frontend:80
+
+	# Naikkan batas upload untuk lampiran (SPK/Faktur/foto)
+	request_body {
+		max_size 50MB
+	}
+}

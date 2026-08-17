@@ -1,0 +1,82 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: la-tracker-mongo
+    restart: unless-stopped
+    command: ["--auth"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASS}
+    volumes:
+      - ./data/mongo:/data/db
+    networks:
+      - la-net
+    healthcheck:
+      test: ["CMD", "mongosh", "-u", "${MONGO_ROOT_USER}", "-p", "${MONGO_ROOT_PASS}", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: la-tracker-backend
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_URL: "mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASS}@mongo:27017/${DB_NAME}?authSource=admin"
+      DB_NAME: "${DB_NAME}"
+      JWT_SECRET: "${JWT_SECRET}"
+      CORS_ORIGINS: "${PUBLIC_URL}"
+      FRONTEND_URL: "${PUBLIC_URL}"
+      STORAGE_MODE: "local"
+      LOCAL_STORAGE_DIR: "/data/attachments"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD}"
+      OPERATOR_PASSWORD: "${OPERATOR_PASSWORD}"
+      GUEST_PASSWORD: "${GUEST_PASSWORD}"
+      STATS_SCAN_LIMIT: "50000"
+    volumes:
+      - ./data/attachments:/data/attachments
+    networks:
+      - la-net
+    expose:
+      - "8001"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: la-tracker-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - la-net
+    expose:
+      - "80"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: la-tracker-caddy
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: "${DOMAIN}"
+      ACME_EMAIL: "${ACME_EMAIL}"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy/data:/data
+      - ./data/caddy/config:/config
+    networks:
+      - la-net
+
+networks:
+  la-net:
+    driver: bridge
