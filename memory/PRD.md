@@ -29,8 +29,8 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 
 ## SI ID prefill saat create WO (June 2026)
 - Saat input SI ID di form WO baru, jika SI ID sudah terdaftar → muncul banner info + tombol "Isi Otomatis".
-- Backend `GET /workorders/lookup-by-si?si_id=` → WO terakhir dgn SI ID sama. Prefill: Pelanggan (kecuali RFS & jenis_order & si_id), Media & Kontak (kecuali tim_pelaksana/teknisi), dan perangkat_items terakhir terpasang.
-- Frontend `WorkOrderFormPage.jsx`: debounce lookup, banner biru, `applySiPrefill()`. Terverifikasi curl + UI.
+- Backend `GET /workorders/lookup-by-si?si_id=` → WO terakhir dgn SI ID sama. Prefill: Pelanggan (kecuali RFS & jenis_order & si_id), Media & Kontak (kecuali tim_pelaksana/teknisi), dan perangkat_items terakhir terpasang. Response juga berisi `matches[]` = seluruh riwayat WO untuk SI ID tsb (id, jenis_order, created_at, pelanggan, spk, perangkat_count, prefill) agar user bisa memilih WO mana untuk prefill.
+- Frontend `WorkOrderFormPage.jsx`: debounce lookup, banner biru menampilkan daftar riwayat WO dengan tombol "Pilih" per item; `applySiPrefill(prefill)`. Terverifikasi curl + UI.
 
 ## Badge menu & index MongoDB (June 2026)
 - Sidebar "Work Orders" menampilkan badge amber jumlah WO belum invoice. Endpoint baru `GET /workorders/pending-invoice-count` → {total, belum, sudah}. Layout fetch saat pindah route. Badge dapat diklik → `/workorders?invoiced=belum` (WorkOrdersPage sync filter dari URL). Terverifikasi UI.

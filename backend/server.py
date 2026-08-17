@@ -835,33 +835,51 @@ async def workorder_lookup_by_si(si_id: str, user: dict = Depends(get_current_us
     Tim Pelaksana), dan data perangkat terakhir yang terpasang."""
     sid = (si_id or "").strip()
     if not sid:
-        return {"found": False}
-    doc = await db.workorders.find_one({"si_id": sid}, sort=[("created_at", -1)])
-    if not doc:
-        return {"found": False}
-    # Pelanggan (tanpa RFS & tanpa jenis_order/si_id) + Media & Kontak (tanpa Tim Pelaksana)
+        return {"found": False, "matches": []}
+    docs = await db.workorders.find({"si_id": sid}).sort("created_at", -1).to_list(200)
+    if not docs:
+        return {"found": False, "matches": []}
+
     prefill_fields = [
         "pelanggan", "sa_id", "alamat", "lat", "lng", "bw",
         "media_jenis", "media_perangkat", "cp_la", "cp_pelanggan", "cp_mitra",
     ]
-    prefill = {k: doc.get(k, "") for k in prefill_fields}
-    # Perangkat terakhir terpasang: WO terbaru yang punya perangkat_items
-    perangkat = doc.get("perangkat_items") or []
-    if not perangkat:
-        alt = await db.workorders.find_one(
-            {"si_id": sid, "perangkat_items": {"$exists": True, "$ne": []}},
-            sort=[("created_at", -1)],
-        )
-        if alt:
-            perangkat = alt.get("perangkat_items") or []
-    prefill["perangkat_items"] = perangkat
+
+    def _mk_prefill(d: dict) -> dict:
+        pf = {k: d.get(k, "") for k in prefill_fields}
+        pf["perangkat_items"] = d.get("perangkat_items") or []
+        return pf
+
+    matches = []
+    for d in docs:
+        matches.append({
+            "id": str(d["_id"]),
+            "pelanggan": d.get("pelanggan", ""),
+            "jenis_order": d.get("jenis_order", ""),
+            "created_at": d.get("created_at", ""),
+            "sa_id": d.get("sa_id", ""),
+            "spk": (d.get("spk_survey_nomor") or d.get("spk_instalasi_nomor")
+                    or d.get("spk_aktivasi_nomor") or ""),
+            "perangkat_count": len(d.get("perangkat_items") or []),
+            "prefill": _mk_prefill(d),
+        })
+
+    # Default prefill (WO terbaru) with fallback perangkat terakhir terpasang.
+    prefill = dict(matches[0]["prefill"])
+    if not prefill.get("perangkat_items"):
+        for m in matches:
+            if m["perangkat_count"] > 0:
+                prefill["perangkat_items"] = m["prefill"]["perangkat_items"]
+                break
+
     return {
         "found": True,
         "prefill": prefill,
+        "matches": matches,
         "source": {
-            "pelanggan": doc.get("pelanggan", ""),
-            "jenis_order": doc.get("jenis_order", ""),
-            "created_at": doc.get("created_at", ""),
+            "pelanggan": matches[0]["pelanggan"],
+            "jenis_order": matches[0]["jenis_order"],
+            "created_at": matches[0]["created_at"],
         },
     }
 

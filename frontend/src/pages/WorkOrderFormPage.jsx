@@ -253,9 +253,8 @@ export default function WorkOrderFormPage() {
     return () => clearTimeout(t);
   }, [form.si_id, isEdit, siPrefillDismissed]);
 
-  const applySiPrefill = () => {
-    if (!siPrefill?.prefill) return;
-    const p = siPrefill.prefill;
+  const applySiPrefill = (p) => {
+    if (!p) return;
     setForm((f) => ({
       ...f,
       pelanggan: p.pelanggan || f.pelanggan,
@@ -850,37 +849,71 @@ export default function WorkOrderFormPage() {
               {!isEdit && siPrefill?.found && (
                 <div
                   data-testid="workorder-form-si-prefill"
-                  className="mb-4 px-4 py-3 border border-blue-300 bg-blue-50 rounded-sm flex items-start gap-3"
+                  className="mb-4 px-4 py-3 border border-blue-300 bg-blue-50 rounded-sm"
                 >
-                  <MagnifyingGlass size={18} weight="bold" className="text-blue-600 mt-0.5 shrink-0" />
-                  <div className="flex-1 text-sm text-blue-900">
-                    <div className="font-semibold">SI ID ini sudah pernah terdaftar</div>
-                    <div className="text-xs mt-0.5 text-blue-800">
-                      Pelanggan: <b className="mono">{siPrefill.source?.pelanggan || "-"}</b>. Isi
-                      otomatis data <b>Pelanggan</b> (kecuali RFS), <b>Media &amp; Kontak</b>{" "}
-                      (kecuali Tim Pelaksana), dan <b>perangkat terakhir terpasang</b>?
+                  <div className="flex items-start gap-3">
+                    <MagnifyingGlass size={18} weight="bold" className="text-blue-600 mt-0.5 shrink-0" />
+                    <div className="flex-1 text-sm text-blue-900">
+                      <div className="font-semibold">
+                        SI ID ini sudah pernah terdaftar
+                        <span className="ml-1 text-xs font-normal">
+                          ({siPrefill.matches?.length || 0} riwayat WO)
+                        </span>
+                      </div>
+                      <div className="text-xs mt-0.5 text-blue-800">
+                        Pilih WO di bawah untuk mengisi otomatis data <b>Pelanggan</b> (kecuali RFS),{" "}
+                        <b>Media &amp; Kontak</b> (kecuali Tim Pelaksana), dan{" "}
+                        <b>perangkat terpasang</b>.
+                      </div>
                     </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <button
-                        type="button"
-                        data-testid="workorder-form-si-prefill-apply"
-                        onClick={applySiPrefill}
-                        className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition-colors"
+                    <button
+                      type="button"
+                      data-testid="workorder-form-si-prefill-dismiss"
+                      onClick={() => {
+                        setSiPrefillDismissed(String(form.si_id || "").trim());
+                        setSiPrefill(null);
+                      }}
+                      className="text-xs text-blue-700 hover:text-blue-900 px-2 py-1"
+                    >
+                      Abaikan
+                    </button>
+                  </div>
+                  <div className="mt-3 space-y-1.5 max-h-56 overflow-y-auto">
+                    {(siPrefill.matches || []).map((m, i) => (
+                      <div
+                        key={m.id}
+                        data-testid={`workorder-form-si-match-${i}`}
+                        className="flex items-center gap-3 bg-white border border-blue-200 rounded-sm px-3 py-2"
                       >
-                        Isi Otomatis
-                      </button>
-                      <button
-                        type="button"
-                        data-testid="workorder-form-si-prefill-dismiss"
-                        onClick={() => {
-                          setSiPrefillDismissed(String(form.si_id || "").trim());
-                          setSiPrefill(null);
-                        }}
-                        className="text-xs text-blue-700 hover:text-blue-900 px-2 py-1.5"
-                      >
-                        Abaikan
-                      </button>
-                    </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="inline-flex px-1.5 py-0.5 rounded-sm bg-slate-100 border border-slate-200 text-[10px] uppercase tracking-wider mono">
+                              {m.jenis_order || "-"}
+                            </span>
+                            <span className="text-xs mono text-muted-foreground">
+                              {m.created_at ? new Date(m.created_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : "-"}
+                            </span>
+                            {m.perangkat_count > 0 && (
+                              <span className="text-[10px] mono text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-sm px-1.5 py-0.5">
+                                {m.perangkat_count} perangkat
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs truncate mt-0.5 text-slate-700" title={m.pelanggan}>
+                            {m.pelanggan || "-"}
+                            {m.spk ? <span className="mono text-muted-foreground"> · SPK {m.spk}</span> : null}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          data-testid={`workorder-form-si-match-apply-${i}`}
+                          onClick={() => applySiPrefill(m.prefill)}
+                          className="shrink-0 inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-sm transition-colors"
+                        >
+                          Pilih
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
