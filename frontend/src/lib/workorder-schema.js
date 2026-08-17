@@ -2,6 +2,15 @@
 // Sections drive the multi-step form and reuse identical field metadata for
 // dashboard, table, and report views.
 
+// Dependent "Perangkat" options per Jenis Media Akses. "PIHAK KE 3" has none.
+export const MEDIA_PERANGKAT_OPTIONS = {
+  WIRELINE: ["M2M", "Open Port", "AIR Fiber", "GPON", "Standalone", "Back to Back", "SDWAN", "Router"],
+  WIRELESS: ["BWA", "Radio Link"],
+  FIBER: ["GPON", "Stand Alone", "Back to Back"],
+  SATELLITE: ["Idirect", "Hughes", "Starlink"],
+  "PIHAK KE 3": [],
+};
+
 export const SECTIONS = [
   {
     id: "customer",
@@ -73,7 +82,7 @@ export const SECTIONS = [
         name: "media_jenis",
         label: "Jenis Media Akses",
         type: "select",
-        options: ["WIRELINE", "WIRELESS", "FIBER", "SATELLITE", "OTHER"],
+        options: ["WIRELINE", "WIRELESS", "FIBER", "SATELLITE", "PIHAK KE 3"],
       },
       { name: "media_perangkat", label: "Perangkat", type: "text" },
       { name: "cp_la", label: "CP LA", type: "text" },

@@ -27,6 +27,17 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 - **Excel Export** (`GET /api/workorders/export/xlsx`): sheet "Workorders" (+ kolom PERANGKAT DETAIL) & sheet "Perangkat".
 - **Excel Import dedup** (`POST /api/workorders/import/xlsx`): dedup berdasarkan **nomor SPK per section** (survey/instalasi/aktivasi). Jika salah satu nomor SPK di baris impor sudah ada di DB → baris dilewati (skip). Response `{inserted, skipped}`. Frontend menampilkan jumlah baris yang dilewati. *Catatan: baris tanpa nomor SPK tidak bisa didedup dan akan selalu di-insert.* ✅ Diverifikasi via curl (35 skip saat re-import).
 
+## Media Akses & Perangkat dependent dropdown (June 2026)
+- Hapus jenis media "OTHER" (dropdown + migrasi WO existing media_jenis OTHER → kosong).
+- Jenis Media Akses: WIRELINE, WIRELESS, FIBER, SATELLITE, PIHAK KE 3 (baru).
+- Perangkat jadi dropdown dependent (`MEDIA_PERANGKAT_OPTIONS` di workorder-schema.js):
+  - WIRELINE: M2M, Open Port, AIR Fiber, GPON, Standalone, Back to Back, SDWAN, Router
+  - WIRELESS: BWA, Radio Link
+  - FIBER: GPON, Stand Alone, Back to Back
+  - SATELLITE: Idirect, Hughes, Starlink
+  - PIHAK KE 3: tanpa perangkat (dropdown disabled, perangkat dikosongkan)
+- Ganti media_jenis mereset media_perangkat bila tak valid. Terverifikasi UI.
+
 ## SI ID prefill saat create WO (June 2026)
 - Saat input SI ID di form WO baru, jika SI ID sudah terdaftar → muncul banner info + tombol "Isi Otomatis".
 - Backend `GET /workorders/lookup-by-si?si_id=` → WO terakhir dgn SI ID sama. Prefill: Pelanggan (kecuali RFS & jenis_order & si_id), Media & Kontak (kecuali tim_pelaksana/teknisi), dan perangkat_items terakhir terpasang. Response juga berisi `matches[]` = seluruh riwayat WO untuk SI ID tsb (id, jenis_order, created_at, pelanggan, spk, perangkat_count, prefill) agar user bisa memilih WO mana untuk prefill.

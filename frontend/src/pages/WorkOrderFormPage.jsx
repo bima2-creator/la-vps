@@ -17,6 +17,7 @@ import {
   requiresMaintenanceTypePicker,
   MAINTENANCE_TYPE_OPTIONS,
   MAINTENANCE_TYPE_META,
+  MEDIA_PERANGKAT_OPTIONS,
 } from "@/lib/workorder-schema";
 import { WOFORM } from "@/constants/testIds";
 import { toast } from "sonner";
@@ -281,6 +282,13 @@ export default function WorkOrderFormPage() {
   const onChange = (k, v) => {
     setForm((f) => {
       const next = { ...f, [k]: v };
+      // When Jenis Media Akses changes, reset Perangkat if it no longer valid.
+      if (k === "media_jenis") {
+        const opts = MEDIA_PERANGKAT_OPTIONS[v] || [];
+        if (opts.length === 0 || !opts.includes(next.media_perangkat)) {
+          next.media_perangkat = "";
+        }
+      }
       // If boq_items changed, re-derive legacy aggregates so exports/reports stay in sync
       if (k === "boq_items") {
         const t = computeBoqTotals(v);
@@ -1204,21 +1212,36 @@ export default function WorkOrderFormPage() {
                   </div>
                 );
               }
-              // Media perangkat — text + autocomplete dari data yang pernah diinput
+              // Media perangkat — dependent dropdown based on Jenis Media Akses
               if (f.name === "media_perangkat") {
+                const opts = MEDIA_PERANGKAT_OPTIONS[form.media_jenis] || [];
+                const noDevice = form.media_jenis === "PIHAK KE 3";
+                const disabled = !canEdit || noDevice || !form.media_jenis;
                 return (
                   <label key={f.name} className="block">
                     <span className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
                       {f.label}
                     </span>
-                    <input
+                    <select
                       data-testid="media-perangkat-input"
-                      list="media-perangkat-list"
                       value={form.media_perangkat ?? ""}
-                      disabled={!canEdit}
-                      onChange={(e) => onChange("media_perangkat", e.target.value.toUpperCase())}
-                      className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm"
-                    />
+                      disabled={disabled}
+                      onChange={(e) => onChange("media_perangkat", e.target.value)}
+                      className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-muted-foreground"
+                    >
+                      <option value="">
+                        {noDevice
+                          ? "— Tanpa perangkat (Pihak Ke 3) —"
+                          : !form.media_jenis
+                          ? "— Pilih Jenis Media Akses dulu —"
+                          : "— Pilih Perangkat —"}
+                      </option>
+                      {opts.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>
                   </label>
                 );
               }
