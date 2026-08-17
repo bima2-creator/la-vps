@@ -1242,6 +1242,74 @@ export default function WorkOrderFormPage() {
                         </option>
                       ))}
                     </select>
+                    {form.media_perangkat === "M2M" && (
+                      <div
+                        data-testid="m2m-detail-fields"
+                        className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 border border-blue-200 bg-blue-50/50 rounded-sm"
+                      >
+                        <div className="sm:col-span-2 text-[10px] uppercase tracking-[0.2em] text-blue-700 font-semibold">
+                          Detail SIM Card (M2M)
+                        </div>
+                        <label className="block">
+                          <span className="block text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-1">
+                            No. Sim Card
+                          </span>
+                          <input
+                            data-testid="m2m-sim-card-input"
+                            value={form.m2m_sim_card ?? ""}
+                            disabled={!canEdit}
+                            onChange={(e) => onChange("m2m_sim_card", e.target.value)}
+                            className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm"
+                            placeholder="mis. 6281234567890"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="block text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-1">
+                            Jenis Kartu
+                          </span>
+                          <select
+                            data-testid="m2m-jenis-kartu-input"
+                            value={form.m2m_jenis_kartu ?? ""}
+                            disabled={!canEdit}
+                            onChange={(e) => onChange("m2m_jenis_kartu", e.target.value)}
+                            className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm disabled:bg-slate-100"
+                          >
+                            <option value="">— Pilih —</option>
+                            <option value="Retail">Retail</option>
+                            <option value="Corporate">Corporate</option>
+                          </select>
+                        </label>
+                        <label className="block">
+                          <span className="block text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-1">
+                            Kuota Terakhir (GB)
+                          </span>
+                          <input
+                            data-testid="m2m-kuota-input"
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={form.m2m_kuota_gb ?? ""}
+                            disabled={!canEdit}
+                            onChange={(e) => onChange("m2m_kuota_gb", e.target.value)}
+                            className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm"
+                            placeholder="mis. 50"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="block text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-1">
+                            Masa Aktif Kartu
+                          </span>
+                          <input
+                            data-testid="m2m-masa-aktif-input"
+                            type="date"
+                            value={form.m2m_masa_aktif ?? ""}
+                            disabled={!canEdit}
+                            onChange={(e) => onChange("m2m_masa_aktif", e.target.value)}
+                            className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm"
+                          />
+                        </label>
+                      </div>
+                    )}
                   </label>
                 );
               }

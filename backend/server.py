@@ -322,6 +322,11 @@ class WorkOrderBase(BaseModel):
     # Media Akses
     media_jenis: Optional[str] = ""
     media_perangkat: Optional[str] = ""
+    # Detail SIM Card khusus perangkat M2M
+    m2m_sim_card: Optional[str] = ""
+    m2m_jenis_kartu: Optional[str] = ""   # retail | corporate
+    m2m_kuota_gb: Optional[str] = ""      # kuota terakhir dalam GB
+    m2m_masa_aktif: Optional[str] = ""    # tanggal masa aktif kartu (ISO/date)
 
     # Contact Persons
     cp_la: Optional[str] = ""

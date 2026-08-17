@@ -27,6 +27,10 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 - **Excel Export** (`GET /api/workorders/export/xlsx`): sheet "Workorders" (+ kolom PERANGKAT DETAIL) & sheet "Perangkat".
 - **Excel Import dedup** (`POST /api/workorders/import/xlsx`): dedup berdasarkan **nomor SPK per section** (survey/instalasi/aktivasi). Jika salah satu nomor SPK di baris impor sudah ada di DB → baris dilewati (skip). Response `{inserted, skipped}`. Frontend menampilkan jumlah baris yang dilewati. *Catatan: baris tanpa nomor SPK tidak bisa didedup dan akan selalu di-insert.* ✅ Diverifikasi via curl (35 skip saat re-import).
 
+## Detail SIM Card M2M (June 2026)
+- Section Media & Kontak: bila Perangkat = M2M, muncul panel "Detail SIM Card (M2M)" berisi input No. Sim Card, Jenis Kartu (Retail/Corporate), Kuota Terakhir (GB), Masa Aktif Kartu (date).
+- Backend WorkOrderBase field baru: m2m_sim_card, m2m_jenis_kartu, m2m_kuota_gb, m2m_masa_aktif. Terverifikasi curl (persist) + UI (muncul/hilang sesuai perangkat).
+
 ## Media Akses & Perangkat dependent dropdown (June 2026)
 - Hapus jenis media "OTHER" (dropdown + migrasi WO existing media_jenis OTHER → kosong).
 - Jenis Media Akses: WIRELINE, WIRELESS, SATELLITE, PIHAK KE 3 (FIBER dihapus, folded ke WIRELINE karena perangkat duplikat; migrasi FIBER→WIRELINE & "Stand Alone"→"Standalone").
