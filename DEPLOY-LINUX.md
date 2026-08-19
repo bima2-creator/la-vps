@@ -35,9 +35,13 @@ cd la-tracker
 ## 3. Konfigurasi environment
 ```bash
 cp prod.env.example .env
-nano .env         # isi DOMAIN, ACME_EMAIL, PUBLIC_URL, password, JWT_SECRET
+nano .env         # isi SITE_ADDRESS, PUBLIC_URL, password, JWT_SECRET
 ```
 Buat JWT & password acak dengan: `openssl rand -hex 32`
+
+**Mode akses (pilih salah satu di `.env`):**
+- **Domain (HTTPS otomatis):** `SITE_ADDRESS=namadomain.com` & `PUBLIC_URL=https://namadomain.com`
+- **IP saja (HTTP, tanpa sertifikat):** `SITE_ADDRESS=:80` & `PUBLIC_URL=http://IP_VPS_ANDA`
 
 ## 4. Jalankan (build + start)
 ```bash

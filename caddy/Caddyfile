@@ -2,7 +2,10 @@
 	email {$ACME_EMAIL}
 }
 
-{$DOMAIN} {
+# SITE_ADDRESS menentukan mode:
+#   - Domain  : SITE_ADDRESS=app.almar.co.id   -> HTTPS otomatis (Let's Encrypt)
+#   - IP saja : SITE_ADDRESS=:80               -> HTTP biasa (tanpa sertifikat)
+{$SITE_ADDRESS} {
 	encode gzip
 
 	# Semua request (web + /api) diteruskan ke container frontend (nginx),

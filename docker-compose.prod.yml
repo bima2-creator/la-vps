@@ -69,6 +69,7 @@ services:
       - "443:443"
     environment:
       DOMAIN: "${DOMAIN}"
+      SITE_ADDRESS: "${SITE_ADDRESS}"
       ACME_EMAIL: "${ACME_EMAIL}"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
