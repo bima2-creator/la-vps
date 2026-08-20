@@ -5,6 +5,7 @@ import {
   FloppyDisk,
   DownloadSimple,
   UploadSimple,
+  FileZip,
   ArrowCounterClockwise,
   Trash,
   ArrowClockwise,
@@ -40,6 +41,7 @@ export default function BackupPage() {
   const [busy, setBusy] = useState(false);
   const [confirmRestore, setConfirmRestore] = useState(null);
   const fileRef = useRef(null);
+  const zipRef = useRef(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -85,6 +87,25 @@ export default function BackupPage() {
       load();
     } catch (err) {
       toast.error(formatApiError(err) || "Gagal mengunggah backup");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const uploadAttachmentsZip = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const { data } = await api.post("/backups/attachments/upload", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success(data.message || `${data.extracted} file lampiran diekstrak`);
+    } catch (err) {
+      toast.error(formatApiError(err) || "Gagal mengunggah ZIP lampiran");
     } finally {
       setBusy(false);
     }
@@ -165,6 +186,23 @@ export default function BackupPage() {
             className="hidden"
             data-testid="backup-upload-input"
           />
+          <input
+            ref={zipRef}
+            type="file"
+            accept=".zip,application/zip,application/x-zip-compressed"
+            onChange={uploadAttachmentsZip}
+            className="hidden"
+            data-testid="backup-upload-zip-input"
+          />
+          <button
+            data-testid="backup-upload-zip"
+            onClick={() => zipRef.current?.click()}
+            disabled={busy}
+            className="inline-flex items-center gap-2 border border-border bg-secondary hover:bg-slate-100 disabled:opacity-60 text-sm px-3 py-2 rounded-sm"
+            title="Unggah ZIP folder data/attachments dari PC lain — file lampiran diekstrak otomatis ke server"
+          >
+            <FileZip size={16} /> Upload Lampiran (ZIP)
+          </button>
           <button
             data-testid="backup-upload"
             onClick={() => fileRef.current?.click()}

@@ -5,6 +5,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 import io
+import zipfile
 import os
 import json
 import uuid
@@ -4532,6 +4533,54 @@ async def upload_backup(file: UploadFile = File(...), user: dict = Depends(requi
     meta["id"] = str(res.inserted_id)
     meta.pop("_id", None)
     return meta
+
+
+@api.post("/backups/attachments/upload")
+async def upload_attachments_zip(file: UploadFile = File(...), user: dict = Depends(require_roles("admin"))):
+    """Terima ZIP berisi folder lampiran (data/attachments) dan ekstrak ke penyimpanan lokal."""
+    if STORAGE_MODE != "local":
+        raise HTTPException(400, "Fitur ini hanya tersedia pada mode penyimpanan lokal (STORAGE_MODE=local)")
+    raw = await file.read()
+    if len(raw) > 200 * 1024 * 1024:
+        raise HTTPException(400, "File terlalu besar (maks 200MB). Pecah ZIP menjadi beberapa bagian.")
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(raw))
+    except Exception:
+        raise HTTPException(400, "File bukan ZIP yang valid")
+    base = _Path(LOCAL_STORAGE_DIR).resolve()
+    extracted, skipped, total_bytes = 0, 0, 0
+    for info in zf.infolist():
+        if info.is_dir():
+            continue
+        parts = [p for p in _Path(info.filename.replace("\\", "/")).parts if p not in ("", "/")]
+        if not parts or any(p == ".." for p in parts) or parts[0].endswith(":"):
+            skipped += 1
+            continue
+        if "backups" in parts:
+            skipped += 1
+            continue
+        if APP_NAME in parts:
+            rel = list(parts[parts.index(APP_NAME):])
+        elif "workorders" in parts:
+            rel = [APP_NAME] + list(parts[parts.index("workorders"):])
+        else:
+            rel = [p for p in parts if p != "attachments"] or list(parts)
+        target = (base / _Path(*rel)).resolve()
+        if not str(target).startswith(str(base)):
+            skipped += 1
+            continue
+        data = zf.read(info)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        extracted += 1
+        total_bytes += len(data)
+    await audit("attachments.zip_upload", user, meta={"files": extracted, "skipped": skipped, "zip_size": len(raw)})
+    return {
+        "extracted": extracted,
+        "skipped": skipped,
+        "total_bytes": total_bytes,
+        "message": f"{extracted} file lampiran berhasil diekstrak ke server.",
+    }
 
 
 @api.post("/backups/{bid}/restore")
