@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { api, formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import {
   FloppyDisk,
   DownloadSimple,
+  UploadSimple,
   ArrowCounterClockwise,
   Trash,
   ArrowClockwise,
@@ -38,6 +39,7 @@ export default function BackupPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [confirmRestore, setConfirmRestore] = useState(null);
+  const fileRef = useRef(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,6 +70,26 @@ export default function BackupPage() {
     }
   };
 
+  const uploadBackup = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const { data } = await api.post("/backups/upload", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success(`Backup diunggah: ${data.filename} (${data.total_docs} data). Klik ikon Restore untuk memulihkan.`);
+      load();
+    } catch (err) {
+      toast.error(formatApiError(err) || "Gagal mengunggah backup");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const download = async (b) => {
     try {
       const resp = await api.get(`/backups/${b.id}/download`, { responseType: "blob" });
@@ -91,6 +113,7 @@ export default function BackupPage() {
     try {
       const { data } = await api.post(`/backups/${b.id}/restore`);
       toast.success(data.message || "Restore selesai");
+      load();
     } catch (e) {
       toast.error(formatApiError(e) || "Gagal restore");
     } finally {
@@ -133,6 +156,23 @@ export default function BackupPage() {
             className="inline-flex items-center gap-2 border border-border bg-secondary hover:bg-slate-100 text-sm px-3 py-2 rounded-sm"
           >
             <ArrowClockwise size={16} /> Muat Ulang
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".json,application/json"
+            onChange={uploadBackup}
+            className="hidden"
+            data-testid="backup-upload-input"
+          />
+          <button
+            data-testid="backup-upload"
+            onClick={() => fileRef.current?.click()}
+            disabled={busy}
+            className="inline-flex items-center gap-2 border border-border bg-secondary hover:bg-slate-100 disabled:opacity-60 text-sm px-3 py-2 rounded-sm"
+            title="Unggah file backup JSON dari instance/PC lain"
+          >
+            <UploadSimple size={16} /> Upload Backup
           </button>
           <button
             data-testid="backup-now"
@@ -189,11 +229,21 @@ export default function BackupPage() {
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-sm border text-[10px] uppercase tracking-wider mono ${
                           b.kind === "auto"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : b.kind === "uploaded"
+                            ? "bg-purple-50 text-purple-700 border-purple-200"
+                            : b.kind === "pre-restore"
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
                             : "bg-blue-50 text-blue-700 border-blue-200"
                         }`}
                       >
                         {b.kind === "auto" ? <Clock size={11} weight="fill" /> : null}
-                        {b.kind === "auto" ? "Otomatis" : "Manual"}
+                        {b.kind === "auto"
+                          ? "Otomatis"
+                          : b.kind === "uploaded"
+                          ? "Upload"
+                          : b.kind === "pre-restore"
+                          ? "Pra-Restore"
+                          : "Manual"}
                       </span>
                     </td>
                     <td className="px-3 py-2 mono text-xs">{fmtDate(b.created_at)}</td>
@@ -255,8 +305,8 @@ export default function BackupPage() {
                 DITIMPA dengan isi backup ini. Tindakan tidak dapat dibatalkan.
               </p>
               <p className="text-muted-foreground text-xs">
-                Tips: buat "Backup Sekarang" dulu sebelum restore agar kondisi
-                terkini tersimpan.
+                Aman: sistem otomatis membuat backup "Pra-Restore" dari kondisi
+                saat ini sebelum data ditimpa.
               </p>
             </div>
             <div className="px-5 py-4 border-t border-border flex justify-end gap-2 bg-slate-50">

@@ -4496,6 +4496,44 @@ async def download_backup(bid: str, user: dict = Depends(require_roles("admin"))
     )
 
 
+@api.post("/backups/upload")
+async def upload_backup(file: UploadFile = File(...), user: dict = Depends(require_roles("admin"))):
+    """Terima file backup JSON (hasil unduhan dari instance lain) dan simpan ke daftar backup."""
+    raw = await file.read()
+    if len(raw) > 200 * 1024 * 1024:
+        raise HTTPException(400, "File terlalu besar (maks 200MB)")
+    try:
+        data = json_util.loads(raw.decode("utf-8"))
+    except Exception as e:
+        raise HTTPException(400, f"File bukan backup JSON yang valid: {e}")
+    colls = data.get("collections", {}) if isinstance(data, dict) else {}
+    known = [n for n in colls.keys() if n in BACKUP_COLLECTIONS]
+    if not known:
+        raise HTTPException(400, "File tidak berisi data backup LA Tracker yang dikenali")
+    coll_stats = [{"name": n, "count": len(colls[n] or [])} for n in known]
+    total = sum(c["count"] for c in coll_stats)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    filename = f"upload-{ts}.json"
+    storage_path = f"backups/{filename}"
+    put_object(storage_path, raw, "application/json")
+    meta = {
+        "filename": filename,
+        "storage_path": storage_path,
+        "size": len(raw),
+        "kind": "uploaded",
+        "created_by": user["actor"],
+        "created_at": now_iso(),
+        "collections": coll_stats,
+        "total_docs": total,
+        "original_filename": file.filename or "",
+    }
+    res = await db.backups.insert_one(meta)
+    await _prune_backups()
+    meta["id"] = str(res.inserted_id)
+    meta.pop("_id", None)
+    return meta
+
+
 @api.post("/backups/{bid}/restore")
 async def restore_backup(bid: str, user: dict = Depends(require_roles("admin"))):
     try:
@@ -4510,6 +4548,11 @@ async def restore_backup(bid: str, user: dict = Depends(require_roles("admin")))
     except Exception as e:
         raise HTTPException(400, f"File backup rusak/tidak valid: {e}")
     colls = data.get("collections", {}) if isinstance(data, dict) else {}
+    # Safety net: snapshot kondisi saat ini sebelum ditimpa.
+    try:
+        await create_backup(created_by=user["actor"], kind="pre-restore")
+    except Exception as e:
+        log.warning("Pre-restore backup failed: %s", e)
     restored = []
     for name, rows in colls.items():
         if name not in BACKUP_COLLECTIONS:
