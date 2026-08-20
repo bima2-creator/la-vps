@@ -4652,10 +4652,12 @@ if FRONTEND_URL not in allow_origins:
     allow_origins.append(FRONTEND_URL)
 # Local install: allow any LAN origin via wildcard regex when CORS_ORIGINS="*"
 _use_wildcard = "*" in allow_origins
+# Selain daftar eksplisit, izinkan semua preview Emergent (web/mobile preview)
+_preview_regex = r"https://.*\.preview\.emergentagent\.com"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[] if _use_wildcard else allow_origins,
-    allow_origin_regex=".*" if _use_wildcard else None,
+    allow_origin_regex=".*" if _use_wildcard else _preview_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
