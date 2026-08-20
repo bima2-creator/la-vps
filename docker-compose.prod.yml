@@ -14,8 +14,9 @@ services:
     healthcheck:
       test: ["CMD", "mongosh", "-u", "${MONGO_ROOT_USER}", "-p", "${MONGO_ROOT_PASS}", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 12
+      start_period: 60s
 
   backend:
     build:

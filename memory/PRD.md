@@ -78,6 +78,9 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 - `GET /invoices/{id}/pdf?part=lampiran` → PDF Lampiran saja: Faktur Pajak + Bukti Potong + SPK & Berita Acara (gate: file Faktur Pajak & Bukti Potong sudah diupload). Dokumen invoice TIDAK ikut.
 - Frontend: 2 tombol per baris invoice (FilePdf = invoice, Paperclip = lampiran) dengan gating & toast. Terverifikasi curl + UI.
 
+## Catatan VPS (Jun 2026)
+- Fix: healthcheck mongo di docker-compose.prod.yml ditambah start_period 60s + retries 12 (mongo lambat start di VPS menyebabkan "dependency mongo failed to start" padahal mongo sehat).
+
 ## Deployment & Docs (June 2026)
 - Panduan instalasi Windows dibuat: `/app/PANDUAN_INSTALASI_WINDOWS.md` (Bahasa Indonesia, lengkap: prasyarat, .env lokal STORAGE_MODE=local, jalankan backend/frontend, akses LAN, troubleshooting).
 - Deployment: blocker CORS diperbaiki (`backend/.env` CORS_ORIGINS="*"). deployment_agent status READY. App tinggal di-deploy lewat tombol Deploy platform.
