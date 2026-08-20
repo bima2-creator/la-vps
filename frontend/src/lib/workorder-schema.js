@@ -71,6 +71,7 @@ export const SECTIONS = [
       { name: "sdt_instalasi_target", label: "SDT Instalasi Target", type: "text", mono: true },
       { name: "sdt_aktivasi_durasi", label: "SDT Aktivasi Durasi", type: "text", mono: true },
       { name: "sdt_aktivasi_target", label: "SDT Aktivasi Target", type: "text", mono: true },
+      { name: "fe_activity_log", label: "Data Lapangan (Aktivitas Field Engineer)", type: "fe-activity-log" },
     ],
   },
   {
@@ -87,6 +88,7 @@ export const SECTIONS = [
       { name: "cp_la", label: "CP LA", type: "text" },
       { name: "cp_pelanggan", label: "CP Pelanggan", type: "text" },
       { name: "cp_mitra", label: "CP Pelaksana", type: "text" },
+      { name: "field_engineer", label: "Field Engineer (PIC)", type: "fe-select" },
       {
         name: "tim_pelaksana",
         label: "Tim Pelaksana",
@@ -344,9 +346,10 @@ export function emptyWorkOrder() {
       f.type === "invoice-activity-type" ||
       f.type === "boq-items" ||
       f.type === "perangkat-items" ||
-      f.type === "teknisi-list"
+      f.type === "teknisi-list" ||
+      f.type === "fe-activity-log"
     ) {
-      if (f.type === "boq-items" || f.type === "perangkat-items" || f.type === "teknisi-list")
+      if (f.type === "boq-items" || f.type === "perangkat-items" || f.type === "teknisi-list" || f.type === "fe-activity-log")
         obj[f.name] = [];
       return;
     }

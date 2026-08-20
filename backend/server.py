@@ -202,6 +202,8 @@ async def _resolve_user_from_token(token: str) -> dict:
         user = await db.users.find_one({"_id": ObjectId(payload["sub"])})
         if not user:
             raise HTTPException(401, "User not found")
+        if user.get("active") is False:
+            raise HTTPException(401, "Akun dinonaktifkan")
         user["id"] = str(user["_id"])
         user.pop("_id", None)
         user.pop("password_hash", None)
@@ -242,7 +244,7 @@ class RegisterIn(BaseModel):
     username: str = Field(min_length=1)
     password: str = Field(min_length=4)
     name: str = Field(min_length=1)
-    role: str = Field(default="operator", pattern="^(admin|operator|viewer)$")
+    role: str = Field(default="operator", pattern="^(admin|operator|viewer|field_engineer)$")
     email: Optional[str] = ""
 
 
@@ -341,6 +343,10 @@ class WorkOrderBase(BaseModel):
     # Tim Pelaksana (dasar penilaian KPI & target)
     tim_pelaksana: Optional[str] = ""            # "INTERNAL" | "MITRA"
     teknisi_pelaksana: Optional[List[Any]] = []  # daftar nama teknisi (4 utk INTERNAL, 1 utk MITRA)
+
+    # Field Engineer (PIC pekerjaan lapangan, akun role field_engineer)
+    field_engineer: Optional[str] = ""           # username FE penanggung jawab
+    fe_activity_log: Optional[List[Any]] = []    # [{fase, action, time, reason, by}]
 
     # Hasil Pekerjaan
     hasil_survey_status: Optional[str] = ""
@@ -511,9 +517,10 @@ async def seed_fixed_users() -> None:
     except Exception:
         pass
 
-    # Remove any accounts that are not part of the fixed set.
+    # Remove any accounts that are not part of the fixed set (kecuali Field Engineer,
+    # yang dibuat dinamis oleh admin lewat halaman Administration).
     try:
-        await db.users.delete_many({"username": {"$nin": usernames}})
+        await db.users.delete_many({"username": {"$nin": usernames}, "role": {"$ne": "field_engineer"}})
     except Exception:
         pass
 
@@ -597,6 +604,8 @@ async def login(payload: LoginIn, response: Response):
     user = await db.users.find_one({"username": username})
     if not user or not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(401, "Invalid username or password")
+    if user.get("active") is False:
+        raise HTTPException(403, "Akun dinonaktifkan. Hubungi admin.")
     uid = str(user["_id"])
     access = create_access_token(uid, username, user["role"])
     refresh = create_refresh_token(uid)
@@ -640,6 +649,8 @@ async def refresh_token(request: Request, response: Response, payload: Optional[
         user = await db.users.find_one({"_id": ObjectId(uid)})
         if not user:
             raise HTTPException(401, "User not found")
+        if user.get("active") is False:
+            raise HTTPException(401, "Akun dinonaktifkan")
         access = create_access_token(uid, user.get("username", ""), user["role"])
         # Rotate refresh token so mobile clients get a fresh 7-day window.
         new_refresh = create_refresh_token(uid)
@@ -688,6 +699,79 @@ async def delete_user(user_id: str, user: dict = Depends(require_roles("admin"))
     return {"ok": True}
 
 
+class FECreateIn(BaseModel):
+    username: str = Field(min_length=3)
+    name: str = Field(min_length=1)
+    password: str = Field(min_length=4)
+
+
+class FEUpdateIn(BaseModel):
+    name: Optional[str] = None
+    active: Optional[bool] = None
+    password: Optional[str] = None
+
+
+def _fe_out(u: dict) -> dict:
+    return {
+        "id": str(u["_id"]),
+        "username": u.get("username", ""),
+        "name": u.get("name", ""),
+        "active": u.get("active", True) is not False,
+        "created_at": u.get("created_at"),
+    }
+
+
+@api.get("/users/field-engineers")
+async def list_field_engineers(user: dict = Depends(require_roles("admin", "operator"))):
+    users = await db.users.find({"role": "field_engineer"}, {"password_hash": 0}).sort("name", 1).to_list(500)
+    return [_fe_out(u) for u in users]
+
+
+@api.post("/users/field-engineers")
+async def create_field_engineer(payload: FECreateIn, user: dict = Depends(require_roles("admin"))):
+    username = payload.username.strip().lower()
+    if await db.users.find_one({"username": username}):
+        raise HTTPException(400, "Username sudah dipakai")
+    doc = {
+        "username": username,
+        "email": "",
+        "password_hash": hash_password(payload.password),
+        "name": payload.name.strip(),
+        "role": "field_engineer",
+        "active": True,
+        "created_at": now_iso(),
+    }
+    res = await db.users.insert_one(doc)
+    await audit("user.fe_create", user, meta={"username": username})
+    doc["_id"] = res.inserted_id
+    return _fe_out(doc)
+
+
+@api.patch("/users/field-engineers/{user_id}")
+async def update_field_engineer(user_id: str, payload: FEUpdateIn, user: dict = Depends(require_roles("admin"))):
+    try:
+        target = await db.users.find_one({"_id": ObjectId(user_id), "role": "field_engineer"})
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    if not target:
+        raise HTTPException(404, "Field engineer tidak ditemukan")
+    update: Dict[str, Any] = {}
+    if payload.name is not None:
+        update["name"] = payload.name.strip()
+    if payload.active is not None:
+        update["active"] = bool(payload.active)
+    if payload.password:
+        if len(payload.password) < 4:
+            raise HTTPException(400, "Password minimal 4 karakter")
+        update["password_hash"] = hash_password(payload.password)
+    if not update:
+        raise HTTPException(400, "Tidak ada perubahan")
+    await db.users.update_one({"_id": target["_id"]}, {"$set": update})
+    await audit("user.fe_update", user, meta={"username": target.get("username"), "fields": list(update.keys())})
+    fresh = await db.users.find_one({"_id": target["_id"]})
+    return _fe_out(fresh)
+
+
 # ------------------------------------------------------------------
 # Work Order CRUD
 # ------------------------------------------------------------------
@@ -701,11 +785,17 @@ async def list_workorders(
     jenis_order: Optional[str] = None,
     jenis_pekerjaan: Optional[str] = None,
     status: Optional[str] = None,
+    field_engineer: Optional[str] = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
     user: dict = Depends(get_current_user),
 ):
     query: Dict[str, Any] = {}
+    # Field Engineer hanya melihat WO yang ditugaskan padanya.
+    if user.get("role") == "field_engineer":
+        query["field_engineer"] = user.get("username")
+    elif field_engineer:
+        query["field_engineer"] = field_engineer
     if q:
         query["$or"] = [
             {"pelanggan": {"$regex": q, "$options": "i"}},
@@ -916,6 +1006,8 @@ async def get_workorder(wo_id: str, user: dict = Depends(get_current_user)):
     doc = await db.workorders.find_one({"_id": ObjectId(wo_id)})
     if not doc:
         raise HTTPException(404, "Not found")
+    if user.get("role") == "field_engineer" and (doc.get("field_engineer") or "") != user.get("username"):
+        raise HTTPException(403, "WO ini tidak ditugaskan kepada Anda")
     return workorder_to_out(doc)
 
 
@@ -1034,6 +1126,144 @@ async def update_workorder(wo_id: str, payload: WorkOrderIn, user: dict = Depend
     await _learn_teknisi(doc.get("tim_pelaksana"), doc.get("teknisi_pelaksana"))
     await audit("workorder.update", user, workorder_id=wo_id, meta={"pelanggan": updated.get("pelanggan")})
     return workorder_to_out(updated)
+
+
+# ---- Field Engineer: entry data lapangan ----
+FE_EDITABLE_FIELDS = {
+    "lat", "lng",
+    "media_jenis", "media_perangkat",
+    "m2m_sim_card", "m2m_jenis_kartu", "m2m_kuota_gb", "m2m_masa_aktif",
+    "cp_pelanggan",
+    "tim_pelaksana", "teknisi_pelaksana",
+    "hasil_survey_status", "hasil_survey_datek", "hasil_survey_npae",
+    "hasil_instalasi_status", "hasil_instalasi_datek", "hasil_instalasi_npae",
+    "hasil_aktivasi_status", "hasil_aktivasi_datek", "hasil_aktivasi_npae",
+    "info_kondisi", "info_perizinan", "info_biaya", "info_masalah", "info_tindak_lanjut",
+    "perangkat_items",
+    "activity_survey_start", "activity_survey_end",
+    "activity_instalasi_start", "activity_instalasi_end",
+    "activity_aktivasi_start", "activity_aktivasi_end",
+    "stop_survey_start", "stop_survey_end",
+    "stop_instalasi_start", "stop_instalasi_end",
+    "stop_aktivasi_start", "stop_aktivasi_end",
+}
+
+
+async def _get_wo_for_fe(wo_id: str, user: dict) -> dict:
+    try:
+        doc = await db.workorders.find_one({"_id": ObjectId(wo_id)})
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    if not doc:
+        raise HTTPException(404, "Not found")
+    if user.get("role") == "field_engineer" and (doc.get("field_engineer") or "") != user.get("username"):
+        raise HTTPException(403, "WO ini tidak ditugaskan kepada Anda")
+    return doc
+
+
+class FEFieldDataIn(BaseModel):
+    data: Dict[str, Any] = Field(default_factory=dict)
+
+
+@api.patch("/workorders/{wo_id}/field-data")
+async def update_field_data(wo_id: str, payload: FEFieldDataIn,
+                            user: dict = Depends(require_roles("admin", "operator", "field_engineer"))):
+    """Entry data lapangan oleh Field Engineer — hanya field yang diizinkan."""
+    doc = await _get_wo_for_fe(wo_id, user)
+    updates = {k: v for k, v in (payload.data or {}).items() if k in FE_EDITABLE_FIELDS}
+    rejected = [k for k in (payload.data or {}).keys() if k not in FE_EDITABLE_FIELDS]
+    if not updates:
+        raise HTTPException(400, "Tidak ada field valid yang dikirim")
+    if "perangkat_items" in updates:
+        await _validate_perangkat_uniqueness({**doc, "perangkat_items": updates["perangkat_items"]}, exclude_wo_id=wo_id)
+    updates["updated_at"] = now_iso()
+    await db.workorders.update_one({"_id": doc["_id"]}, {"$set": updates})
+    if "perangkat_items" in updates:
+        await _learn_perangkat(updates.get("perangkat_items"))
+    if "teknisi_pelaksana" in updates:
+        await _learn_teknisi(updates.get("tim_pelaksana") or doc.get("tim_pelaksana"), updates.get("teknisi_pelaksana"))
+    await audit("workorder.fe_update", user, workorder_id=wo_id,
+                meta={"fields": [k for k in updates if k != "updated_at"], "rejected": rejected})
+    fresh = await db.workorders.find_one({"_id": doc["_id"]})
+    return {"ok": True, "rejected_fields": rejected, "workorder": workorder_to_out(fresh)}
+
+
+class FEActivityIn(BaseModel):
+    fase: str = Field(pattern="^(survey|instalasi|aktivasi)$")
+    action: str = Field(pattern="^(start|hold|resume|stop)$")
+    reason: Optional[str] = ""
+
+
+def _fe_activity_summary(log: List[dict], fase: str) -> dict:
+    """Hitung status & durasi kerja bersih (menit) dari log aktivitas satu fase."""
+    start = end = None
+    holds: List[tuple] = []
+    open_hold = None
+    for e in log or []:
+        if e.get("fase") != fase:
+            continue
+        t = e.get("time")
+        a = e.get("action")
+        if a == "start" and not start:
+            start = t
+        elif a == "hold" and open_hold is None:
+            open_hold = t
+        elif a == "resume" and open_hold:
+            holds.append((open_hold, t))
+            open_hold = None
+        elif a == "stop":
+            end = t
+    if not start:
+        return {"fase": fase, "status": "idle", "net_minutes": 0}
+    def _p(x):
+        return datetime.fromisoformat(x)
+    ref_end = _p(end) if end else datetime.now(timezone.utc)
+    hold_secs = sum((_p(b) - _p(a)).total_seconds() for a, b in holds)
+    if open_hold and not end:
+        hold_secs += (datetime.now(timezone.utc) - _p(open_hold)).total_seconds()
+    net = max(0, (ref_end - _p(start)).total_seconds() - hold_secs)
+    status = "done" if end else ("hold" if open_hold else "running")
+    return {"fase": fase, "status": status, "net_minutes": round(net / 60, 1),
+            "start": start, "end": end, "hold_count": len(holds) + (1 if open_hold else 0)}
+
+
+@api.post("/workorders/{wo_id}/activity")
+async def fe_activity_action(wo_id: str, payload: FEActivityIn,
+                             user: dict = Depends(require_roles("admin", "operator", "field_engineer"))):
+    """Start / Hold / Resume / Stop clock aktivitas lapangan per fase."""
+    doc = await _get_wo_for_fe(wo_id, user)
+    log = list(doc.get("fe_activity_log") or [])
+    cur = _fe_activity_summary(log, payload.fase)
+    a = payload.action
+    if a == "start" and cur["status"] != "idle":
+        raise HTTPException(400, f"Aktivitas {payload.fase} sudah dimulai")
+    if a == "hold" and cur["status"] != "running":
+        raise HTTPException(400, "Hold hanya bisa saat aktivitas berjalan")
+    if a == "resume" and cur["status"] != "hold":
+        raise HTTPException(400, "Resume hanya bisa saat status hold")
+    if a == "stop" and cur["status"] in ("idle", "done"):
+        raise HTTPException(400, "Aktivitas belum berjalan atau sudah selesai")
+    if a == "hold" and not (payload.reason or "").strip():
+        raise HTTPException(400, "Alasan hold wajib diisi")
+    now = datetime.now(timezone.utc)
+    entry = {"fase": payload.fase, "action": a, "time": now.isoformat(),
+             "reason": (payload.reason or "").strip(), "by": user["actor"]}
+    log.append(entry)
+    today = now.date().isoformat()
+    sync: Dict[str, Any] = {"fe_activity_log": log, "updated_at": now_iso()}
+    # Sinkronkan ke field datar WO (dipakai web/KPI/SDT)
+    if a == "start" and not doc.get(f"activity_{payload.fase}_start"):
+        sync[f"activity_{payload.fase}_start"] = today
+    if a == "stop":
+        sync[f"activity_{payload.fase}_end"] = today
+    if a == "hold" and not doc.get(f"stop_{payload.fase}_start"):
+        sync[f"stop_{payload.fase}_start"] = today
+    if a == "resume":
+        sync[f"stop_{payload.fase}_end"] = today
+    await db.workorders.update_one({"_id": doc["_id"]}, {"$set": sync})
+    await audit("workorder.fe_activity", user, workorder_id=wo_id,
+                meta={"fase": payload.fase, "action": a, "reason": entry["reason"]})
+    return {"ok": True, "entry": entry, "summary": _fe_activity_summary(log, payload.fase)}
 
 
 @api.delete("/workorders/{wo_id}")

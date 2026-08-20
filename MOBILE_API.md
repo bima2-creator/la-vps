@@ -101,3 +101,26 @@ api.interceptors.response.use(
 - `GET /api/perangkat/bank/lookup?nomor=` — deteksi nama perangkat dari nomor registrasi
 
 Role: `admin` (full), `operator` (buat/ubah WO), `viewer/guest` (read-only).
+
+---
+
+## Field Engineer (FE) — Endpoint untuk Mobile
+
+Role baru `field_engineer`. Akun dibuat admin di web (Administration → Field Engineer).
+FE login lewat `POST /api/auth/login` yang sama (`{"username","password"}`).
+
+- `GET /api/workorders` — untuk role FE otomatis terfilter hanya WO yang ditugaskan padanya (`field_engineer == username`). Query params filter/pagination tetap berlaku.
+- `GET /api/workorders/{id}` — 403 jika WO bukan miliknya.
+- `PATCH /api/workorders/{id}/field-data` — body `{"data": {field: value, ...}}`. Hanya field berikut yang diterima (lainnya diabaikan & dilaporkan di `rejected_fields`):
+  - `lat`, `lng` (titik lokasi real, format DMS sama dengan web)
+  - `media_jenis`, `media_perangkat`, `m2m_sim_card`, `m2m_jenis_kartu`, `m2m_kuota_gb`, `m2m_masa_aktif`
+  - `cp_pelanggan`
+  - `tim_pelaksana`, `teknisi_pelaksana` (FE lain yang ikut mengerjakan → masuk KPI)
+  - `hasil_{survey|instalasi|aktivasi}_{status|datek|npae}`
+  - `info_kondisi`, `info_perizinan`, `info_biaya`, `info_masalah`, `info_tindak_lanjut`
+  - `perangkat_items`
+  - `activity_*_start/end`, `stop_*_start/end`
+- `POST /api/workorders/{id}/activity` — clock kerja lapangan. Body: `{"fase":"survey|instalasi|aktivasi","action":"start|hold|resume|stop","reason":"wajib saat hold"}`.
+  Respons berisi `summary` `{status: idle|running|hold|done, net_minutes, hold_count}` (durasi bersih di luar masa hold).
+  Aksi otomatis menyinkronkan tanggal ke field `activity_*`/`stop_*` WO (tampil di web).
+- Riwayat lengkap tersimpan di field WO `fe_activity_log` `[{fase, action, time, reason, by}]`.

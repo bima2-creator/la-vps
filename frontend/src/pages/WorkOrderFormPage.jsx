@@ -198,6 +198,10 @@ export default function WorkOrderFormPage() {
   const [mediaPerangkatOpts, setMediaPerangkatOpts] = useState([]);
   const [teknisiInternalOpts, setTeknisiInternalOpts] = useState([]);
   const [teknisiMitraOpts, setTeknisiMitraOpts] = useState([]);
+  const [feOptions, setFeOptions] = useState([]);
+  useEffect(() => {
+    api.get("/users/field-engineers").then(({ data }) => setFeOptions(data || [])).catch(() => {});
+  }, []);
   // SI ID prefill (existing network lookup)
   const [siPrefill, setSiPrefill] = useState(null); // { prefill, source }
   const [siPrefillDismissed, setSiPrefillDismissed] = useState("");
@@ -973,6 +977,80 @@ export default function WorkOrderFormPage() {
                       <LockKey size={14} className="text-muted-foreground" />
                     </div>
                   </label>
+                );
+              }
+              // Dropdown penugasan Field Engineer (akun role field_engineer)
+              if (f.type === "fe-select") {
+                const known = feOptions.some((o) => o.username === form.field_engineer);
+                return (
+                  <label key={f.name} className="block">
+                    <span className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                      {f.label}
+                    </span>
+                    <select
+                      data-testid="workorder-form-input-field_engineer"
+                      value={form.field_engineer || ""}
+                      onChange={(e) => onChange("field_engineer", e.target.value)}
+                      disabled={!canEdit}
+                      className="w-full bg-secondary border border-border rounded-sm px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="">— Belum ditugaskan —</option>
+                      {form.field_engineer && !known && (
+                        <option value={form.field_engineer}>{form.field_engineer}</option>
+                      )}
+                      {feOptions.map((fe) => (
+                        <option key={fe.id} value={fe.username} disabled={!fe.active}>
+                          {fe.name} ({fe.username}){!fe.active ? " — nonaktif" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="block text-[10px] text-muted-foreground mt-1">
+                      FE hanya melihat & mengisi WO yang ditugaskan padanya (via mobile).
+                    </span>
+                  </label>
+                );
+              }
+              // Riwayat aktivitas lapangan FE (read-only)
+              if (f.type === "fe-activity-log") {
+                const felog = form.fe_activity_log || [];
+                const aLabel = { start: "MULAI", hold: "HOLD", resume: "LANJUT", stop: "SELESAI" };
+                const aColor = {
+                  start: "text-emerald-600",
+                  hold: "text-amber-600",
+                  resume: "text-blue-600",
+                  stop: "text-slate-700",
+                };
+                return (
+                  <div key={f.name} data-testid="fe-activity-log" className="md:col-span-2">
+                    <span className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
+                      {f.label}
+                    </span>
+                    {felog.length === 0 ? (
+                      <div className="border border-dashed border-border rounded-sm p-4 text-xs text-muted-foreground">
+                        Belum ada aktivitas lapangan dari Field Engineer.
+                      </div>
+                    ) : (
+                      <div className="border border-border rounded-sm bg-slate-50/60 p-4 space-y-1.5">
+                        {felog.map((e, i) => (
+                          <div key={i} className="flex flex-wrap items-center gap-2 text-xs">
+                            <span className="mono text-muted-foreground">
+                              {e.time ? new Date(e.time).toLocaleString("id-ID") : "-"}
+                            </span>
+                            <span className="uppercase tracking-wider text-[10px] border border-border bg-white px-1.5 py-0.5 rounded-sm">
+                              {e.fase}
+                            </span>
+                            <span className={`font-semibold ${aColor[e.action] || ""}`}>
+                              {aLabel[e.action] || e.action}
+                            </span>
+                            {e.reason ? (
+                              <span className="text-muted-foreground">— {e.reason}</span>
+                            ) : null}
+                            <span className="mono text-[10px] text-muted-foreground ml-auto">{e.by}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 );
               }
               // Multi-paket BoQ editor — locked until hasil_*_status is OK/BATAL
