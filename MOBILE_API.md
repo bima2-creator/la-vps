@@ -124,3 +124,4 @@ FE login lewat `POST /api/auth/login` yang sama (`{"username","password"}`).
   Respons berisi `summary` `{status: idle|running|hold|done, net_minutes, hold_count}` (durasi bersih di luar masa hold).
   Aksi otomatis menyinkronkan tanggal ke field `activity_*`/`stop_*` WO (tampil di web).
 - Riwayat lengkap tersimpan di field WO `fe_activity_log` `[{fase, action, time, reason, by}]`.
+- `PUT /api/workorders/{id}` — kini juga bisa dipakai role FE. Perilaku untuk FE: hanya WO miliknya (403 jika bukan), hanya field whitelist yang diterapkan, dan **hanya field yang dikirim** (kirim subset saja, mis. `{"cp_pelanggan":"..."}` — field lain tidak tertimpa). Field terlarang diabaikan; jika tidak ada field valid → 400.

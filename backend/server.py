@@ -1113,17 +1113,34 @@ async def create_workorder(payload: WorkOrderIn, user: dict = Depends(require_ro
 
 
 @api.put("/workorders/{wo_id}")
-async def update_workorder(wo_id: str, payload: WorkOrderIn, user: dict = Depends(require_roles("admin", "operator"))):
-    doc = payload.model_dump()
-    _validate_sa_or_si_required(doc)
-    await _validate_perangkat_uniqueness(doc, exclude_wo_id=wo_id)
+async def update_workorder(wo_id: str, payload: WorkOrderIn,
+                           user: dict = Depends(require_roles("admin", "operator", "field_engineer"))):
+    existing = await db.workorders.find_one({"_id": ObjectId(wo_id)})
+    if not existing:
+        raise HTTPException(404, "Not found")
+    if user.get("role") == "field_engineer":
+        # FE: hanya WO miliknya, hanya field whitelist, dan hanya field yang benar-benar dikirim
+        if (existing.get("field_engineer") or "") != user.get("username"):
+            raise HTTPException(403, "WO ini tidak ditugaskan kepada Anda")
+        sent = payload.model_dump(exclude_unset=True)
+        doc = {k: v for k, v in sent.items() if k in FE_EDITABLE_FIELDS}
+        if not doc:
+            raise HTTPException(400, "Tidak ada field valid yang dikirim")
+        if "perangkat_items" in doc:
+            await _validate_perangkat_uniqueness({**existing, "perangkat_items": doc["perangkat_items"]}, exclude_wo_id=wo_id)
+    else:
+        doc = payload.model_dump()
+        _validate_sa_or_si_required(doc)
+        await _validate_perangkat_uniqueness(doc, exclude_wo_id=wo_id)
     doc["updated_at"] = now_iso()
     res = await db.workorders.update_one({"_id": ObjectId(wo_id)}, {"$set": doc})
     if res.matched_count == 0:
         raise HTTPException(404, "Not found")
     updated = await db.workorders.find_one({"_id": ObjectId(wo_id)})
-    await _learn_perangkat(doc.get("perangkat_items"))
-    await _learn_teknisi(doc.get("tim_pelaksana"), doc.get("teknisi_pelaksana"))
+    if doc.get("perangkat_items") is not None:
+        await _learn_perangkat(doc.get("perangkat_items"))
+    if doc.get("teknisi_pelaksana") is not None:
+        await _learn_teknisi(doc.get("tim_pelaksana") or updated.get("tim_pelaksana"), doc.get("teknisi_pelaksana"))
     await audit("workorder.update", user, workorder_id=wo_id, meta={"pelanggan": updated.get("pelanggan")})
     return workorder_to_out(updated)
 
