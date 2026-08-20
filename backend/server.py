@@ -2546,7 +2546,7 @@ async def perangkat_registry(
             nr = (item.get("nomor_registrasi") or "").strip()
             if not nr:
                 continue
-            nama = (item.get("nama") or "").strip()
+            nama = (item.get("nama_perangkat") or item.get("nama") or "").strip()
             hist_entry = {
                 "wo_id": wo_id,
                 "pelanggan": wo.get("pelanggan") or "",
@@ -2570,6 +2570,23 @@ async def perangkat_registry(
                 devices[nr]["wo_history"].append(hist_entry)
                 if nama and not devices[nr]["nama"]:
                     devices[nr]["nama"] = nama
+
+    # Fallback nama dari Bank Data (prefix nomor registrasi) untuk perangkat tanpa nama
+    unnamed = [nr for nr, dev in devices.items() if not dev["nama"]]
+    if unnamed:
+        bank: Dict[str, Dict[str, int]] = {}
+        async for bd in db.perangkat_bank.find({}, {"prefix": 1, "nama": 1, "count": 1}):
+            p = bd.get("prefix") or ""
+            if p:
+                bank.setdefault(p, {})
+                bank[p][bd["nama"]] = bank[p].get(bd["nama"], 0) + int(bd.get("count", 1))
+        for nr in unnamed:
+            n = _clean_nomor(nr)
+            for L in PREFIX_LENGTHS:
+                agg = bank.get(n[:L]) if len(n) >= L else None
+                if agg:
+                    devices[nr]["nama"] = max(agg.items(), key=lambda x: x[1])[0]
+                    break
 
     # Sort each device's history desc by updated_at then created_at
     for dev in devices.values():

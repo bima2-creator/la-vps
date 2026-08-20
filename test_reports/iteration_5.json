@@ -1,0 +1,33 @@
+{
+  "summary": "Verified the fix for 'nama perangkat tidak muncul di Flow Perangkat'. Backend: new pytest suite (5 tests, all passed) covering GET /api/perangkat/registry nama resolution from perangkat_items[].nama_perangkat, bank-prefix (13-char) fallback for unnamed devices, CSV export regression, existing device sanity, and cleanup/delete verification. Frontend: admin login -> /perangkat table shows 'X1 SATELLITE ROUTER 90W KU/C' for B2WS0200023MA0580 (no '-'), clicking nomor registrasi opens drawer with the device name in the title (no '(tanpa nama)'), /backup page renders with backup-upload and backup-upload-zip present. No console errors after login. Bug is FIXED.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/workorders + perangkat_bank", "issue": "Creating a WO auto-learns nama into perangkat_bank via _learn_perangkat, but DELETE /api/workorders/{id} does not unlearn it — deleted test data left a residual bank entry (prefix TESTREG123456). I removed that leftover manually. Consider whether learned bank entries should be reference-counted/cleaned on WO delete."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_perangkat_registry_nama.py",
+    "/app/test_reports/pytest/registry_nama.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "perangkat_registry loads up to 20000 full WO docs into memory and does all filtering/pagination in Python; will not scale — consider a Mongo aggregation pipeline with $unwind on perangkat_items.",
+    "perangkat_export_csv calls perangkat_registry with page_size=100000, duplicating the full in-memory aggregation for every export; extract a shared helper.",
+    "Bank fallback loads the whole perangkat_bank collection on every registry request when any device is unnamed; cache or query only the needed prefixes.",
+    "Optional: DELETE of a WO does not roll back perangkat_bank learning (see minor backend issue)."
+  ],
+  "updated_files": ["/app/backend/tests/test_perangkat_registry_nama.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Created 2 temporary WOs (sa_id prefix TESTSA-, nomor_registrasi TESTREG1234567890 and <bankPrefix>XX99) — both deleted via DELETE /api/workorders/{id} and verified removed from registry. Residual perangkat_bank entry created by auto-learn was deleted.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": false,
+  "test_credentials": "admin / admin123 (POST /api/auth/login with username)",
+  "context_for_next_testing_agent": "POST /api/workorders requires sa_id OR si_id (400 otherwise) — include sa_id in any WO test payload. pytest.ini runs -n 2 --dist loadscope, so module-scoped sequential tests stay on one worker. Preview DB has only 1 real WO with perangkat_items (B2WS0200023MA0580) and 34 perangkat_bank entries.",
+  "rca_of_the_issue": "Original bug: registry read item['nama'] while WO documents store 'nama_perangkat'. Current code reads nama_perangkat with fallback to nama, plus a perangkat_bank 13-char-prefix fallback for still-unnamed devices. Both paths verified working end-to-end (API + UI table + drawer + CSV)."
+}
