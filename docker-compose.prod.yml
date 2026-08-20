@@ -79,6 +79,17 @@ services:
     networks:
       - la-net
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: la-tracker-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    depends_on:
+      - caddy
+    networks:
+      - la-net
+    profiles: ["tunnel"]
+
 networks:
   la-net:
     driver: bridge

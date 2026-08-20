@@ -79,7 +79,9 @@ Admin (`admin`/`admin123`), Operator (`operator`/`operator`), Guest/Viewer (`gue
 - Frontend: 2 tombol per baris invoice (FilePdf = invoice, Paperclip = lampiran) dengan gating & toast. Terverifikasi curl + UI.
 
 ## Catatan VPS (Jun 2026)
-- Fix: healthcheck mongo di docker-compose.prod.yml ditambah start_period 60s + retries 12 (mongo lambat start di VPS menyebabkan "dependency mongo failed to start" padahal mongo sehat).
+- Fix: healthcheck mongo pakai CMD-SHELL tanpa auth + start_period 90s (mongosh lambat boot di VPS kecil).
+- VM vm190 di belakang NAT (IP privat 192.168.204.161, publik 154.17.167.145). Port 22 terbuka, port 80/443 TERTUTUP dari internet → solusi: Cloudflare Tunnel.
+- Ditambahkan service `cloudflared` (profile "tunnel") di docker-compose.prod.yml; jalankan dengan `--profile tunnel up -d`. Domain: app.bitech.co.id, SITE_ADDRESS=:80, PUBLIC_URL=https://app.bitech.co.id. Panduan lengkap di DEPLOY-LINUX.md bagian Cloudflare Tunnel.
 
 ## Deployment & Docs (June 2026)
 - Panduan instalasi Windows dibuat: `/app/PANDUAN_INSTALASI_WINDOWS.md` (Bahasa Indonesia, lengkap: prasyarat, .env lokal STORAGE_MODE=local, jalankan backend/frontend, akses LAN, troubleshooting).

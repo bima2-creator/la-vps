@@ -102,3 +102,43 @@ Contoh cron harian jam 02:00 (`crontab -e`):
 ## ⬆️ Skala lebih besar (opsional)
 - Pindah database ke **MongoDB Atlas** (managed + backup otomatis): cukup ubah `MONGO_URL` di `.env`, dan hapus service `mongo` dari compose.
 - Pindah file ke **S3 / Cloudflare R2** untuk penyimpanan lampiran yang lebih tahan lama.
+
+---
+
+## 🌐 Cloudflare Tunnel (VM di belakang NAT, port 80/443 tertutup)
+
+Dipakai saat VPS tidak bisa menerima koneksi masuk (seperti vm190: hanya port 22 yang diteruskan).
+Tunnel membuat koneksi KELUAR dari VM ke Cloudflare, jadi tidak butuh port forwarding sama sekali,
+dan HTTPS `https://app.bitech.co.id` diurus otomatis oleh Cloudflare.
+
+### 1. Daftarkan domain ke Cloudflare (sekali saja)
+1. Buat akun gratis di https://dash.cloudflare.com
+2. **Add a domain** → masukkan `bitech.co.id` → pilih plan **Free**
+3. Cloudflare menampilkan 2 nameserver → ganti nameserver di registrar domain
+   (record DNS lama otomatis dimigrasikan; website & email utama tetap jalan)
+4. Tunggu status domain menjadi **Active** (beberapa menit s/d 24 jam)
+
+### 2. Buat Tunnel
+1. Buka https://one.dash.cloudflare.com → **Networks → Tunnels → Create a tunnel**
+2. Pilih **Cloudflared** → beri nama misal `la-tracker` → **Save**
+3. Di halaman install, salin **token**-nya saja (teks panjang setelah `--token`)
+4. Tab **Public Hostname → Add a public hostname**:
+   - Subdomain: `app` — Domain: `bitech.co.id`
+   - Service Type: **HTTP** — URL: `caddy:80`
+5. Save
+
+### 3. Jalankan di VPS
+```bash
+cd ~/la-tracker
+git pull
+nano .env    # pastikan: SITE_ADDRESS=:80, PUBLIC_URL=https://app.bitech.co.id, TUNNEL_TOKEN=<token langkah 2.3>
+docker compose -f docker-compose.prod.yml --profile tunnel up -d
+docker logs la-tracker-tunnel --tail 20   # harus muncul "Registered tunnel connection"
+```
+
+Selesai → akses **https://app.bitech.co.id**
+
+> Catatan mode tunnel:
+> - `SITE_ADDRESS` HARUS `:80` (Caddy menerima semua host; TLS diurus Cloudflare, bukan Caddy)
+> - `PUBLIC_URL` HARUS `https://app.bitech.co.id` (dipakai untuk CORS backend)
+> - Selalu sertakan `--profile tunnel` pada perintah `up -d` agar container tunnel ikut menyala
