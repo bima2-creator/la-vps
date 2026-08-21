@@ -20,6 +20,7 @@ import jwt
 import pandas as pd
 from bson import ObjectId
 from bson import json_util
+from pymongo.errors import DuplicateKeyError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Response, UploadFile, File, Query, Header, Form
 from fastapi.responses import StreamingResponse
@@ -4364,7 +4365,10 @@ async def create_invoice(
         "created_by": user.get("actor"),
     }
     doc["status"] = compute_invoice_status(doc)
-    res = await db.invoices.insert_one(doc)
+    try:
+        res = await db.invoices.insert_one(doc)
+    except DuplicateKeyError:
+        raise HTTPException(409, f"No Invoice '{doc.get('invoice_no')}' sudah digunakan invoice lain")
     doc["id"] = str(res.inserted_id)
     doc.pop("_id", None)
     await audit("invoice.create", user, target=doc["id"], meta={"pelanggans": pelanggans, "jp": jp})
@@ -4430,7 +4434,10 @@ async def update_invoice(
     }
     # Auto-compute status from the merged data (keep existing faktur/bupot attachments).
     upd["status"] = compute_invoice_status({**existing, **upd})
-    await db.invoices.update_one({"_id": oid}, {"$set": upd})
+    try:
+        await db.invoices.update_one({"_id": oid}, {"$set": upd})
+    except DuplicateKeyError:
+        raise HTTPException(409, f"No Invoice '{invoice_no}' sudah digunakan invoice lain")
     await audit("invoice.update", user, target=inv_id, meta={"pelanggans": pelanggans, "jp": jp})
     upd["id"] = inv_id
     return upd

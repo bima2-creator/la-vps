@@ -1,0 +1,46 @@
+{
+  "summary": "Backend-only verification of the requirements.txt fix (Emergent-internal packages removed) plus regression on auth/workorders and the pymupdf-dependent invoice 'lampiran' PDF flow. 17/17 tests passed in test_requirements_and_invoice_pdf.py. Independent clean-venv `pip install --dry-run --index-url https://pypi.org/simple -r requirements.txt` resolved successfully (exit 0, no ResolutionImpossible, no internal index needed). Additionally found a pre-existing (unrelated to this fix) 500 on duplicate invoice_no.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/invoices", "issue": "Duplicate invoice_no raises unhandled pymongo DuplicateKeyError -> HTTP 500 'Internal Server Error' instead of 400/409 with a readable message (unique index invoice_no_1). Reproduced by test_invoice_duplicate_no.py; traceback also present in backend.err.log. PRE-EXISTING, not caused by the requirements fix.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/auth/login", "issue": "No brute-force lockout/rate-limit implemented (playbook expects lockout after 5 failed attempts). Invalid password returns 401 indefinitely."},
+      {"endpoint": "requirements.txt", "issue": "Unbounded upper pins: pandas>=2.2.0 resolves to pandas 3.0.5, reportlab>=4.0.0 resolves to reportlab 5.0.1, numpy 2.4.6 on a fresh VPS build - major-version jumps vs. what is installed in the preview container (pandas 2.x / reportlab 4.x). Docker build will succeed but runtime behaviour may differ. Recommend capping (e.g. pandas>=2.2,<3, reportlab>=4,<5) or pinning known-good versions."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_requirements_and_invoice_pdf.py",
+    "/app/backend/tests/test_invoice_duplicate_no.py",
+    "/app/test_reports/pytest/it7_req_invoice.xml",
+    "/app/test_reports/pytest/it7_dup_invoice.xml"
+  ],
+  "action_items": [
+    "Wrap db.invoices.insert_one in POST /api/invoices (and PUT update) with DuplicateKeyError handling -> HTTPException(409, 'No Invoice sudah digunakan').",
+    "Consider adding upper bounds to pandas/reportlab/numpy in requirements.txt so a future PyPI major release does not silently change VPS builds.",
+    "Optional: implement login attempt lockout/rate limiting per playbook."
+  ],
+  "critical_code_review_comments": [
+    "requirements.txt is clean: no 'emergentintegrations', 'litellm', or 'customer-assets.emergentagent.com', no direct URL/@-refs, no --index-url lines. All 20 curated packages present.",
+    "AST scan of server.py top-level + nested imports shows only stdlib + {dotenv, bcrypt, jwt, pandas, bson(pymongo), apscheduler, fastapi, motor, pydantic, starlette, reportlab, pypdf, requests, pymupdf} - every third-party module is covered by requirements.txt. pymupdf is lazily imported inside _compress_pdf_bytes (line ~3567) and is listed (pymupdf>=1.26.0).",
+    "openpyxl/xlsxwriter are used indirectly via pd.ExcelWriter(engine='xlsxwriter'); pillow is needed by reportlab image embedding - both correctly kept in requirements even though not imported directly.",
+    "Auth playbook spot-checks OK: admin password_hash starts with $2b$; login sets httpOnly+secure+samesite=none cookies; CORSMiddleware uses explicit origins + preview regex with allow_credentials=True; seed_fixed_users is idempotent and re-hashes the password when it no longer matches the configured value.",
+    "server.py is ~5030 lines - well over the 700-line guideline; splitting into routers (auth, workorders, invoices, pdf, exports) would help maintainability."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_requirements_and_invoice_pdf.py",
+    "/app/backend/tests/test_invoice_duplicate_no.py"
+  ],
+  "success_rate": {"backend": "94% (17/18 tests; the single failure is a pre-existing duplicate-invoice_no 500, unrelated to the requirements fix)", "frontend": "not tested (frontend skipped per request)"},
+  "seed_data_creation": "Created and then deleted: WO 'PT REQ TEST' (SI-REQ-01) + 1 PDF attachment, invoice INV-REQ-TEST-IT7 with faktur-pajak/bukti-potong/scan-invoice PDFs; WO 'PT DUP TEST' + invoice INV-DUP-TEST-IT7. DB verified clean afterwards (0 leftover docs). Temp venvs removed.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin/admin123 (username-based login) from /app/memory/test_credentials.md - valid and working",
+  "context_for_next_testing_agent": "New regression suite: /app/backend/tests/test_requirements_and_invoice_pdf.py (requirements hygiene, clean-venv pip dry-run against public PyPI, AST import-coverage check, auth/workorders/field-engineers regression, full invoice lampiran PDF flow incl. gating 400 before faktur/bupot upload and %PDF + first-page-text assertion). It creates a temp venv at /app/test_reports/.venvtest during the dry-run test (~25s). test_invoice_duplicate_no.py intentionally FAILS until POST /api/invoices handles DuplicateKeyError. pytest.ini runs -n 2 --dist loadscope; class-scoped ordering matters in the invoice test (test_01..test_08).",
+  "rca_of_the_issue": "Original bug (pip ResolutionImpossible on VPS) is FIXED: requirements.txt no longer contains pip-freeze artifacts pointing to Emergent-internal packages (emergentintegrations, litellm wheel URL). Verified independently in an isolated venv with --index-url https://pypi.org/simple: pip exited 0 with 'Would install ... pymupdf-1.28.2 ...'. pymupdf, required by the lazy import in _compress_pdf_bytes for invoice attachment compression, is present and the lampiran PDF endpoint returns a valid %PDF whose first page contains the scan-invoice content, so the compression path executes without falling back on an ImportError."
+}
