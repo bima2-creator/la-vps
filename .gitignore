@@ -105,3 +105,9 @@ frontend/node_modules/.cache/default-development/2.pack_
 frontend/node_modules/.cache/default-development/8.pack
 frontend/node_modules/.cache/default-development/3.pack
 frontend/node_modules/.cache/default-development/5.pack
+
+# Virtualenv sisa testing (berisi symlink - bermasalah di Windows)
+.venvtest/
+test_reports/.venvtest/
+venv/
+.venv/

@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 8: tested the new combined NON_MAINTENANCE invoice rule (backend + frontend). Backend: 9 pytest cases in /app/backend/tests/test_invoice_non_maintenance.py (seed 3 WO + PDF attachments, candidates filter, combined PSB+DISMANTLE invoice, MAINTENANCE invoice, duplicate 409, candidate exclusion of invoiced WO, invalid jenis). 8/9 passed. Frontend: admin login -> /invoices -> Buat Invoice picker shows EXACTLY 2 cards (NON-MAINTENANCE (GABUNGAN) + MAINTENANCE); NON_MAINTENANCE flow selected 'PT GABUNG TEST' showing 2 WO (PSB + DISMANTLE) combined with Grand Total Rp 1.500.000; legacy invoice edit (INV/001/1/2026, jenis DISMANTLE) renders the fallback 'Kategori lama' card + the 2 new cards, locked as expected. All FE tests PASSED. Auth playbook spot-checks also run. All test data cleaned up.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/invoices (and PUT /api/invoices/{id})", "issue": "create_invoice/update_invoice never call _wo_matches_activity for the submitted work_order_ids. A MAINTENANCE invoice containing a PSB work order (hasil_instalasi OK) was accepted with 200 instead of the expected 400. This lets any WO be attached to any category (e.g. MAINTENANCE WO into a NON_MAINTENANCE invoice) via direct API/stale UI state — the very rule this change is about is only enforced in the /invoices/candidates listing.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/invoices", "issue": "No guard against invoicing a work order that is already attached to another invoice. WO 'SI-GAB-01' was accepted into a second invoice (INV-MAINT-BAD) while already on INV-GAB-TEST. /invoices/candidates correctly hides invoiced WOs, so this is API-only, but it allows double-billing."},
+      {"endpoint": "POST /api/auth/login", "issue": "No brute-force lockout: 6 consecutive wrong-password attempts on 'admin' all returned 401 and the account remained usable (auth playbook item 4 not implemented). bcrypt $2b$12$ hashes, httpOnly+secure+samesite=none cookies, explicit CORS origins with allow_credentials, and idempotent seed_fixed_users (password kept in sync) all verified OK."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_invoice_non_maintenance.py",
+    "/app/backend/tests/fe_invoice_seed.py",
+    "/app/test_reports/pytest/pytest_results_iter8.xml"
+  ],
+  "action_items": [
+    "Enforce _wo_matches_activity(wo, jenis_pekerjaan) for every WO inside create_invoice and update_invoice, returning 400 with the offending SA/SI id (this is the only remaining gap for the new NON_MAINTENANCE vs MAINTENANCE rule).",
+    "Optionally reject work orders already referenced by another invoice in create_invoice/update_invoice (exclude current invoice id on update) to prevent double-billing."
+  ],
+  "critical_code_review_comments": [
+    "server.py create_invoice (~line 4316) validates jenis_pekerjaan value, attachments and grand_total > 0 but not WO<->category compatibility; add `bad = [w for w in wos if not _wo_matches_activity(w, jp)]` and raise HTTPException(400, ...).",
+    "InvoicesPage.jsx is 1620 lines — consider splitting the invoice form modal into its own component (>700 line guideline).",
+    "Legacy-category fallback in InvoicesPage.jsx (line 947-949) works and correctly disables switching when jenisLocked; no change needed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_invoice_non_maintenance.py",
+    "/app/backend/tests/fe_invoice_seed.py"
+  ],
+  "success_rate": {"backend": "89% (8/9)", "frontend": "100% (3/3 scenarios)"},
+  "seed_data_creation": "3 work orders for pelanggan 'PT GABUNG TEST' (SI-GAB-01 PSB, SI-GAB-02 DISMANTLE, SI-GAB-03 MAINTENANCE) each with 1 small PDF attachment; invoices INV-GAB-TEST, INV-MAINT-TEST, INV-MAINT-BAD. ALL created data deleted afterwards (verified 0 leftovers in DB). Production invoices untouched.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin/admin123 (from /app/memory/test_credentials.md, login by username)",
+  "context_for_next_testing_agent": "Re-run `pytest /app/backend/tests/test_invoice_non_maintenance.py` after the category-validation fix; test_maintenance_invoice_rejects_non_maintenance_wo is the only failing case. Use /app/backend/tests/fe_invoice_seed.py [seed|clean|legacy] to seed/clean 'PT GABUNG TEST' data for UI runs. Legacy-category invoice for the fallback test: INV/001/1/2026 (id 6a7379fe4e9c33469cb88998, jenis DISMANTLE) — open its edit modal only, do not save.",
+  "rca_of_the_issue": "The NON_MAINTENANCE/MAINTENANCE separation is implemented only in the read path (/invoices/candidates line 4114 calls _wo_matches_activity). The write path (create_invoice line 4316+, update_invoice line 4380+) loads WOs via _load_selected_wos with no category check, so a client can post any WO id under any jenis_pekerjaan and it is stored, producing a MAINTENANCE invoice containing non-maintenance work (reproduced: POST /api/invoices jenis_pekerjaan=MAINTENANCE with a PSB WO -> 200)."
+}

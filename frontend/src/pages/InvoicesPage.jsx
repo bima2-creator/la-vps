@@ -20,28 +20,13 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { Pagination, PAGE_SIZE } from "@/components/Pagination";
 
-// Each invoice covers exactly ONE phase/jenis pekerjaan. Customers can be one
-// or more, but all their WOs must share the same phase.
+// Rule: WO Survey/Instalasi/Aktivasi/Dismantle boleh DIGABUNG dalam satu invoice
+// (kategori NON_MAINTENANCE). Invoice MAINTENANCE hanya untuk WO Maintenance.
 const INVOICE_CATEGORIES = [
   {
-    value: "SURVEY",
-    title: "SURVEY",
-    hint: "Untuk WO Tipro Survey (PSB / Mutasi / Migrasi).",
-  },
-  {
-    value: "INSTALASI",
-    title: "INSTALASI",
-    hint: "Untuk WO Tipro Instalasi (PSB / Mutasi / Migrasi).",
-  },
-  {
-    value: "AKTIVASI",
-    title: "AKTIVASI",
-    hint: "Untuk WO Tipro Aktivasi (PSB / Mutasi / Migrasi).",
-  },
-  {
-    value: "DISMANTLE",
-    title: "DISMANTLE",
-    hint: "Hanya work order jenis Dismantle.",
+    value: "NON_MAINTENANCE",
+    title: "NON-MAINTENANCE (GABUNGAN)",
+    hint: "Gabungan WO Survey, Instalasi, Aktivasi & Dismantle — bisa dijadikan satu invoice.",
   },
   {
     value: "MAINTENANCE",
@@ -958,8 +943,11 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                 </span>
               )}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-              {INVOICE_CATEGORIES.map((cat) => {
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {(jenisPekerjaan && !INVOICE_CATEGORIES.some((c) => c.value === jenisPekerjaan)
+                ? [{ value: jenisPekerjaan, title: jenisPekerjaan, hint: "Kategori lama (invoice existing)." }, ...INVOICE_CATEGORIES]
+                : INVOICE_CATEGORIES
+              ).map((cat) => {
                 const on = jenisPekerjaan === cat.value;
                 const locked = jenisLocked && !on;
                 return (

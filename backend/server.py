@@ -3939,6 +3939,25 @@ def _invoice_totals(work_orders: List[dict]) -> Dict[str, float]:
     return {"total_jasa": tj, "total_material": tm, "grand_total": tj + tm}
 
 
+async def _validate_wos_for_invoice(wos: List[dict], jp: str, exclude_invoice_oid=None) -> None:
+    """Pastikan setiap WO sesuai kategori invoice & belum dipakai invoice lain."""
+    bad = [w for w in wos if not _wo_matches_activity(w, jp)]
+    if bad:
+        ids = ", ".join((w.get("si_id") or w.get("sa_id") or w.get("pelanggan") or w.get("id", "?")) for w in bad[:5])
+        raise HTTPException(400, f"WO tidak sesuai kategori {jp}: {ids}")
+    inv_query: Dict[str, Any] = {}
+    if exclude_invoice_oid is not None:
+        inv_query["_id"] = {"$ne": exclude_invoice_oid}
+    billed: set = set()
+    async for iv in db.invoices.find(inv_query, {"work_order_ids": 1}):
+        for wid in iv.get("work_order_ids", []):
+            billed.add(str(wid))
+    dup = [w for w in wos if w["id"] in billed]
+    if dup:
+        ids = ", ".join((w.get("si_id") or w.get("sa_id") or w.get("id", "?")) for w in dup[:5])
+        raise HTTPException(400, f"WO sudah dipakai di invoice lain: {ids}")
+
+
 async def _load_selected_wos(ids: List[str]) -> List[dict]:
     out: List[dict] = []
     for wid in ids:
@@ -4322,6 +4341,7 @@ async def create_invoice(
     if not payload.pelanggans:
         raise HTTPException(400, "Pilih minimal 1 pelanggan")
     wos = await _load_selected_wos(payload.work_order_ids)
+    await _validate_wos_for_invoice(wos, jp)
     # Wajib: setiap work order pada invoice harus punya minimal 1 attachment PDF
     await _ensure_wos_have_attachments(wos)
     totals = _invoice_totals(wos)
@@ -4394,6 +4414,7 @@ async def update_invoice(
     if not payload.pelanggans:
         raise HTTPException(400, "Pilih minimal 1 pelanggan")
     wos = await _load_selected_wos(payload.work_order_ids)
+    await _validate_wos_for_invoice(wos, jp, exclude_invoice_oid=oid)
     # Wajib: setiap work order pada invoice harus punya minimal 1 attachment PDF
     await _ensure_wos_have_attachments(wos)
     totals = _invoice_totals(wos)
