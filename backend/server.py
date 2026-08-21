@@ -3563,20 +3563,35 @@ async def invoice_pdf(inv_id: str, part: str = Query("invoice"), user: dict = De
     log = logging.getLogger("la-tracker")
 
     def _compress_pdf_bytes(data: bytes) -> bytes:
-        """Perkecil ukuran PDF: turunkan resolusi & kompresi ulang gambar scan."""
+        """Samakan ukuran semua halaman ke A4 (fit proporsional, center; landscape
+        memakai A4 landscape), lalu perkecil ukuran file (kompresi gambar scan)."""
         try:
             import pymupdf
-            pdoc = pymupdf.open(stream=data, filetype="pdf")
+            src = pymupdf.open(stream=data, filetype="pdf")
+            a4 = pymupdf.paper_rect("a4")  # 595 x 842 pt (potret)
+            out = pymupdf.open()
+            for page in src:
+                r = page.rect
+                if r.width <= 0 or r.height <= 0:
+                    continue
+                landscape = r.width > r.height
+                tw, th = (a4.height, a4.width) if landscape else (a4.width, a4.height)
+                newp = out.new_page(width=tw, height=th)
+                scale = min(tw / r.width, th / r.height)
+                w, h = r.width * scale, r.height * scale
+                x0, y0 = (tw - w) / 2, (th - h) / 2
+                newp.show_pdf_page(pymupdf.Rect(x0, y0, x0 + w, y0 + h), src, page.number)
             try:
-                pdoc.rewrite_images(dpi_threshold=150, dpi_target=120, quality=70)
+                out.rewrite_images(dpi_threshold=150, dpi_target=120, quality=70)
             except Exception as e:
                 log.warning("pdf rewrite_images skipped: %s", e)
-            out = pdoc.tobytes(garbage=4, deflate=True, clean=True)
-            pdoc.close()
-            if out and len(out) < len(data):
-                return out
+            result = out.tobytes(garbage=4, deflate=True, clean=True)
+            out.close()
+            src.close()
+            if result:
+                return result
         except Exception as e:
-            log.warning("pdf compress skipped: %s", e)
+            log.warning("pdf normalize/compress skipped: %s", e)
         return data
 
     def _first_last_pdf(pdf_bytes: bytes) -> bytes:

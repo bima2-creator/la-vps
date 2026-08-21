@@ -1,0 +1,30 @@
+{
+  "summary": "Iteration 9 (backend only): verified the A4 page-size normalization fix in _compress_pdf_bytes for GET /api/invoices/{id}/pdf?part=lampiran. New pytest suite /app/backend/tests/test_invoice_lampiran_pagesize.py (10 cases, all PASS) seeds a WO 'PT UKURAN TEST' + invoice INV-UKR-TEST and uploads 4 PDFs with deliberately different page sizes (WO attachment 2000x2800 with noise image, faktur pajak 595x842, bukti potong 300x500, scan invoice landscape 1200x600). Result lampiran PDF page sizes = [(842,595), (595,842), (595,842), (595,842)] — every portrait page exactly A4 595x842 and the landscape scan page exactly A4 landscape 842x595 (±1pt); no 2000x2800 / 300x500 / 1200x600 pages remain. Page order regression OK: page 1 = 'SCAN', then 'FAKTUR', 'BUPOT', 'WO BESAR' (text extracted per page via pymupdf, so content is intact/readable after proportional centered fit). Compression regression OK: total input 2,436,211 bytes -> lampiran output 835,595 bytes (ratio 0.343), confirming rewrite_images still runs. Cleanup verified: invoice + WO deleted (invoice GET returns 404, no INV-UKR-TEST / PT UKURAN TEST left). Requested regression suites test_invoice_non_maintenance, test_invoice_duplicate_no, test_requirements_and_invoice_pdf: 28/28 pass. Full suite run: 91 passed, 4 failed, 3 errors — all failures confined to the perangkat_bank suites and are pre-existing/stale (spec changed: prefix now must be 13 chars), unrelated to this PDF change.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/perangkat/bank", "issue": "Stale tests: test_perangkat_bank_admin.py fixture posts a short prefix and API now returns 400 'Prefix harus 13 karakter.' -> 3 setup ERRORS. Also test_perangkat_bank.py::test_lookup_antenna_prodelin / test_lookup_lnb_cband and test_perangkat_bank_import.py (2 cases, prefix-format import + lookup learning returns {'matched': false, 'options': []}) fail. Pre-existing, NOT caused by the PDF fix; either the 13-char prefix rule broke prefix-learning lookup or the old tests need updating to the new spec."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_invoice_lampiran_pagesize.py",
+    "/app/backend/tests/test_requirements_and_invoice_pdf.py"
+  ],
+  "action_items": [
+    "No action needed for the lampiran page-size fix — verified working e2e.",
+    "Decide on the perangkat_bank suites: either fix prefix-learning lookup (13-char prefix rule appears to have broken /api/perangkat/bank/lookup learning) or update the stale tests to the new 13-char prefix spec."
+  ],
+  "critical_code_review_comments": [
+    "_compress_pdf_bytes silently falls back to the un-normalized merged bytes on any pymupdf exception (log.warning only); consider surfacing a header/metric so a silent regression to mixed page sizes is detectable in production.",
+    "server.py is very large (>3700 lines); the invoice PDF/lampiran helpers (_compress_pdf_bytes, _first_last_pdf, _first_pdf, _to_pdf_bytes) are good candidates to move into a dedicated module (e.g. backend/pdf_utils.py) and unit-test directly."
+  ],
+  "updated_files": ["/app/backend/tests/test_invoice_lampiran_pagesize.py"],
+  "success_rate": {"backend": "100% for invoice lampiran/PDF scope (10/10 new + 28/28 regression); 92% overall suite (91/98, all failures pre-existing perangkat_bank)", "frontend": "not tested (backend only per request)"},
+  "seed_data_creation": "Temporary WO 'PT UKURAN TEST' (SI-UKR-01) + invoice INV-UKR-TEST with 4 differently-sized PDF attachments; all deleted at teardown and verified removed.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin/admin123 (username-based login, /app/memory/test_credentials.md)",
+  "context_for_next_testing_agent": "Run `python3 -m pytest /app/backend/tests/test_invoice_lampiran_pagesize.py -q -s -n0` to see printed page sizes and compression ratio. The suite is self-cleaning. Known pre-existing failures to ignore for invoice work: test_perangkat_bank.py (2), test_perangkat_bank_import.py (2), test_perangkat_bank_admin.py (3 setup errors, 400 'Prefix harus 13 karakter.').",
+  "rca_of_the_issue": "Original bug: merged lampiran PDF kept each source file's MediaBox, so page sizes varied. Fix (verified): _compress_pdf_bytes re-creates every page on A4 (or A4 landscape when width>height) and draws the source page via show_pdf_page with min(tw/w, th/h) scale, centered — output confirmed as exactly 595x842 / 842x595 with text preserved, followed by rewrite_images (dpi 120, q70) giving a 0.34x size ratio."
+}
