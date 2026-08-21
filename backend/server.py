@@ -3561,6 +3561,23 @@ async def invoice_pdf(inv_id: str, part: str = Query("invoice"), user: dict = De
     lampiran_pdfs: List[bytes] = []
     log = logging.getLogger("la-tracker")
 
+    def _compress_pdf_bytes(data: bytes) -> bytes:
+        """Perkecil ukuran PDF: turunkan resolusi & kompresi ulang gambar scan."""
+        try:
+            import pymupdf
+            pdoc = pymupdf.open(stream=data, filetype="pdf")
+            try:
+                pdoc.rewrite_images(dpi_threshold=150, dpi_target=120, quality=70)
+            except Exception as e:
+                log.warning("pdf rewrite_images skipped: %s", e)
+            out = pdoc.tobytes(garbage=4, deflate=True, clean=True)
+            pdoc.close()
+            if out and len(out) < len(data):
+                return out
+        except Exception as e:
+            log.warning("pdf compress skipped: %s", e)
+        return data
+
     def _first_last_pdf(pdf_bytes: bytes) -> bytes:
         """Ambil halaman PERTAMA (Surat Perintah Kerja) & TERAKHIR (Berita Acara) dari SPK."""
         if not _HAS_PYPDF:
@@ -3596,6 +3613,17 @@ async def invoice_pdf(inv_id: str, part: str = Query("invoice"), user: dict = De
         except Exception as e:
             log.warning("first-page SPK extract failed: %s", e)
             return pdf_bytes
+
+    # 0) Scan Invoice — SELALU jadi halaman pertama lampiran
+    sc = inv.get("scan_invoice_attachment") or {}
+    if sc.get("storage_path"):
+        try:
+            raw, ctype_sc = get_object(sc["storage_path"])
+            pdf_bytes = _to_pdf_bytes(raw, sc.get("ext") or "", ctype_sc or sc.get("content_type") or "")
+            if pdf_bytes:
+                lampiran_pdfs.append(pdf_bytes)
+        except Exception as e:
+            log.warning("scan invoice fetch failed for %s: %s", inv_id, e)
 
     # 1) Faktur Pajak
     fp = inv.get("faktur_pajak_attachment") or {}
@@ -3672,9 +3700,9 @@ async def invoice_pdf(inv_id: str, part: str = Query("invoice"), user: dict = De
                     log.warning("skip lampiran page: %s", e)
             merged = io.BytesIO()
             writer.write(merged)
-            merged.seek(0)
+            compressed = _compress_pdf_bytes(merged.getvalue())
             return StreamingResponse(
-                merged,
+                io.BytesIO(compressed),
                 media_type="application/pdf",
                 headers={"Content-Disposition": f'inline; filename="{safe_no}-lampiran.pdf"'},
             )
@@ -4523,6 +4551,91 @@ async def delete_faktur_pajak(
         {"$unset": {"faktur_pajak_attachment": ""}, "$set": {"updated_at": now_iso(), "status": compute_invoice_status(merged)}},
     )
     await audit("invoice.faktur_pajak.delete", user, target=inv_id)
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------
+# Invoice - Scan Invoice (PDF, jadi halaman pertama lampiran)
+# ------------------------------------------------------------------
+@api.post("/invoices/{inv_id}/scan-invoice")
+async def upload_scan_invoice(
+    inv_id: str,
+    file: UploadFile = File(...),
+    user: dict = Depends(require_roles("admin", "operator")),
+):
+    try:
+        oid = ObjectId(inv_id)
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    inv = await db.invoices.find_one({"_id": oid})
+    if not inv:
+        raise HTTPException(404, "Invoice tidak ditemukan")
+    data = await file.read()
+    if len(data) > 20 * 1024 * 1024:
+        raise HTTPException(413, "File terlalu besar (maks 20MB)")
+    fname = file.filename or "scan_invoice"
+    ext = (fname.rsplit(".", 1)[-1] if "." in fname else "bin").lower()
+    if ext != "pdf" and (file.content_type or "").lower() != "application/pdf":
+        raise HTTPException(400, "Hanya file PDF yang diperbolehkan")
+    file_uuid = str(uuid.uuid4())
+    path = f"{APP_NAME}/invoices/{inv_id}/scan_invoice_{file_uuid}.pdf"
+    result = put_object(path, data, "application/pdf")
+    sc_attachment = {
+        "storage_path": result["path"],
+        "original_filename": fname,
+        "content_type": "application/pdf",
+        "size": result.get("size", len(data)),
+        "ext": "pdf",
+        "uploaded_by": user["actor"],
+        "uploaded_at": now_iso(),
+    }
+    await db.invoices.update_one(
+        {"_id": oid},
+        {"$set": {"scan_invoice_attachment": sc_attachment, "updated_at": now_iso()}},
+    )
+    await audit("invoice.scan_invoice.upload", user, target=inv_id,
+                meta={"filename": fname, "size": sc_attachment["size"]})
+    return {"ok": True, "scan_invoice_attachment": sc_attachment}
+
+
+@api.get("/invoices/{inv_id}/scan-invoice/download")
+async def download_scan_invoice(inv_id: str, request: Request, auth: Optional[str] = Query(None)):
+    _ = (await _resolve_user_from_token(auth)) if auth else (await get_current_user(request))
+    try:
+        oid = ObjectId(inv_id)
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    inv = await db.invoices.find_one({"_id": oid})
+    if not inv:
+        raise HTTPException(404, "Invoice tidak ditemukan")
+    sc = inv.get("scan_invoice_attachment") or {}
+    if not sc.get("storage_path"):
+        raise HTTPException(404, "Scan invoice belum diupload")
+    data, ctype = get_object(sc["storage_path"])
+    return Response(
+        content=data,
+        media_type=sc.get("content_type") or ctype,
+        headers={"Content-Disposition": f'inline; filename="{sc.get("original_filename", "scan_invoice")}"'},
+    )
+
+
+@api.delete("/invoices/{inv_id}/scan-invoice")
+async def delete_scan_invoice(
+    inv_id: str,
+    user: dict = Depends(require_roles("admin", "operator")),
+):
+    try:
+        oid = ObjectId(inv_id)
+    except Exception:
+        raise HTTPException(400, "Invalid id")
+    inv = await db.invoices.find_one({"_id": oid})
+    if not inv:
+        raise HTTPException(404, "Invoice tidak ditemukan")
+    await db.invoices.update_one(
+        {"_id": oid},
+        {"$unset": {"scan_invoice_attachment": ""}, "$set": {"updated_at": now_iso()}},
+    )
+    await audit("invoice.scan_invoice.delete", user, target=inv_id)
     return {"ok": True}
 
 

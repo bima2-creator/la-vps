@@ -575,6 +575,10 @@ function InvoiceForm({ initial, onClose, onSaved }) {
     initial?.bukti_potong_attachment || null,
   );
   const [uploadingBp, setUploadingBp] = useState(false);
+  const [scanAttachment, setScanAttachment] = useState(
+    initial?.scan_invoice_attachment || null,
+  );
+  const [uploadingScan, setUploadingScan] = useState(false);
 
   // Load customers whenever the jenis pekerjaan changes.
   // If no jenis is picked yet, we clear the customer list to force the user
@@ -829,6 +833,53 @@ function InvoiceForm({ initial, onClose, onSaved }) {
     const token = localStorage.getItem("la_token") || "";
     const base = (api.defaults && api.defaults.baseURL) || "";
     const url = `${base}/invoices/${invId}/bukti-potong/download?auth=${encodeURIComponent(token)}`;
+    window.open(url, "_blank");
+  };
+
+  const uploadScanInvoice = async (file) => {
+    if (!file) return;
+    const isPdf = file.type === "application/pdf" || (file.name || "").toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      toast.error("Hanya file PDF yang diperbolehkan");
+      return;
+    }
+    let id = invId;
+    if (!id) { id = await ensureSaved(); if (!id) return; }
+    setUploadingScan(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const { data } = await api.post(
+        `/invoices/${id}/scan-invoice`,
+        form,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      setScanAttachment(data.scan_invoice_attachment || null);
+      toast.success("Scan invoice diupload — akan jadi halaman pertama PDF Lampiran");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    } finally {
+      setUploadingScan(false);
+    }
+  };
+
+  const deleteScanInvoice = async () => {
+    if (!invId) return;
+    if (!window.confirm("Hapus file scan invoice yang tersimpan?")) return;
+    try {
+      await api.delete(`/invoices/${invId}/scan-invoice`);
+      setScanAttachment(null);
+      toast.success("Scan invoice dihapus");
+    } catch (e) {
+      toast.error(formatApiError(e));
+    }
+  };
+
+  const previewScanInvoice = () => {
+    if (!invId) return;
+    const token = localStorage.getItem("la_token") || "";
+    const base = (api.defaults && api.defaults.baseURL) || "";
+    const url = `${base}/invoices/${invId}/scan-invoice/download?auth=${encodeURIComponent(token)}`;
     window.open(url, "_blank");
   };
 
@@ -1260,6 +1311,57 @@ function InvoiceForm({ initial, onClose, onSaved }) {
                     placeholder="NO. INVOICE DI SISTEM EPROC (OPSIONAL)"
                     className="w-full border border-border bg-white rounded-sm px-3 py-2 text-sm mono"
                   />
+                </div>
+                <div className="md:col-span-2 border border-dashed border-border rounded-sm p-3 bg-slate-50">
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
+                    Scan Invoice (halaman pertama lampiran)
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                      File Scan Invoice (PDF)
+                    </label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <label className="inline-flex items-center gap-1.5 border border-border bg-white hover:bg-slate-100 rounded-sm px-3 py-1.5 text-sm cursor-pointer">
+                          {uploadingScan ? "Mengupload…" : (scanAttachment ? "Ganti file" : "Pilih file")}
+                          <input
+                            type="file"
+                            accept="application/pdf,.pdf"
+                            className="hidden"
+                            disabled={uploadingScan}
+                            data-testid="invoice-form-scan-invoice-file"
+                            onChange={(e) => {
+                              const f = e.target.files && e.target.files[0];
+                              if (f) uploadScanInvoice(f);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                        {scanAttachment ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={previewScanInvoice}
+                              className="text-sm text-blue-600 hover:underline"
+                              data-testid="invoice-form-scan-invoice-preview"
+                            >
+                              Lihat: {scanAttachment.original_filename || "scan_invoice"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={deleteScanInvoice}
+                              className="text-sm text-red-600 hover:underline"
+                              data-testid="invoice-form-scan-invoice-delete"
+                            >
+                              Hapus
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground">
+                            Belum ada file. Setelah upload, otomatis jadi halaman PERTAMA PDF Lampiran.
+                          </span>
+                        )}
+                    </div>
+                  </div>
                 </div>
                 <div className="md:col-span-2 border border-dashed border-border rounded-sm p-3 bg-slate-50">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
